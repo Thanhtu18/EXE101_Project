@@ -1,0 +1,282 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+@import 'leaflet/dist/leaflet.css';
+
+/* Ensure Leaflet map stays below dialogs */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-pane {
+  z-index: auto !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000 !important;
+}
+
+.leaflet-control {
+  z-index: 1000 !important;
+}
+
+/* Leaflet popups should be above map but below dialogs */
+.leaflet-popup-pane {
+  z-index: 1100 !important;
+}
+
+/* Custom Leaflet popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.leaflet-popup-close-button {
+  color: #374151 !important;
+  font-size: 24px !important;
+  padding: 4px 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #111827 !important;
+}
+
+/* Hero Carousel Styles */
+.hero-carousel-wrapper .slick-slider {
+  position: relative;
+}
+
+.hero-carousel-wrapper .slick-list,
+.hero-carousel-wrapper .slick-track {
+  height: 100%;
+}
+
+.hero-carousel-wrapper .slick-slide > div {
+  height: 100%;
+}
+
+/* Custom dots styling */
+.hero-carousel-wrapper .slick-dots {
+  position: absolute;
+  bottom: 2rem;
+  list-style: none;
+  display: flex !important;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  gap: 0.5rem;
+}
+
+.hero-carousel-wrapper .slick-dots li {
+  margin: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+}
+
+.hero-carousel-wrapper .slick-dots li button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hero-carousel-wrapper .slick-dots li button:before {
+  display: none;
+}
+
+.hero-carousel-wrapper .slick-dots li.slick-active button {
+  width: 32px;
+  background: rgba(255, 255, 255, 1);
+}
+
+.hero-carousel-wrapper .slick-dots li button:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Arrow button reset */
+.hero-carousel-wrapper .slick-prev,
+.hero-carousel-wrapper .slick-next {
+  width: auto;
+  height: auto;
+  z-index: 10;
+}
+
+.hero-carousel-wrapper .slick-prev:before,
+.hero-carousel-wrapper .slick-next:before {
+  display: none;
+}
+
+/* Fade animation for images */
+.hero-carousel-wrapper .slick-slide {
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+.hero-carousel-wrapper .slick-slide.slick-active {
+  opacity: 1;
+}
+
+/* Image zoom effect */
+.hero-carousel-wrapper .slick-slide.slick-active [style*="background-image"] {
+  animation: kenBurns 8s ease-out forwards;
+}
+
+@keyframes kenBurns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .hero-carousel-wrapper .slick-dots {
+    bottom: 1.5rem;
+  }
+  
+  .hero-carousel-wrapper .slick-dots li button {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .hero-carousel-wrapper .slick-dots li.slick-active button {
+    width: 24px;
+  }
+}
+
+/* Property Carousel Styles */
+.property-carousel-wrapper .slick-list {
+  margin: 0 -0.5rem;
+  overflow: visible;
+}
+
+.property-carousel-wrapper .slick-track {
+  display: flex !important;
+}
+
+.property-carousel-wrapper .slick-slide {
+  height: inherit !important;
+}
+
+.property-carousel-wrapper .slick-slide > div {
+  height: 100%;
+}
+
+.property-carousel-wrapper .slick-dots {
+  position: relative;
+  bottom: 0;
+  margin-top: 1.5rem;
+  list-style: none;
+  display: flex !important;
+  justify-content: center;
+  padding: 0;
+  gap: 0.5rem;
+}
+
+.property-carousel-wrapper .slick-dots li {
+  margin: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+}
+
+.property-carousel-wrapper .slick-dots li button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 9999px;
+  background: #d1d5db;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.property-carousel-wrapper .slick-dots li button:before {
+  display: none;
+}
+
+.property-carousel-wrapper .slick-dots li.slick-active button {
+  width: 28px;
+  background: #16a34a;
+}
+
+.property-carousel-wrapper .slick-dots li button:hover {
+  background: #9ca3af;
+}
+
+/* Testimonial Carousel Styles */
+.testimonial-carousel-wrapper .slick-list {
+  margin: 0 -0.5rem;
+}
+
+.testimonial-carousel-wrapper .slick-track {
+  display: flex !important;
+}
+
+.testimonial-carousel-wrapper .slick-slide {
+  height: inherit !important;
+}
+
+.testimonial-carousel-wrapper .slick-slide > div {
+  height: 100%;
+}
+
+.testimonial-carousel-wrapper .slick-dots {
+  position: relative;
+  bottom: 0;
+  margin-top: 1.5rem;
+  list-style: none;
+  display: flex !important;
+  justify-content: center;
+  padding: 0;
+  gap: 0.5rem;
+}
+
+.testimonial-carousel-wrapper .slick-dots li {
+  margin: 0;
+  padding: 0;
+  width: auto;
+  height: auto;
+}
+
+.testimonial-carousel-wrapper .slick-dots li button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 9999px;
+  background: #d1d5db;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.testimonial-carousel-wrapper .slick-dots li button:before {
+  display: none;
+}
+
+.testimonial-carousel-wrapper .slick-dots li.slick-active button {
+  width: 28px;
+  background: #16a34a;
+}
+
+.testimonial-carousel-wrapper .slick-dots li button:hover {
+  background: #9ca3af;
+}
