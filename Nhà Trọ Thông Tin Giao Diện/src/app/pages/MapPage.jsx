@@ -248,7 +248,12 @@ export function MapPage() {
             <div className={`${selectedProperty ? "w-2/3" : "w-full"} h-full`}>
               <RentalMapView
                 properties={propertiesWithDistance}
-                onPropertyClick={setSelectedProperty}
+                // pass the currently selected property so the map can open its popup
+                selectedProperty={selectedProperty}
+                // RentalMapView expects `onPropertySelect` to be called when a marker is clicked
+                onPropertySelect={setSelectedProperty}
+                // forward search locations (used by the map for centering/markers if needed)
+                searchLocations={searchLocations}
               />
             </div>
 
