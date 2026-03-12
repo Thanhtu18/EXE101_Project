@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const sanitizeUser = require("../lib/sanitizeUser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -7,9 +8,8 @@ exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
   const hash = await bcrypt.hash(password, 10);
   const user = await User.create({ name, email, password: hash, role });
-  // Do not return password hash to client
-  const { password: _pwd, ...userData } = user.toObject();
-  res.status(201).json(userData);
+  // Do not return password hash to client — return sanitized user
+  return res.status(201).json(sanitizeUser(user));
 };
 
 exports.login = async (req, res) => {
@@ -23,9 +23,8 @@ exports.login = async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: "7d" },
   );
-  // Exclude password hash from the returned user
-  const { password: _pwd2, ...userData } = user.toObject();
-  res.json({ token, user: userData });
+  // Return only minimal user fields to the client
+  res.json({ token, user: sanitizeUser(user) });
 };
 
 // Dev-friendly OTP endpoints (simulate SMS). In production use an SMS provider and hash codes.
@@ -61,7 +60,6 @@ exports.confirmOtp = async (req, res) => {
   user.phoneOtp = undefined;
   user.phoneOtpExpires = undefined;
   await user.save();
-  // Exclude password hash when returning user object
-  const { password: _pwd3, ...userData } = user.toObject();
-  return res.json({ success: true, user: userData });
+  // Return only minimal user fields to the client
+  return res.json({ success: true, user: sanitizeUser(user) });
 };

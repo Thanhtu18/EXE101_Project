@@ -73,6 +73,28 @@ const options = {
             },
           },
         },
+        User: {
+          type: "object",
+          required: ["_id", "name", "email"],
+          properties: {
+            _id: { type: "string", example: "69b26a064f31b24fcaa2ee55" },
+            name: { type: "string", example: "testuser" },
+            email: { type: "string", example: "test@gmail.com" },
+            role: { type: "string", example: "user" },
+            verificationLevel: { type: "integer", example: 1 },
+            phoneVerified: { type: "boolean", example: false },
+            favorites: {
+              type: "array",
+              items: { type: "string" },
+              example: ["645a1f4c2b9a3f001234abcd"],
+            },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-10T12:34:56.789Z",
+            },
+          },
+        },
       },
     },
   },
