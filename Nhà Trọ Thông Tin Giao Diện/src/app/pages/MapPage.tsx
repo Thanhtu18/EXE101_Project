@@ -1,39 +1,50 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
-import { RentalMapView } from '@/app/components/RentalMapView';
-import { PropertyList } from '@/app/components/PropertyList';
-import { PropertyCard } from '@/app/components/PropertyCard';
-import { useProperties } from '@/app/contexts/PropertiesContext';
-import { RentalProperty } from '@/app/components/types';
-import { Input } from '@/app/components/ui/input';
-import { Button } from '@/app/components/ui/button';
-import { Search, MapIcon, List, X, Home, ArrowLeft, Heart } from 'lucide-react';
-import { FilterPanel, FilterOptions, defaultFilters } from '@/app/components/FilterPanel';
-import { SearchByWorkplace, SearchLocation } from '@/app/components/SearchByWorkplace';
-import { addDistanceToProperties, formatDistance, findOptimalLocation } from '@/app/utils/distanceCalculator';
-import { useFavorites } from '@/app/hooks/useFavorites';
-import { CompareFloatingBar } from '@/app/components/CompareFloatingBar';
-import { Toaster } from '@/app/components/ui/sonner';
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { RentalMapView } from "@/app/components/RentalMapView";
+import { PropertyList } from "@/app/components/PropertyList";
+import { PropertyCard } from "@/app/components/PropertyCard";
+import { useProperties } from "@/app/contexts/PropertiesContext";
+import { RentalProperty, RentalFilters, PropertyWithDistance } from "@/app/components/types";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
+import { Search, MapIcon, List, X, Home, ArrowLeft, Heart } from "lucide-react";
+import {
+  FilterPanel,
+  defaultFilters,
+} from "@/app/components/FilterPanel";
+import {
+  SearchByWorkplace,
+  SearchLocation,
+} from "@/app/components/SearchByWorkplace";
+import {
+  addDistanceToProperties,
+  formatDistance,
+  findOptimalLocation,
+} from "@/app/utils/distanceCalculator";
+import { useFavorites } from "@/app/hooks/useFavorites";
+import { CompareFloatingBar } from "@/app/components/CompareFloatingBar";
+import { Toaster } from "@/app/components/ui/sonner";
 
 export function MapPage() {
   const navigate = useNavigate();
   const { properties } = useProperties();
-  const [selectedProperty, setSelectedProperty] = useState<RentalProperty | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-  const [filters, setFilters] = useState<FilterOptions>(defaultFilters);
+  const [selectedProperty, setSelectedProperty] =
+    useState<RentalProperty | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [filters, setFilters] = useState<RentalFilters>(defaultFilters);
   const [searchLocations, setSearchLocations] = useState<SearchLocation[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { isFavorite, favoritesCount } = useFavorites();
 
   // User location (simulated - near Nhà thờ Đức Bà, TP.HCM)
   const userLocation: [number, number] = [10.7769, 106.7009];
-  
+
   // Calculate optimal center point for multi-location search
   const searchCenter: [number, number] = useMemo(() => {
     if (searchLocations.length === 0) return userLocation;
     if (searchLocations.length === 1) return searchLocations[0].coordinates;
-    return findOptimalLocation(searchLocations.map(l => l.coordinates));
+    return findOptimalLocation(searchLocations.map((l) => l.coordinates));
   }, [searchLocations, userLocation]);
 
   // Add distances to all properties
@@ -48,28 +59,32 @@ export function MapPage() {
     // Text search
     if (searchTerm) {
       result = result.filter(
-        (property) =>
+        (property: PropertyWithDistance) =>
           property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          property.address.toLowerCase().includes(searchTerm.toLowerCase())
+          property.address.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
     // Favorites filter
     if (showFavoritesOnly) {
-      result = result.filter(property => isFavorite(property.id));
+      result = result.filter((property: PropertyWithDistance) => isFavorite(property.id));
     }
 
     // Radius filter
-    result = result.filter(property => property.distance <= filters.radius);
+    result = result.filter((property: PropertyWithDistance) => property.distance <= filters.radius);
 
     // Price range filter
     result = result.filter(
-      property => property.price >= filters.priceRange[0] && property.price <= filters.priceRange[1]
+      (property: PropertyWithDistance) =>
+        property.price >= filters.priceRange[0] &&
+        property.price <= filters.priceRange[1],
     );
 
     // Area range filter
     result = result.filter(
-      property => property.area >= filters.areaRange[0] && property.area <= filters.areaRange[1]
+      (property: PropertyWithDistance) =>
+        property.area >= filters.areaRange[0] &&
+        property.area <= filters.areaRange[1],
     );
 
     // Amenities filter
@@ -78,56 +93,71 @@ export function MapPage() {
       .map(([key]) => key);
 
     if (selectedAmenities.length > 0) {
-      result = result.filter(property =>
-        selectedAmenities.every(amenity => property.amenities[amenity as keyof typeof property.amenities])
+      result = result.filter((property: PropertyWithDistance) =>
+        selectedAmenities.every(
+          (amenity) =>
+            property.amenities[amenity as keyof typeof property.amenities],
+        ),
       );
     }
 
     // Availability filter
-    if (filters.availability !== 'all') {
-      result = result.filter(property =>
-        filters.availability === 'available' ? property.available : !property.available
+    if (filters.availability !== "all") {
+      result = result.filter((property: PropertyWithDistance) =>
+        filters.availability === "available"
+          ? property.available
+          : !property.available,
       );
     }
 
     // Verification level filter
-    if (filters.verificationLevel !== 'all') {
-      if (filters.verificationLevel === 'location-verified') {
-        result = result.filter(property => property.verificationLevel === 'location-verified');
-      } else if (filters.verificationLevel === 'phone-verified') {
-        result = result.filter(property =>
-          property.verificationLevel === 'phone-verified' || property.verificationLevel === 'location-verified'
-        );
-      }
+    if (filters.verificationLevel !== "all") {
+      result = result.filter(
+        (property: PropertyWithDistance) => property.verificationLevel === filters.verificationLevel,
+      );
     }
 
     // Sorting
     switch (filters.sortBy) {
-      case 'price-asc':
-        result.sort((a, b) => a.price - b.price);
+      case "price-asc":
+        result.sort((a: PropertyWithDistance, b: PropertyWithDistance) => a.price - b.price);
         break;
-      case 'price-desc':
-        result.sort((a, b) => b.price - a.price);
+      case "price-desc":
+        result.sort((a: PropertyWithDistance, b: PropertyWithDistance) => b.price - a.price);
         break;
-      case 'distance':
-        result.sort((a, b) => a.distance - b.distance);
+      case "distance":
+        result.sort((a: PropertyWithDistance, b: PropertyWithDistance) => a.distance - b.distance);
         break;
-      case 'area':
-        result.sort((a, b) => b.area - a.area);
+      case "area":
+        result.sort((a: PropertyWithDistance, b: PropertyWithDistance) => b.area - a.area);
         break;
     }
 
     return result;
-  }, [propertiesWithDistance, searchTerm, filters, showFavoritesOnly, isFavorite]);
+  }, [
+    propertiesWithDistance,
+    searchTerm,
+    filters,
+    showFavoritesOnly,
+    isFavorite,
+  ]);
 
   // Count active filters
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (filters.priceRange[0] !== defaultFilters.priceRange[0] || filters.priceRange[1] !== defaultFilters.priceRange[1]) count++;
-    if (filters.areaRange[0] !== defaultFilters.areaRange[0] || filters.areaRange[1] !== defaultFilters.areaRange[1]) count++;
-    if (Object.values(filters.amenities).some(v => v)) count++;
-    if (filters.availability !== 'all') count++;
-    if (filters.verificationLevel !== 'all') count++;
+    if (
+      filters.priceRange[0] !== defaultFilters.priceRange[0] ||
+      filters.priceRange[1] !== defaultFilters.priceRange[1]
+    )
+      count++;
+    if (
+      filters.areaRange[0] !== defaultFilters.areaRange[0] ||
+      filters.areaRange[1] !== defaultFilters.areaRange[1]
+    )
+      count++;
+    if (Object.values(filters.amenities).some((v) => v)) count++;
+    if (filters.availability !== "all") count++;
+    if (filters.verificationLevel !== "all") count++;
     if (filters.radius !== defaultFilters.radius) count++;
     return count;
   }, [filters]);
@@ -142,7 +172,7 @@ export function MapPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/')}
+                onClick={() => navigate("/")}
                 className="mr-2"
               >
                 <ArrowLeft className="size-5" />
@@ -152,24 +182,26 @@ export function MapPage() {
             </div>
             <div className="flex gap-2">
               <Button
-                variant={showFavoritesOnly ? 'default' : 'outline'}
+                variant={showFavoritesOnly ? "default" : "outline"}
                 onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                 className="flex items-center gap-2"
               >
-                <Heart className={`size-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                <Heart
+                  className={`size-4 ${showFavoritesOnly ? "fill-current" : ""}`}
+                />
                 Yêu thích ({favoritesCount})
               </Button>
               <Button
-                variant={viewMode === 'map' ? 'default' : 'outline'}
-                onClick={() => setViewMode('map')}
+                variant={viewMode === "map" ? "default" : "outline"}
+                onClick={() => setViewMode("map")}
                 className="flex items-center gap-2"
               >
                 <MapIcon className="size-4" />
                 Bản đồ
               </Button>
               <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                onClick={() => setViewMode('list')}
+                variant={viewMode === "list" ? "default" : "outline"}
+                onClick={() => setViewMode("list")}
                 className="flex items-center gap-2"
               >
                 <List className="size-4" />
@@ -177,7 +209,7 @@ export function MapPage() {
               </Button>
             </div>
           </div>
-          
+
           <div className="flex gap-2 items-center flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-5 text-gray-400" />
@@ -190,17 +222,17 @@ export function MapPage() {
               />
             </div>
             {searchTerm && (
-              <Button variant="ghost" onClick={() => setSearchTerm('')}>
+              <Button variant="ghost" onClick={() => setSearchTerm("")}>
                 <X className="size-4 mr-2" />
                 Xóa
               </Button>
             )}
-            <FilterPanel 
-              filters={filters} 
+            <FilterPanel
+              filters={filters}
               onFiltersChange={setFilters}
               activeFiltersCount={activeFiltersCount}
             />
-            <SearchByWorkplace 
+            <SearchByWorkplace
               onSearch={setSearchLocations}
               currentLocations={searchLocations}
             />
@@ -210,8 +242,11 @@ export function MapPage() {
           {searchLocations.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2 items-center">
               <span className="text-sm text-gray-600">Tìm gần:</span>
-              {searchLocations.map(loc => (
-                <span key={loc.id} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm">
+              {searchLocations.map((loc) => (
+                <span
+                  key={loc.id}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm"
+                >
                   📍 {loc.name}
                 </span>
               ))}
@@ -222,10 +257,12 @@ export function MapPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {viewMode === 'map' ? (
+        {viewMode === "map" ? (
           <div className="h-full w-full flex">
             {/* Map */}
-            <div className={`${selectedProperty ? 'w-2/3' : 'w-full'} h-full transition-all duration-300`}>
+            <div
+              className={`${selectedProperty ? "w-2/3" : "w-full"} h-full transition-all duration-300`}
+            >
               <div className="h-full w-full p-4">
                 <RentalMapView
                   properties={filteredProperties}
@@ -235,7 +272,7 @@ export function MapPage() {
                 />
               </div>
             </div>
-            
+
             {/* Detail Panel */}
             {selectedProperty && (
               <div className="w-1/3 h-full bg-white border-l shadow-lg overflow-y-auto">
@@ -256,7 +293,9 @@ export function MapPage() {
                     <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm">📌</span>
-                        <p className="text-sm font-semibold text-orange-900">Chủ trọ đã ghim vị trí</p>
+                        <p className="text-sm font-semibold text-orange-900">
+                          Chủ trọ đã ghim vị trí
+                        </p>
                       </div>
                       {selectedProperty.pinInfo.note && (
                         <p className="text-sm text-orange-700 italic mb-2">
@@ -264,21 +303,29 @@ export function MapPage() {
                         </p>
                       )}
                       <p className="text-xs text-orange-600">
-                        Ghim lúc: {new Date(selectedProperty.pinInfo.pinnedAt).toLocaleDateString('vi-VN')}
+                        Ghim lúc:{" "}
+                        {new Date(
+                          selectedProperty.pinInfo.pinnedAt,
+                        ).toLocaleDateString("vi-VN")}
                       </p>
                     </div>
                   )}
                   {/* Distance Info */}
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm font-semibold text-blue-900 mb-1">📍 Khoảng cách</p>
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      📍 Khoảng cách
+                    </p>
                     <p className="text-lg font-bold text-blue-600">
-                      {formatDistance((propertiesWithDistance.find(p => p.id === selectedProperty.id))?.distance || 0)}
+                      {formatDistance(
+                        propertiesWithDistance.find(
+                          (p) => p.id === selectedProperty.id,
+                        )?.distance || 0,
+                      )}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      {searchLocations.length > 0 
+                      {searchLocations.length > 0
                         ? `Từ ${searchLocations.length === 1 ? searchLocations[0].name : `${searchLocations.length} địa điểm đã chọn`}`
-                        : 'Từ vị trí của bạn'
-                      }
+                        : "Từ vị trí của bạn"}
                     </p>
                   </div>
                   {/* View Detail Button */}
@@ -306,34 +353,43 @@ export function MapPage() {
       <footer className="bg-white border-t py-3 px-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center text-sm text-gray-600 flex-wrap gap-2">
           <span>
-            Tìm thấy <strong className="text-blue-600">{filteredProperties.length}</strong> nhà trọ
+            Tìm thấy{" "}
+            <strong className="text-blue-600">
+              {filteredProperties.length}
+            </strong>{" "}
+            nhà trọ
           </span>
           <span>
-            📌 Đã ghim:{' '}
+            📌 Đã ghim:{" "}
             <strong className="text-orange-600">
               {filteredProperties.filter((p) => p.pinInfo).length}
             </strong>
           </span>
           <span>
-            Còn phòng:{' '}
+            Còn phòng:{" "}
             <strong className="text-green-600">
               {filteredProperties.filter((p) => p.available).length}
             </strong>
           </span>
           <span>
-            Giá TB:{' '}
+            Giá TB:{" "}
             <strong>
               {filteredProperties.length > 0
                 ? Math.round(
-                    filteredProperties.reduce((sum, p) => sum + p.price, 0) / filteredProperties.length
-                  ).toLocaleString('vi-VN')
-                : 0
-              }đ/tháng
+                    filteredProperties.reduce((sum, p) => sum + p.price, 0) /
+                      filteredProperties.length,
+                  ).toLocaleString("vi-VN")
+                : 0}
+              đ/tháng
             </strong>
           </span>
           {searchLocations.length > 0 && (
             <span>
-              Tìm gần <strong className="text-blue-600">{searchLocations.length}</strong> địa điểm
+              Tìm gần{" "}
+              <strong className="text-blue-600">
+                {searchLocations.length}
+              </strong>{" "}
+              địa điểm
             </span>
           )}
         </div>

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { Button } from '@/app/components/ui/button';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { AlertCircle, Clock, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { AlertCircle, Clock, X } from "lucide-react";
 
 interface ExpiryWarningModalProps {
   isOpen: boolean;
@@ -24,7 +24,12 @@ export function ExpiryWarningModal({
   renewalPrice,
 }: ExpiryWarningModalProps) {
   const navigate = useNavigate();
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [countdown, setCountdown] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,7 +45,9 @@ export function ExpiryWarningModal({
       }
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
@@ -55,7 +62,7 @@ export function ExpiryWarningModal({
 
   const handleRemindLater = () => {
     // Store in session storage to not show again this session
-    sessionStorage.setItem('expiryWarningDismissed', 'true');
+    sessionStorage.setItem("expiryWarningDismissed", "true");
     onClose();
   };
 
@@ -64,7 +71,7 @@ export function ExpiryWarningModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleRemindLater}
       />
@@ -90,12 +97,16 @@ export function ExpiryWarningModal({
                   {/* House icon */}
                   <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center transform rotate-45">
                     <div className="transform -rotate-45">
-                      <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-8 h-8 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                       </svg>
                     </div>
                   </div>
-                  
+
                   {/* Clock badge */}
                   <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-red-500 border-4 border-white flex items-center justify-center shadow-lg animate-pulse">
                     <Clock className="size-5 text-white" />
@@ -112,7 +123,8 @@ export function ExpiryWarningModal({
 
           {/* Body */}
           <p className="text-center text-gray-700 mb-6 leading-relaxed">
-            Gia hạn ngay để tránh tin đăng bị gỡ khỏi bản đồ và mất vị trí tìm kiếm
+            Gia hạn ngay để tránh tin đăng bị gỡ khỏi bản đồ và mất vị trí tìm
+            kiếm
           </p>
 
           {/* Countdown */}
@@ -125,10 +137,12 @@ export function ExpiryWarningModal({
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 bg-white rounded-lg shadow-md flex items-center justify-center">
                   <span className="text-2xl font-bold text-red-600">
-                    {String(countdown.days).padStart(2, '0')}
+                    {String(countdown.days).padStart(2, "0")}
                   </span>
                 </div>
-                <span className="text-xs text-gray-600 mt-1 font-medium">Ngày</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium">
+                  Ngày
+                </span>
               </div>
 
               <span className="text-2xl font-bold text-red-600 mb-5">:</span>
@@ -137,10 +151,12 @@ export function ExpiryWarningModal({
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 bg-white rounded-lg shadow-md flex items-center justify-center">
                   <span className="text-2xl font-bold text-red-600">
-                    {String(countdown.hours).padStart(2, '0')}
+                    {String(countdown.hours).padStart(2, "0")}
                   </span>
                 </div>
-                <span className="text-xs text-gray-600 mt-1 font-medium">Giờ</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium">
+                  Giờ
+                </span>
               </div>
 
               <span className="text-2xl font-bold text-red-600 mb-5">:</span>
@@ -149,10 +165,12 @@ export function ExpiryWarningModal({
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 bg-white rounded-lg shadow-md flex items-center justify-center">
                   <span className="text-2xl font-bold text-red-600">
-                    {String(countdown.minutes).padStart(2, '0')}
+                    {String(countdown.minutes).padStart(2, "0")}
                   </span>
                 </div>
-                <span className="text-xs text-gray-600 mt-1 font-medium">Phút</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium">
+                  Phút
+                </span>
               </div>
 
               <span className="text-2xl font-bold text-red-600 mb-5">:</span>
@@ -161,10 +179,12 @@ export function ExpiryWarningModal({
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 bg-white rounded-lg shadow-md flex items-center justify-center">
                   <span className="text-2xl font-bold text-red-600">
-                    {String(countdown.seconds).padStart(2, '0')}
+                    {String(countdown.seconds).padStart(2, "0")}
                   </span>
                 </div>
-                <span className="text-xs text-gray-600 mt-1 font-medium">Giây</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium">
+                  Giây
+                </span>
               </div>
             </div>
           </div>
@@ -179,7 +199,7 @@ export function ExpiryWarningModal({
               <div className="text-right">
                 <p className="text-sm text-amber-800 mb-1">Hết hạn</p>
                 <p className="font-bold text-amber-900">
-                  {new Date(expiryDate).toLocaleDateString('vi-VN')}
+                  {new Date(expiryDate).toLocaleDateString("vi-VN")}
                 </p>
               </div>
             </div>
@@ -191,7 +211,7 @@ export function ExpiryWarningModal({
             className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold shadow-lg mb-4 h-14 text-base"
             onClick={onRenew}
           >
-            Gia hạn ngay — {renewalPrice.toLocaleString('vi-VN')}đ
+            Gia hạn ngay — {renewalPrice.toLocaleString("vi-VN")}đ
           </Button>
 
           {/* Secondary */}

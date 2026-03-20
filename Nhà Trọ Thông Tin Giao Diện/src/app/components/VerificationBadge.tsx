@@ -1,8 +1,8 @@
 import { ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
-import { VerificationLevel } from './types';
+import { GreenBadgeLevel } from './types';
 
 interface VerificationBadgeProps {
-  level: VerificationLevel;
+  level: GreenBadgeLevel;
   verifiedAt?: string;
   locationAccuracy?: number;
   size?: 'sm' | 'md' | 'lg';
@@ -17,25 +17,16 @@ export function VerificationBadge({
   showText = true 
 }: VerificationBadgeProps) {
   const config = {
-    'location-verified': {
+    'verified': {
       icon: ShieldCheck,
-      text: 'Đã xác thực vị trí',
-      shortText: 'Xác thực GPS',
+      text: 'Đã xác thực',
+      shortText: 'Xác thực',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-600',
       description: 'Đã xác thực qua GPS tại địa điểm',
     },
-    'phone-verified': {
-      icon: Shield,
-      text: 'Đã xác thực SĐT',
-      shortText: 'Xác thực SĐT',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-600',
-      description: 'Đã xác thực số điện thoại qua OTP',
-    },
-    'unverified': {
+    'none': {
       icon: ShieldAlert,
       text: 'Chưa xác thực',
       shortText: 'Chưa xác thực',
@@ -76,7 +67,7 @@ export function VerificationBadge({
         )}
       </div>
       
-      {level === 'location-verified' && locationAccuracy && size !== 'sm' && (
+      {level === 'verified' && locationAccuracy && size !== 'sm' && (
         <div className="text-xs text-gray-500 ml-1">
           Độ chính xác: {locationAccuracy}m
         </div>

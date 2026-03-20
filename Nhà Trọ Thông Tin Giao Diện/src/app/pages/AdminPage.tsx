@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { useVerification } from '@/app/contexts/VerificationContext';
-import { useProperties } from '@/app/contexts/PropertiesContext';
-import { Button } from '@/app/components/ui/button';
-import { InspectionDialog } from '@/app/components/InspectionDialog';
-import { VerificationRequest } from '@/app/components/types';
-import { 
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useVerification } from "@/app/contexts/VerificationContext";
+import { useProperties } from "@/app/contexts/PropertiesContext";
+import { Button } from "@/app/components/ui/button";
+import { InspectionDialog } from "@/app/components/InspectionDialog";
+import { VerificationRequest } from "@/app/components/types";
+import {
   LayoutDashboard,
   FileText,
   Users,
@@ -29,249 +29,58 @@ import {
   XCircle,
   Phone,
   MapPinned,
-} from 'lucide-react';
-import { RevenueView } from './RevenueView';
-import { InspectionsView } from '@/app/components/InspectionsView';
+} from "lucide-react";
+import { RevenueView } from "./RevenueView";
+import { InspectionsView } from "@/app/components/InspectionsView";
 
-type AdminView = 'dashboard' | 'posts' | 'users' | 'verification' | 'revenue' | 'inspections';
+type AdminView =
+  | "dashboard"
+  | "posts"
+  | "users"
+  | "verification"
+  | "revenue"
+  | "inspections";
 
 // Mock data
 const mockStats = {
-  totalPosts: 1284,
-  newThisMonth: 38,
-  totalUsers: 3917,
-  newUsers: 124,
-  verifiedBadges: 247,
-  newBadges: 12,
-  pending: 17,
+  totalPosts: 0,
+  newThisMonth: 0,
+  totalUsers: 0,
+  newUsers: 0,
+  verifiedBadges: 0,
+  newBadges: 0,
+  pending: 0,
 };
 
-const weeklySearchData = [
-  { day: 'T2', value: 42, label: 'T2' },
-  { day: 'T3', value: 61, label: 'T3' },
-  { day: 'T4', value: 55, label: 'T4' },
-  { day: 'T5', value: 78, label: 'T5', highlight: true },
-  { day: 'T6', value: 90, label: 'T6', highlight: true },
-  { day: 'T7', value: 72, label: 'T7' },
-  { day: 'CN', value: 50, label: 'CN' },
-];
+const weeklySearchData: any[] = [];
 
-const recentActivities = [
-  { id: 1, text: '5 tin đăng mới chờ duyệt', time: '2p', color: 'red' },
-  { id: 2, text: 'Đã cấp tích xanh cho Trọ Minh Phúc', time: '15p', color: 'green' },
-  { id: 3, text: 'Nguyễn Văn B đăng ký chủ trọ', time: '32p', color: 'amber' },
-  { id: 4, text: 'Báo cáo vi phạm: Tin ID #2841', time: '1g', color: 'red' },
-  { id: 5, text: '247 lượt xem bản đồ Q9 hôm nay', time: '2g', color: 'blue' },
-];
+const recentActivities: any[] = [];
 
-const topRooms = [
-  { rank: 1, name: 'Trọ Cao Cấp FPTU', location: 'Q9', views: 842 },
-  { rank: 2, name: 'Phòng Trọ Làng ĐH', location: 'Thủ Đức', views: 691 },
-  { rank: 3, name: 'Mini House Gần KCN', location: 'Bình Dương', views: 534 },
-  { rank: 4, name: 'Trọ Sinh Viên Hutech', location: 'Bình Thạnh', views: 489 },
-  { rank: 5, name: 'Phòng Máy Lạnh Full NT', location: 'Tân Bình', views: 402 },
-];
+const topRooms: any[] = [];
 
-const mockPosts = [
-  {
-    id: 1,
-    emoji: '🏠',
-    title: 'Trọ Cao Cấp Gần FPTU',
-    location: 'Q9',
-    owner: 'NV',
-    ownerColor: 'bg-green-500',
-    price: '3.5M',
-    date: '22/02/2026',
-    status: 'pending' as const,
-  },
-  {
-    id: 2,
-    emoji: '🏡',
-    title: 'Phòng Trọ Làng Đại Học',
-    location: 'Thủ Đức',
-    owner: 'TT',
-    ownerColor: 'bg-blue-500',
-    price: '2.8M',
-    date: '21/02',
-    status: 'pending' as const,
-  },
-  {
-    id: 3,
-    emoji: '🏢',
-    title: 'Mini Studio Full Nội Thất',
-    location: 'Q9',
-    owner: 'LM',
-    ownerColor: 'bg-amber-500',
-    price: '4.2M',
-    date: '20/02',
-    status: 'approved' as const,
-  },
-  {
-    id: 4,
-    emoji: '🛖',
-    title: 'Phòng Trọ Bình Dân',
-    location: 'Sóng Thần',
-    owner: 'PH',
-    ownerColor: 'bg-red-500',
-    price: '1.8M',
-    date: '19/02',
-    status: 'reported' as const,
-  },
-  {
-    id: 5,
-    emoji: '🏠',
-    title: 'Trọ Sinh Viên UEH',
-    location: 'Q4',
-    owner: 'VQ',
-    ownerColor: 'bg-green-500',
-    price: '2.2M',
-    date: '18/02',
-    status: 'approved' as const,
-  },
-];
+const mockPosts: any[] = [];
 
-const mockUsers = [
-  {
-    id: 1,
-    name: 'Lê Thị Hương',
-    email: 'huong.le@email.com',
-    avatar: 'LT',
-    avatarColor: 'bg-green-500',
-    role: 'landlord',
-    phone: '0901 234 567',
-    joinDate: '10/01/2026',
-    activity: '3 tin đăng',
-    status: 'active',
-  },
-  {
-    id: 2,
-    name: 'Nguyễn Minh Khoa',
-    email: 'khoa.nm@email.com',
-    avatar: 'NM',
-    avatarColor: 'bg-blue-500',
-    role: 'user',
-    phone: '0912 345 678',
-    joinDate: '15/01/2026',
-    activity: 'Tìm kiếm 12 lần',
-    status: 'active',
-  },
-  {
-    id: 3,
-    name: 'Phạm Đức Thắng',
-    email: 'thang.pd@email.com',
-    avatar: 'PD',
-    avatarColor: 'bg-amber-500',
-    role: 'landlord',
-    phone: '0978 456 789',
-    joinDate: '05/02/2026',
-    activity: '8 tin đăng',
-    status: 'active',
-  },
-  {
-    id: 4,
-    name: 'Trịnh Văn Cò',
-    email: 'co.tv@email.com',
-    avatar: 'TV',
-    avatarColor: 'bg-red-500',
-    role: 'landlord',
-    phone: '0945 678 901',
-    joinDate: '12/01/2026',
-    activity: '3 lần báo cáo',
-    status: 'blocked',
-  },
-  {
-    id: 5,
-    name: 'Bùi Thị Lan',
-    email: 'lan.bt@email.com',
-    avatar: 'BT',
-    avatarColor: 'bg-green-500',
-    role: 'user',
-    phone: '0867 890 123',
-    joinDate: '20/02/2026',
-    activity: 'Tìm kiếm 4 lần',
-    status: 'active',
-  },
-];
+const mockUsers: any[] = [];
 
-const mockVerifications = [
-  {
-    id: 1,
-    icon: '🏠',
-    name: 'Nguyễn Văn An',
-    package: 'Gói Cơ Bản',
-    packageColor: 'amber',
-    location: 'Q9',
-    rooms: 6,
-    photos: 12,
-    video: true,
-    gpsPercent: 94,
-    gpsDistance: '28m',
-    gpsStatus: 'success',
-  },
-  {
-    id: 2,
-    icon: '🏡',
-    name: 'Trần Thị Bảo',
-    package: 'Gói Premium',
-    packageColor: 'green',
-    location: 'Thủ Đức',
-    rooms: 12,
-    photos: 24,
-    video: true,
-    video360: true,
-    gpsPercent: 100,
-    gpsDistance: '8m',
-    gpsStatus: 'success',
-  },
-  {
-    id: 3,
-    icon: '⚠️',
-    name: 'Phạm Hải Đăng',
-    package: '⚠️ GPS không hợp lệ',
-    packageColor: 'red',
-    location: 'Q12',
-    rooms: 4,
-    photos: 5,
-    video: false,
-    gpsPercent: 38,
-    gpsDistance: '2.1km',
-    gpsStatus: 'error',
-    warning: true,
-  },
-  {
-    id: 4,
-    icon: '🛖',
-    name: 'Võ Quang Minh',
-    package: 'Chờ kiểm tra thực địa',
-    packageColor: 'teal',
-    location: 'Thủ Đức',
-    rooms: 20,
-    photos: 0,
-    video: false,
-    gpsPercent: 80,
-    gpsDistance: '45m',
-    gpsStatus: 'waiting',
-    needsInspection: true,
-  },
-];
+const mockVerifications: any[] = [];
 
 export function AdminPage() {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
-  const [activeView, setActiveView] = useState<AdminView>('dashboard');
+  const [activeView, setActiveView] = useState<AdminView>("dashboard");
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'admin') {
-      navigate('/login');
+    if (!isAuthenticated || user?.role !== "admin") {
+      navigate("/login");
     }
   }, [isAuthenticated, user, navigate]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!isAuthenticated || user?.role !== "admin") {
     return null;
   }
 
@@ -302,14 +111,14 @@ export function AdminPage() {
               TỔNG QUAN
             </div>
             <button
-              onClick={() => setActiveView('dashboard')}
+              onClick={() => setActiveView("dashboard")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'dashboard'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "dashboard"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'dashboard' && (
+              {activeView === "dashboard" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               <LayoutDashboard className="size-4" />
@@ -323,14 +132,14 @@ export function AdminPage() {
               QUẢN LÝ
             </div>
             <button
-              onClick={() => setActiveView('posts')}
+              onClick={() => setActiveView("posts")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'posts'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "posts"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'posts' && (
+              {activeView === "posts" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               <FileText className="size-4" />
@@ -340,28 +149,28 @@ export function AdminPage() {
               </span>
             </button>
             <button
-              onClick={() => setActiveView('users')}
+              onClick={() => setActiveView("users")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'users'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "users"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'users' && (
+              {activeView === "users" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               <Users className="size-4" />
               Người dùng
             </button>
             <button
-              onClick={() => setActiveView('verification')}
+              onClick={() => setActiveView("verification")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'verification'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "verification"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'verification' && (
+              {activeView === "verification" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               <CheckCircle className="size-4" />
@@ -371,14 +180,14 @@ export function AdminPage() {
               </span>
             </button>
             <button
-              onClick={() => setActiveView('inspections')}
+              onClick={() => setActiveView("inspections")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'inspections'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "inspections"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'inspections' && (
+              {activeView === "inspections" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               <ShieldCheck className="size-4" />
@@ -388,14 +197,14 @@ export function AdminPage() {
               </span>
             </button>
             <button
-              onClick={() => setActiveView('revenue')}
+              onClick={() => setActiveView("revenue")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
-                activeView === 'revenue'
-                  ? 'bg-[#dcfce7] text-[#16a34a] font-semibold'
-                  : 'text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]'
+                activeView === "revenue"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
               }`}
             >
-              {activeView === 'revenue' && (
+              {activeView === "revenue" && (
                 <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
               )}
               📈
@@ -423,9 +232,11 @@ export function AdminPage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-gray-900 truncate">
-                {user?.fullName || 'Lý Hoàng Thành'}
+                {user?.fullName || "Lý Hoàng Thành"}
               </div>
-              <div className="text-[10px] text-[#94a3b8]">Super Admin · CEO</div>
+              <div className="text-[10px] text-[#94a3b8]">
+                Super Admin · CEO
+              </div>
             </div>
             <button
               onClick={handleLogout}
@@ -442,12 +253,12 @@ export function AdminPage() {
         {/* Top Bar */}
         <header className="h-[60px] bg-white border-b border-[#e2e8f0] px-6 flex items-center justify-between sticky top-0 z-40">
           <h2 className="text-base font-bold text-[#0f172a]">
-            {activeView === 'dashboard' && 'Dashboard'}
-            {activeView === 'posts' && 'Quản lý Tin đăng'}
-            {activeView === 'users' && 'Quản lý Người dùng'}
-            {activeView === 'verification' && 'Xác thực Tích Xanh ✅'}
-            {activeView === 'revenue' && 'Doanh Thu'}
-            {activeView === 'inspections' && 'Kiểm tra thực địa'}
+            {activeView === "dashboard" && "Dashboard"}
+            {activeView === "posts" && "Quản lý Tin đăng"}
+            {activeView === "users" && "Quản lý Người dùng"}
+            {activeView === "verification" && "Xác thực Tích Xanh ✅"}
+            {activeView === "revenue" && "Doanh Thu"}
+            {activeView === "inspections" && "Kiểm tra thực địa"}
           </h2>
           <div className="flex items-center gap-3">
             <button className="px-3.5 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors">
@@ -463,12 +274,12 @@ export function AdminPage() {
 
         {/* Content Area */}
         <div className="p-6">
-          {activeView === 'dashboard' && <DashboardView />}
-          {activeView === 'posts' && <PostsView />}
-          {activeView === 'users' && <UsersView />}
-          {activeView === 'verification' && <VerificationView />}
-          {activeView === 'revenue' && <RevenueView />}
-          {activeView === 'inspections' && <InspectionsView />}
+          {activeView === "dashboard" && <DashboardView />}
+          {activeView === "posts" && <PostsView />}
+          {activeView === "users" && <UsersView />}
+          {activeView === "verification" && <VerificationView />}
+          {activeView === "revenue" && <RevenueView />}
+          {activeView === "inspections" && <InspectionsView />}
         </div>
       </main>
     </div>
@@ -534,19 +345,24 @@ function DashboardView() {
           </div>
           <div className="h-[90px] flex items-end justify-between gap-2 mb-3">
             {weeklySearchData.map((item) => (
-              <div key={item.day} className="flex-1 flex flex-col items-center gap-1">
+              <div
+                key={item.day}
+                className="flex-1 flex flex-col items-center gap-1"
+              >
                 <div
                   className="w-full rounded-t-md transition-all"
                   style={{
                     height: `${item.value}%`,
                     background: item.highlight
-                      ? 'linear-gradient(180deg, #16a34a, #bbf7d0)'
-                      : 'linear-gradient(180deg, #0ea5e9, #bae6fd)',
+                      ? "linear-gradient(180deg, #16a34a, #bbf7d0)"
+                      : "linear-gradient(180deg, #0ea5e9, #bae6fd)",
                   }}
                 />
                 <span
                   className={`text-[10px] ${
-                    item.highlight ? 'text-[#16a34a] font-bold' : 'text-[#94a3b8]'
+                    item.highlight
+                      ? "text-[#16a34a] font-bold"
+                      : "text-[#94a3b8]"
                   }`}
                 >
                   {item.label}
@@ -562,7 +378,8 @@ function DashboardView() {
               Cao nhất: <strong className="text-[#16a34a]">Thứ Sáu</strong>
             </span>
             <span className="text-[#94a3b8]">
-              Khu vực hot: <strong className="text-[#d97706]">Q9·Làng ĐH</strong>
+              Khu vực hot:{" "}
+              <strong className="text-[#d97706]">Q9·Làng ĐH</strong>
             </span>
           </div>
         </div>
@@ -578,17 +395,21 @@ function DashboardView() {
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      activity.color === 'red'
-                        ? 'bg-[#dc2626]'
-                        : activity.color === 'green'
-                        ? 'bg-[#16a34a]'
-                        : activity.color === 'amber'
-                        ? 'bg-[#d97706]'
-                        : 'bg-[#2563eb]'
+                      activity.color === "red"
+                        ? "bg-[#dc2626]"
+                        : activity.color === "green"
+                          ? "bg-[#16a34a]"
+                          : activity.color === "amber"
+                            ? "bg-[#d97706]"
+                            : "bg-[#2563eb]"
                     }`}
                   />
-                  <span className="flex-1 text-[12.5px] text-[#475569]">{activity.text}</span>
-                  <span className="text-[11px] text-[#94a3b8]">{activity.time}</span>
+                  <span className="flex-1 text-[12.5px] text-[#475569]">
+                    {activity.text}
+                  </span>
+                  <span className="text-[11px] text-[#94a3b8]">
+                    {activity.time}
+                  </span>
                 </div>
                 {idx < recentActivities.length - 1 && (
                   <div className="h-px bg-[#e2e8f0] my-3" />
@@ -647,17 +468,23 @@ function DashboardView() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
                 <span className="text-xs text-[#475569]">Đang hiển thị</span>
-                <span className="ml-auto text-xs font-bold text-[#0f172a]">63%</span>
+                <span className="ml-auto text-xs font-bold text-[#0f172a]">
+                  63%
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#d97706]" />
                 <span className="text-xs text-[#475569]">Chờ duyệt</span>
-                <span className="ml-auto text-xs font-bold text-[#0f172a]">24%</span>
+                <span className="ml-auto text-xs font-bold text-[#0f172a]">
+                  24%
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#dc2626]" />
                 <span className="text-xs text-[#475569]">Bị báo cáo</span>
-                <span className="ml-auto text-xs font-bold text-[#0f172a]">13%</span>
+                <span className="ml-auto text-xs font-bold text-[#0f172a]">
+                  13%
+                </span>
               </div>
             </div>
           </div>
@@ -672,16 +499,24 @@ function DashboardView() {
             {topRooms.map((room, idx) => (
               <div key={room.rank}>
                 <div className="flex items-center gap-3">
-                  <span className="text-[#94a3b8] font-medium text-sm">#{room.rank}</span>
+                  <span className="text-[#94a3b8] font-medium text-sm">
+                    #{room.rank}
+                  </span>
                   <div className="flex-1">
                     <div className="text-[12.5px] font-semibold text-[#0f172a]">
                       {room.name}
                     </div>
-                    <div className="text-[11px] text-[#94a3b8]">{room.location}</div>
+                    <div className="text-[11px] text-[#94a3b8]">
+                      {room.location}
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-[#16a34a]">{room.views}</span>
+                  <span className="text-sm font-bold text-[#16a34a]">
+                    {room.views}
+                  </span>
                 </div>
-                {idx < topRooms.length - 1 && <div className="h-px bg-[#e2e8f0] my-3" />}
+                {idx < topRooms.length - 1 && (
+                  <div className="h-px bg-[#e2e8f0] my-3" />
+                )}
               </div>
             ))}
           </div>
@@ -728,13 +563,13 @@ function KPICard({
         <div
           className={`text-[11px] flex items-center gap-1 ${
             changePositive
-              ? 'text-[#16a34a]'
+              ? "text-[#16a34a]"
               : changeNegative
-              ? 'text-[#dc2626]'
-              : 'text-[#94a3b8]'
+                ? "text-[#dc2626]"
+                : "text-[#94a3b8]"
           }`}
         >
-          {changePositive && '↑'}
+          {changePositive && "↑"}
           {change}
         </div>
       </div>
@@ -744,7 +579,9 @@ function KPICard({
 
 // Posts View Component
 function PostsView() {
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported' | 'approved'>('all');
+  const [activeTab, setActiveTab] = useState<
+    "all" | "pending" | "reported" | "approved"
+  >("all");
 
   return (
     <div className="space-y-4">
@@ -753,31 +590,31 @@ function PostsView() {
       {/* Tab Bar */}
       <div className="flex items-center gap-2">
         <TabButton
-          active={activeTab === 'all'}
-          onClick={() => setActiveTab('all')}
+          active={activeTab === "all"}
+          onClick={() => setActiveTab("all")}
           count="1,284"
         >
           Tất cả
         </TabButton>
         <TabButton
-          active={activeTab === 'pending'}
-          onClick={() => setActiveTab('pending')}
+          active={activeTab === "pending"}
+          onClick={() => setActiveTab("pending")}
           count="12"
           variant="amber"
         >
           Chờ duyệt
         </TabButton>
         <TabButton
-          active={activeTab === 'reported'}
-          onClick={() => setActiveTab('reported')}
+          active={activeTab === "reported"}
+          onClick={() => setActiveTab("reported")}
           count="5"
           variant="red"
         >
           Bị báo cáo
         </TabButton>
         <TabButton
-          active={activeTab === 'approved'}
-          onClick={() => setActiveTab('approved')}
+          active={activeTab === "approved"}
+          onClick={() => setActiveTab("approved")}
         >
           Đang hiển thị
         </TabButton>
@@ -791,7 +628,9 @@ function PostsView() {
             placeholder="Tìm tên phòng, địa chỉ..."
             className="w-full h-9 pl-8 pr-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-xs focus:border-[#16a34a] focus:outline-none"
           />
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8]">🔍</div>
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+            🔍
+          </div>
         </div>
         <select className="h-9 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-xs">
           <option>Tất cả khu vực</option>
@@ -828,7 +667,10 @@ function PostsView() {
           </thead>
           <tbody>
             {mockPosts.map((post) => (
-              <tr key={post.id} className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]">
+              <tr
+                key={post.id}
+                className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]"
+              >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-8 rounded-lg bg-[#dcfce7] flex items-center justify-center text-sm">
@@ -838,7 +680,9 @@ function PostsView() {
                       <div className="text-[12.5px] font-semibold text-[#0f172a]">
                         {post.title}
                       </div>
-                      <div className="text-[11px] text-[#94a3b8]">📍 {post.location}</div>
+                      <div className="text-[11px] text-[#94a3b8]">
+                        📍 {post.location}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -852,16 +696,20 @@ function PostsView() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm font-bold text-[#16a34a]">{post.price}</span>
+                  <span className="text-sm font-bold text-[#16a34a]">
+                    {post.price}
+                  </span>
                   <span className="text-[11px] text-[#94a3b8]">/th</span>
                 </td>
-                <td className="px-4 py-3 text-xs text-[#475569]">{post.date}</td>
+                <td className="px-4 py-3 text-xs text-[#475569]">
+                  {post.date}
+                </td>
                 <td className="px-4 py-3">
                   <StatusPill status={post.status} />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
-                    {post.status === 'pending' && (
+                    {post.status === "pending" && (
                       <>
                         <button className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]">
                           Duyệt
@@ -871,12 +719,12 @@ function PostsView() {
                         </button>
                       </>
                     )}
-                    {post.status === 'approved' && (
+                    {post.status === "approved" && (
                       <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
                         Ẩn tin
                       </button>
                     )}
-                    {post.status === 'reported' && (
+                    {post.status === "reported" && (
                       <>
                         <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
                           Giữ tin
@@ -954,7 +802,10 @@ function UsersView() {
           </thead>
           <tbody>
             {mockUsers.map((user) => (
-              <tr key={user.id} className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]">
+              <tr
+                key={user.id}
+                className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]"
+              >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div
@@ -966,27 +817,35 @@ function UsersView() {
                       <div className="text-[12.5px] font-semibold text-[#0f172a]">
                         {user.name}
                       </div>
-                      <div className="text-[11px] text-[#94a3b8]">{user.email}</div>
+                      <div className="text-[11px] text-[#94a3b8]">
+                        {user.email}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${
-                      user.role === 'landlord'
-                        ? 'bg-[#fef3c7] text-[#d97706]'
-                        : 'bg-[#dbeafe] text-[#2563eb]'
+                      user.role === "landlord"
+                        ? "bg-[#fef3c7] text-[#d97706]"
+                        : "bg-[#dbeafe] text-[#2563eb]"
                     }`}
                   >
-                    {user.role === 'landlord' ? 'Chủ trọ' : 'Người thuê'}
+                    {user.role === "landlord" ? "Chủ trọ" : "Người thuê"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-[#475569]">{user.phone}</td>
-                <td className="px-4 py-3 text-xs text-[#475569]">{user.joinDate}</td>
+                <td className="px-4 py-3 text-xs text-[#475569]">
+                  {user.phone}
+                </td>
+                <td className="px-4 py-3 text-xs text-[#475569]">
+                  {user.joinDate}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`text-xs ${
-                      user.status === 'blocked' ? 'text-[#dc2626]' : 'text-[#16a34a]'
+                      user.status === "blocked"
+                        ? "text-[#dc2626]"
+                        : "text-[#16a34a]"
                     }`}
                   >
                     {user.activity}
@@ -995,12 +854,12 @@ function UsersView() {
                 <td className="px-4 py-3">
                   <span
                     className={`px-2.5 py-1 rounded-full text-[11px] font-medium ${
-                      user.status === 'blocked'
-                        ? 'bg-[#fee2e2] text-[#dc2626]'
-                        : 'bg-[#dcfce7] text-[#16a34a]'
+                      user.status === "blocked"
+                        ? "bg-[#fee2e2] text-[#dc2626]"
+                        : "bg-[#dcfce7] text-[#16a34a]"
                     }`}
                   >
-                    {user.status === 'blocked' ? 'BỊ KHOÁ' : 'Hoạt động'}
+                    {user.status === "blocked" ? "BỊ KHOÁ" : "Hoạt động"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -1008,7 +867,7 @@ function UsersView() {
                     <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
                       Chi tiết
                     </button>
-                    {user.status === 'blocked' ? (
+                    {user.status === "blocked" ? (
                       <button className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]">
                         Mở khoá
                       </button>
@@ -1033,16 +892,16 @@ function VerificationView() {
   const navigate = useNavigate();
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleData, setScheduleData] = useState({
-    landlordName: '',
-    landlordPhone: '',
-    propertyName: '',
-    propertyAddress: '',
-    district: '',
-    roomCount: '',
-    scheduledDate: '',
-    scheduledTime: '09:00',
-    inspectionType: 'standard',
-    notes: '',
+    landlordName: "",
+    landlordPhone: "",
+    propertyName: "",
+    propertyAddress: "",
+    district: "",
+    roomCount: "",
+    scheduledDate: "",
+    scheduledTime: "09:00",
+    inspectionType: "standard",
+    notes: "",
   });
 
   const handleScheduleSubmit = (e: React.FormEvent) => {
@@ -1050,29 +909,34 @@ function VerificationView() {
 
     // Validate ALL required fields in JS (không dựa hoàn toàn vào HTML5 native validation)
     const errors: string[] = [];
-    if (!scheduleData.landlordName.trim()) errors.push('Họ tên chủ trọ');
-    if (!scheduleData.landlordPhone.trim()) errors.push('Số điện thoại');
-    if (!scheduleData.propertyName.trim()) errors.push('Tên căn trọ');
-    if (!scheduleData.propertyAddress.trim()) errors.push('Địa chỉ căn trọ');
-    if (!scheduleData.scheduledDate) errors.push('Ngày kiểm tra');
+    if (!scheduleData.landlordName.trim()) errors.push("Họ tên chủ trọ");
+    if (!scheduleData.landlordPhone.trim()) errors.push("Số điện thoại");
+    if (!scheduleData.propertyName.trim()) errors.push("Tên căn trọ");
+    if (!scheduleData.propertyAddress.trim()) errors.push("Địa chỉ căn trọ");
+    if (!scheduleData.scheduledDate) errors.push("Ngày kiểm tra");
 
     if (errors.length > 0) {
-      alert(`Vui lòng điền đầy đủ thông tin bắt buộc:\n• ${errors.join('\n• ')}`);
+      alert(
+        `Vui lòng điền đầy đủ thông tin bắt buộc:\n• ${errors.join("\n• ")}`,
+      );
       return;
     }
 
     const checkoutPayload = {
-      type: 'inspection',
+      type: "inspection",
       inspectionData: scheduleData,
       amount: 199000,
     };
 
     // Backup vào sessionStorage để tránh mất state do môi trường iframe/sandbox
     try {
-      sessionStorage.setItem('inspectionCheckoutData', JSON.stringify(checkoutPayload));
+      sessionStorage.setItem(
+        "inspectionCheckoutData",
+        JSON.stringify(checkoutPayload),
+      );
     } catch (_) {}
 
-    navigate('/checkout', { state: checkoutPayload });
+    navigate("/checkout", { state: checkoutPayload });
   };
 
   return (
@@ -1106,8 +970,12 @@ function VerificationView() {
                 <ShieldCheck className="size-7 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-lg">Đặt lịch kiểm tra ngay</h3>
-                <p className="text-blue-100 text-sm">Xác thực thực địa để cấp Tích Xanh cho chủ trọ</p>
+                <h3 className="text-white font-bold text-lg">
+                  Đặt lịch kiểm tra ngay
+                </h3>
+                <p className="text-blue-100 text-sm">
+                  Xác thực thực địa để cấp Tích Xanh cho chủ trọ
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -1136,8 +1004,12 @@ function VerificationView() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="size-6 text-white" />
                 <div>
-                  <h3 className="text-white font-bold text-base">Đặt lịch kiểm tra thực địa</h3>
-                  <p className="text-blue-100 text-xs">Phí: 199.000đ / 1 lần kiểm tra</p>
+                  <h3 className="text-white font-bold text-base">
+                    Đặt lịch kiểm tra thực địa
+                  </h3>
+                  <p className="text-blue-100 text-xs">
+                    Phí: 199.000đ / 1 lần kiểm tra
+                  </p>
                 </div>
               </div>
               <button
@@ -1150,7 +1022,11 @@ function VerificationView() {
           </div>
 
           {/* Form Body */}
-          <form onSubmit={handleScheduleSubmit} className="p-6 space-y-5" noValidate>
+          <form
+            onSubmit={handleScheduleSubmit}
+            className="p-6 space-y-5"
+            noValidate
+          >
             {/* Row 1: Thông tin chủ trọ */}
             <div>
               <div className="text-xs font-bold uppercase text-[#94a3b8] mb-3 flex items-center gap-1.5">
@@ -1165,7 +1041,12 @@ function VerificationView() {
                   <input
                     type="text"
                     value={scheduleData.landlordName}
-                    onChange={(e) => setScheduleData({ ...scheduleData, landlordName: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        landlordName: e.target.value,
+                      })
+                    }
                     placeholder="VD: Nguyễn Văn An"
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
@@ -1178,7 +1059,12 @@ function VerificationView() {
                   <input
                     type="tel"
                     value={scheduleData.landlordPhone}
-                    onChange={(e) => setScheduleData({ ...scheduleData, landlordPhone: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        landlordPhone: e.target.value,
+                      })
+                    }
                     placeholder="VD: 0901 234 567"
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
@@ -1201,7 +1087,12 @@ function VerificationView() {
                   <input
                     type="text"
                     value={scheduleData.propertyName}
-                    onChange={(e) => setScheduleData({ ...scheduleData, propertyName: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        propertyName: e.target.value,
+                      })
+                    }
                     placeholder="VD: Trọ Cao Cấp FPTU"
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
@@ -1214,7 +1105,12 @@ function VerificationView() {
                   <input
                     type="number"
                     value={scheduleData.roomCount}
-                    onChange={(e) => setScheduleData({ ...scheduleData, roomCount: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        roomCount: e.target.value,
+                      })
+                    }
                     placeholder="VD: 12"
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                   />
@@ -1228,7 +1124,12 @@ function VerificationView() {
                   <input
                     type="text"
                     value={scheduleData.propertyAddress}
-                    onChange={(e) => setScheduleData({ ...scheduleData, propertyAddress: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        propertyAddress: e.target.value,
+                      })
+                    }
                     placeholder="VD: 123 Đường Lê Văn Việt, P. Hiệp Phú"
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
@@ -1240,7 +1141,12 @@ function VerificationView() {
                   </label>
                   <select
                     value={scheduleData.district}
-                    onChange={(e) => setScheduleData({ ...scheduleData, district: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        district: e.target.value,
+                      })
+                    }
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                   >
                     <option value="">-- Chọn --</option>
@@ -1271,8 +1177,13 @@ function VerificationView() {
                   <input
                     type="date"
                     value={scheduleData.scheduledDate}
-                    onChange={(e) => setScheduleData({ ...scheduleData, scheduledDate: e.target.value })}
-                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        scheduledDate: e.target.value,
+                      })
+                    }
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
                   />
@@ -1283,7 +1194,12 @@ function VerificationView() {
                   </label>
                   <select
                     value={scheduleData.scheduledTime}
-                    onChange={(e) => setScheduleData({ ...scheduleData, scheduledTime: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        scheduledTime: e.target.value,
+                      })
+                    }
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                     required
                   >
@@ -1302,7 +1218,12 @@ function VerificationView() {
                   </label>
                   <select
                     value={scheduleData.inspectionType}
-                    onChange={(e) => setScheduleData({ ...scheduleData, inspectionType: e.target.value })}
+                    onChange={(e) =>
+                      setScheduleData({
+                        ...scheduleData,
+                        inspectionType: e.target.value,
+                      })
+                    }
                     className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
                   >
                     <option value="standard">Kiểm tra tiêu chuẩn</option>
@@ -1320,7 +1241,9 @@ function VerificationView() {
               </label>
               <textarea
                 value={scheduleData.notes}
-                onChange={(e) => setScheduleData({ ...scheduleData, notes: e.target.value })}
+                onChange={(e) =>
+                  setScheduleData({ ...scheduleData, notes: e.target.value })
+                }
                 placeholder="VD: Hẹn tại cổng chính, gọi trước 15 phút, cần kiểm tra kỹ hệ thống PCCC..."
                 className="w-full min-h-[70px] px-3 py-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none resize-none"
               />
@@ -1334,27 +1257,41 @@ function VerificationView() {
                     <ShieldCheck className="size-4 text-white" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#0f172a]">Phí kiểm tra thực địa</div>
-                    <div className="text-[11px] text-[#94a3b8]">1 lần kiểm tra - Bao gồm báo cáo chi tiết</div>
+                    <div className="text-sm font-bold text-[#0f172a]">
+                      Phí kiểm tra thực địa
+                    </div>
+                    <div className="text-[11px] text-[#94a3b8]">
+                      1 lần kiểm tra - Bao gồm báo cáo chi tiết
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-[#2563eb]">199.000đ</div>
-                  <div className="text-[10px] text-[#94a3b8]">Đã bao gồm VAT</div>
+                  <div className="text-2xl font-bold text-[#2563eb]">
+                    199.000đ
+                  </div>
+                  <div className="text-[10px] text-[#94a3b8]">
+                    Đã bao gồm VAT
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px]">
                 <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
                   <div className="text-blue-600 mb-0.5">📍</div>
-                  <div className="font-semibold text-[#0f172a]">Xác thực GPS</div>
+                  <div className="font-semibold text-[#0f172a]">
+                    Xác thực GPS
+                  </div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
                   <div className="text-blue-600 mb-0.5">📸</div>
-                  <div className="font-semibold text-[#0f172a]">Chụp ảnh thực tế</div>
+                  <div className="font-semibold text-[#0f172a]">
+                    Chụp ảnh thực tế
+                  </div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
                   <div className="text-blue-600 mb-0.5">📋</div>
-                  <div className="font-semibold text-[#0f172a]">Báo cáo đánh giá</div>
+                  <div className="font-semibold text-[#0f172a]">
+                    Báo cáo đánh giá
+                  </div>
                 </div>
               </div>
             </div>
@@ -1386,17 +1323,21 @@ function VerificationView() {
           <div
             key={item.id}
             className={`bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4 ${
-              item.warning ? 'border-[#fecaca]' : item.needsInspection ? 'border-[#bae6fd]' : 'border-[#e2e8f0]'
+              item.warning
+                ? "border-[#fecaca]"
+                : item.needsInspection
+                  ? "border-[#bae6fd]"
+                  : "border-[#e2e8f0]"
             }`}
           >
             {/* Icon */}
             <div
               className={`w-[46px] h-[46px] rounded-[10px] flex items-center justify-center text-xl flex-shrink-0 ${
                 item.warning
-                  ? 'bg-[#fee2e2]'
+                  ? "bg-[#fee2e2]"
                   : item.needsInspection
-                  ? 'bg-[#dbeafe]'
-                  : 'bg-[#dcfce7]'
+                    ? "bg-[#dbeafe]"
+                    : "bg-[#dcfce7]"
               }`}
             >
               {item.icon}
@@ -1405,16 +1346,18 @@ function VerificationView() {
             {/* Info */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[13.5px] font-bold text-[#0f172a]">{item.name}</span>
+                <span className="text-[13.5px] font-bold text-[#0f172a]">
+                  {item.name}
+                </span>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                    item.packageColor === 'amber'
-                      ? 'bg-[#fef3c7] text-[#d97706]'
-                      : item.packageColor === 'green'
-                      ? 'bg-[#dcfce7] text-[#16a34a]'
-                      : item.packageColor === 'red'
-                      ? 'bg-[#fee2e2] text-[#dc2626]'
-                      : 'bg-[#dbeafe] text-[#0ea5e9]'
+                    item.packageColor === "amber"
+                      ? "bg-[#fef3c7] text-[#d97706]"
+                      : item.packageColor === "green"
+                        ? "bg-[#dcfce7] text-[#16a34a]"
+                        : item.packageColor === "red"
+                          ? "bg-[#fee2e2] text-[#dc2626]"
+                          : "bg-[#dbeafe] text-[#0ea5e9]"
                   }`}
                 >
                   {item.package}
@@ -1422,36 +1365,42 @@ function VerificationView() {
               </div>
               <div className="text-[11.5px] text-[#94a3b8] mb-2">
                 📍 {item.location} • {item.rooms} phòng • {item.photos} ảnh
-                {item.video && ' + 1 video'}
-                {item.video360 && ' 360°'}
-                {!item.video && item.photos < 10 && ' (thiếu video)'}
+                {item.video && " + 1 video"}
+                {item.video360 && " 360°"}
+                {!item.video && item.photos < 10 && " (thiếu video)"}
               </div>
               {/* GPS Progress */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-medium text-[#475569]">GPS:</span>
+                <span className="text-[11px] font-medium text-[#475569]">
+                  GPS:
+                </span>
                 <div className="flex-1 h-[5px] bg-[#e2e8f0] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${
-                      item.gpsStatus === 'success'
-                        ? 'bg-[#16a34a]'
-                        : item.gpsStatus === 'error'
-                        ? 'bg-[#dc2626]'
-                        : 'bg-[#0ea5e9]'
+                      item.gpsStatus === "success"
+                        ? "bg-[#16a34a]"
+                        : item.gpsStatus === "error"
+                          ? "bg-[#dc2626]"
+                          : "bg-[#0ea5e9]"
                     }`}
                     style={{ width: `${item.gpsPercent}%` }}
                   />
                 </div>
                 <span
                   className={`text-[11px] font-bold font-mono ${
-                    item.gpsStatus === 'success'
-                      ? 'text-[#16a34a]'
-                      : item.gpsStatus === 'error'
-                      ? 'text-[#dc2626]'
-                      : 'text-[#0ea5e9]'
+                    item.gpsStatus === "success"
+                      ? "text-[#16a34a]"
+                      : item.gpsStatus === "error"
+                        ? "text-[#dc2626]"
+                        : "text-[#0ea5e9]"
                   }`}
                 >
-                  {item.gpsPercent}% · {item.gpsDistance}{' '}
-                  {item.gpsStatus === 'success' ? '✓' : item.gpsStatus === 'error' ? '✗' : '~'}
+                  {item.gpsPercent}% · {item.gpsDistance}{" "}
+                  {item.gpsStatus === "success"
+                    ? "✓"
+                    : item.gpsStatus === "error"
+                      ? "✗"
+                      : "~"}
                 </span>
               </div>
             </div>
@@ -1504,26 +1453,26 @@ function TabButton({
   onClick: () => void;
   children: React.ReactNode;
   count?: string;
-  variant?: 'amber' | 'red';
+  variant?: "amber" | "red";
 }) {
   return (
     <button
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-[12.5px] font-semibold border transition-all ${
         active
-          ? 'bg-[#dcfce7] border-[#bbf7d0] text-[#16a34a]'
-          : 'bg-white border-[#e2e8f0] text-[#475569] hover:border-[#bbf7d0]'
+          ? "bg-[#dcfce7] border-[#bbf7d0] text-[#16a34a]"
+          : "bg-white border-[#e2e8f0] text-[#475569] hover:border-[#bbf7d0]"
       }`}
     >
       {children}
       {count && (
         <span
           className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-            variant === 'amber'
-              ? 'bg-[#fef3c7] text-[#d97706]'
-              : variant === 'red'
-              ? 'bg-[#fee2e2] text-[#dc2626]'
-              : 'bg-black/10'
+            variant === "amber"
+              ? "bg-[#fef3c7] text-[#d97706]"
+              : variant === "red"
+                ? "bg-[#fee2e2] text-[#dc2626]"
+                : "bg-black/10"
           }`}
         >
           {count}
@@ -1534,17 +1483,21 @@ function TabButton({
 }
 
 // Status Pill Component
-function StatusPill({ status }: { status: 'pending' | 'approved' | 'reported' }) {
+function StatusPill({
+  status,
+}: {
+  status: "pending" | "approved" | "reported";
+}) {
   const styles = {
-    pending: 'bg-[#fef3c7] text-[#d97706]',
-    approved: 'bg-[#dcfce7] text-[#16a34a]',
-    reported: 'bg-[#fee2e2] text-[#dc2626]',
+    pending: "bg-[#fef3c7] text-[#d97706]",
+    approved: "bg-[#dcfce7] text-[#16a34a]",
+    reported: "bg-[#fee2e2] text-[#dc2626]",
   };
 
   const labels = {
-    pending: 'Chờ duyệt',
-    approved: 'Hiển thị',
-    reported: 'Bị báo cáo',
+    pending: "Chờ duyệt",
+    approved: "Hiển thị",
+    reported: "Bị báo cáo",
   };
 
   return (

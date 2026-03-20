@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router';
-import { useCompare } from '@/app/contexts/CompareContext';
-import { Button } from '@/app/components/ui/button';
-import { X, GitCompare, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from "react-router-dom";
+import { useCompare } from "@/app/contexts/CompareContext";
+import { Button } from "@/app/components/ui/button";
+import { X, GitCompare, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 export function CompareFloatingBar() {
   const { compareList, removeFromCompare, clearCompare } = useCompare();
@@ -30,7 +30,7 @@ export function CompareFloatingBar() {
 
             {/* Mini cards */}
             <div className="flex gap-2">
-              {compareList.map(property => (
+              {compareList.map((property) => (
                 <motion.div
                   key={property.id}
                   initial={{ scale: 0 }}
@@ -68,7 +68,7 @@ export function CompareFloatingBar() {
               Xóa tất cả
             </Button>
             <Button
-              onClick={() => navigate('/compare')}
+              onClick={() => navigate("/compare")}
               disabled={compareList.length < 2}
               className="gap-2 bg-blue-600 hover:bg-blue-700"
             >

@@ -75,7 +75,7 @@ export interface RentalProperty {
   available: boolean;
   phone: string;
   ownerName: string;
-  verificationLevel: VerificationLevel;
+  verificationLevel: GreenBadgeLevel;
   verifiedAt?: string; // ISO date string
   locationAccuracy?: number; // meters
   // Landlord pinning fields
@@ -85,4 +85,26 @@ export interface RentalProperty {
   greenBadge?: GreenBadge;
   views?: number;
   favorites?: number;
+}
+
+export interface PropertyWithDistance extends RentalProperty {
+  distance: number;
+}
+
+export interface RentalFilters {
+  priceRange: [number, number];
+  areaRange: [number, number];
+  amenities: {
+    wifi: boolean;
+    furniture: boolean;
+    tv: boolean;
+    washingMachine: boolean;
+    kitchen: boolean;
+    refrigerator: boolean;
+    airConditioner: boolean;
+  };
+  verificationLevel: 'all' | 'verified' | 'none';
+  availability: 'all' | 'available' | 'unavailable';
+  sortBy: 'price-asc' | 'price-desc' | 'distance' | 'rating' | 'area';
+  radius: number;
 }

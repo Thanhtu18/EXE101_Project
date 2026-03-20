@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
 import {
   Home,
   LogOut,
@@ -26,138 +26,32 @@ import {
   AlertCircle,
   MessageCircle,
   Navigation,
-} from 'lucide-react';
+} from "lucide-react";
 
-type UserView = 'favorites' | 'search' | 'appointments' | 'book';
+type UserView = "favorites" | "search" | "appointments" | "book";
 
 // Mock data - Trọ yêu thích
-const mockFavorites = [
-  {
-    id: 1,
-    image: '🏠',
-    title: 'Trọ Cao Cấp FPTU',
-    price: 3500000,
-    area: 25,
-    location: 'Quận 9, TP.HCM',
-    address: '123 Đường D1, Khu Công Nghệ Cao',
-    amenities: ['Wifi', 'Điều hòa', 'Máy giặt', 'Bếp'],
-    rating: 4.8,
-    reviews: 24,
-    landlord: 'Nguyễn Văn A',
-    phone: '0901234567',
-    verified: true,
-    addedDate: '2024-02-20',
-  },
-  {
-    id: 2,
-    image: '🏡',
-    title: 'Phòng Trọ Làng Đại Học',
-    price: 2800000,
-    area: 20,
-    location: 'Thủ Đức, TP.HCM',
-    address: '456 Đường Tô Vĩnh Diện',
-    amenities: ['Wifi', 'Điều hòa', 'WC riêng'],
-    rating: 4.5,
-    reviews: 18,
-    landlord: 'Trần Thị B',
-    phone: '0912345678',
-    verified: true,
-    addedDate: '2024-02-18',
-  },
-  {
-    id: 3,
-    image: '🏢',
-    title: 'Mini Studio Full Nội Thất',
-    price: 4200000,
-    area: 35,
-    location: 'Bình Thạnh, TP.HCM',
-    address: '789 Điện Biên Phủ',
-    amenities: ['Wifi', 'Điều hòa', 'Máy giặt', 'Bếp', 'Ban công'],
-    rating: 4.9,
-    reviews: 31,
-    landlord: 'Lê Văn C',
-    phone: '0923456789',
-    verified: true,
-    addedDate: '2024-02-15',
-  },
-];
+const mockFavorites: any[] = [];
 
 // Mock data - Lịch hẹn
-const mockAppointments = [
-  {
-    id: 1,
-    propertyId: 1,
-    propertyTitle: 'Trọ Cao Cấp FPTU',
-    propertyImage: '🏠',
-    location: 'Quận 9, TP.HCM',
-    landlord: 'Nguyễn Văn A',
-    phone: '0901234567',
-    date: '2024-02-26',
-    time: '14:00',
-    status: 'confirmed' as const,
-    notes: 'Xem phòng tầng 2',
-    createdAt: '2024-02-24',
-  },
-  {
-    id: 2,
-    propertyId: 2,
-    propertyTitle: 'Phòng Trọ Làng Đại Học',
-    propertyImage: '🏡',
-    location: 'Thủ Đức, TP.HCM',
-    landlord: 'Trần Thị B',
-    phone: '0912345678',
-    date: '2024-02-28',
-    time: '10:00',
-    status: 'pending' as const,
-    notes: '',
-    createdAt: '2024-02-24',
-  },
-  {
-    id: 3,
-    propertyId: 3,
-    propertyTitle: 'Mini Studio Full Nội Thất',
-    propertyImage: '🏢',
-    location: 'Bình Thạnh, TP.HCM',
-    landlord: 'Lê Văn C',
-    phone: '0923456789',
-    date: '2024-02-23',
-    time: '16:00',
-    status: 'completed' as const,
-    notes: 'Đã xem, rất hài lòng',
-    createdAt: '2024-02-22',
-  },
-  {
-    id: 4,
-    propertyId: 4,
-    propertyTitle: 'Căn Hộ Mini Q7',
-    propertyImage: '🏘️',
-    location: 'Quận 7, TP.HCM',
-    landlord: 'Phạm Văn D',
-    phone: '0934567890',
-    date: '2024-02-25',
-    time: '15:00',
-    status: 'cancelled' as const,
-    notes: 'Không phù hợp giá',
-    createdAt: '2024-02-23',
-  },
-];
+const mockAppointments: any[] = [];
 
 export function UserDashboard() {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
-  const [activeView, setActiveView] = useState<UserView>('favorites');
+  const [activeView, setActiveView] = useState<UserView>("favorites");
   const [favorites, setFavorites] = useState(mockFavorites);
   const [appointments, setAppointments] = useState(mockAppointments);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate("/login");
     }
   }, [isAuthenticated, navigate]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   if (!isAuthenticated) {
@@ -170,7 +64,10 @@ export function UserDashboard() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate("/")}
+            >
               <Home className="size-8 text-green-600" />
               <div>
                 <h1 className="font-bold text-xl text-gray-900">MapHome</h1>
@@ -181,10 +78,12 @@ export function UserDashboard() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.username}</p>
+              <p className="text-sm font-medium text-gray-900">
+                {user?.fullName || user?.username}
+              </p>
               <p className="text-xs text-gray-500">Người dùng</p>
             </div>
-            <Button variant="outline" onClick={() => navigate('/')} size="sm">
+            <Button variant="outline" onClick={() => navigate("/")} size="sm">
               <Home className="size-4 mr-2" />
               Trang chủ
             </Button>
@@ -203,7 +102,9 @@ export function UserDashboard() {
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Xin chào, {user?.fullName || user?.username}! 👋
           </h2>
-          <p className="text-gray-600">Quản lý trọ yêu thích và lịch hẹn xem phòng của bạn</p>
+          <p className="text-gray-600">
+            Quản lý trọ yêu thích và lịch hẹn xem phòng của bạn
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -213,7 +114,9 @@ export function UserDashboard() {
               <p className="text-sm text-gray-600">Trọ yêu thích</p>
               <Heart className="size-5 text-red-500" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{favorites.length}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {favorites.length}
+            </p>
           </div>
 
           <div className="bg-white rounded-xl shadow p-6">
@@ -221,7 +124,9 @@ export function UserDashboard() {
               <p className="text-sm text-gray-600">Lịch hẹn</p>
               <Calendar className="size-5 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{appointments.length}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {appointments.length}
+            </p>
           </div>
 
           <div className="bg-white rounded-xl shadow p-6">
@@ -230,7 +135,7 @@ export function UserDashboard() {
               <Clock className="size-5 text-orange-600" />
             </div>
             <p className="text-3xl font-bold text-orange-600">
-              {appointments.filter((a) => a.status === 'pending').length}
+              {appointments.filter((a) => a.status === "pending").length}
             </p>
           </div>
 
@@ -240,7 +145,7 @@ export function UserDashboard() {
               <CheckCircle className="size-5 text-green-600" />
             </div>
             <p className="text-3xl font-bold text-green-600">
-              {appointments.filter((a) => a.status === 'completed').length}
+              {appointments.filter((a) => a.status === "completed").length}
             </p>
           </div>
         </div>
@@ -248,22 +153,22 @@ export function UserDashboard() {
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <TabButton
-            active={activeView === 'favorites'}
-            onClick={() => setActiveView('favorites')}
+            active={activeView === "favorites"}
+            onClick={() => setActiveView("favorites")}
             icon={<Heart className="size-4" />}
           >
             Trọ yêu thích
           </TabButton>
           <TabButton
-            active={activeView === 'search'}
-            onClick={() => setActiveView('search')}
+            active={activeView === "search"}
+            onClick={() => setActiveView("search")}
             icon={<Search className="size-4" />}
           >
             Tìm kiếm nâng cao
           </TabButton>
           <TabButton
-            active={activeView === 'appointments'}
-            onClick={() => setActiveView('appointments')}
+            active={activeView === "appointments"}
+            onClick={() => setActiveView("appointments")}
             icon={<Calendar className="size-4" />}
           >
             Lịch hẹn của tôi
@@ -271,12 +176,15 @@ export function UserDashboard() {
         </div>
 
         {/* Content Views */}
-        {activeView === 'favorites' && (
+        {activeView === "favorites" && (
           <FavoritesView favorites={favorites} setFavorites={setFavorites} />
         )}
-        {activeView === 'search' && <SearchView />}
-        {activeView === 'appointments' && (
-          <AppointmentsView appointments={appointments} setAppointments={setAppointments} />
+        {activeView === "search" && <SearchView />}
+        {activeView === "appointments" && (
+          <AppointmentsView
+            appointments={appointments}
+            setAppointments={setAppointments}
+          />
         )}
       </main>
     </div>
@@ -300,8 +208,8 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
         active
-          ? 'bg-gradient-to-r from-green-600 to-blue-600 text-white shadow-lg'
-          : 'bg-white text-gray-700 hover:bg-gray-50 shadow'
+          ? "bg-gradient-to-r from-green-600 to-blue-600 text-white shadow-lg"
+          : "bg-white text-gray-700 hover:bg-gray-50 shadow"
       }`}
     >
       {icon}
@@ -319,7 +227,7 @@ function FavoritesView({
   setFavorites: (favorites: typeof mockFavorites) => void;
 }) {
   const handleRemoveFavorite = (id: number) => {
-    if (confirm('Bạn có chắc muốn xóa khỏi danh sách yêu thích?')) {
+    if (confirm("Bạn có chắc muốn xóa khỏi danh sách yêu thích?")) {
       setFavorites(favorites.filter((f) => f.id !== id));
     }
   };
@@ -337,7 +245,7 @@ function FavoritesView({
           Bắt đầu khám phá và lưu các căn trọ bạn thích
         </p>
         <Button
-          onClick={() => navigate('/map')}
+          onClick={() => navigate("/map")}
           className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
         >
           <Search className="size-4 mr-2" />
@@ -355,7 +263,7 @@ function FavoritesView({
         </h3>
         <Button
           variant="outline"
-          onClick={() => navigate('/map')}
+          onClick={() => navigate("/map")}
           className="border-green-300 text-green-700"
         >
           <Search className="size-4 mr-2" />
@@ -473,45 +381,45 @@ function FavoritesView({
 // Search View Component
 function SearchView() {
   const [searchParams, setSearchParams] = useState({
-    keyword: '',
-    district: '',
-    priceMin: '',
-    priceMax: '',
-    areaMin: '',
-    areaMax: '',
+    keyword: "",
+    district: "",
+    priceMin: "",
+    priceMax: "",
+    areaMin: "",
+    areaMax: "",
     amenities: [] as string[],
     verified: false,
   });
 
   const amenitiesList = [
-    'Wifi',
-    'Điều hòa',
-    'Máy giặt',
-    'Bếp',
-    'WC riêng',
-    'Ban công',
-    'Gác lửng',
-    'Chỗ để xe',
+    "Wifi",
+    "Điều hòa",
+    "Máy giặt",
+    "Bếp",
+    "WC riêng",
+    "Ban công",
+    "Gác lửng",
+    "Chỗ để xe",
   ];
 
   const districts = [
-    'Quận 1',
-    'Quận 2',
-    'Quận 3',
-    'Quận 4',
-    'Quận 5',
-    'Quận 6',
-    'Quận 7',
-    'Quận 8',
-    'Quận 9',
-    'Quận 10',
-    'Quận 11',
-    'Quận 12',
-    'Thủ Đức',
-    'Bình Thạnh',
-    'Tân Bình',
-    'Phú Nhuận',
-    'Gò Vấp',
+    "Quận 1",
+    "Quận 2",
+    "Quận 3",
+    "Quận 4",
+    "Quận 5",
+    "Quận 6",
+    "Quận 7",
+    "Quận 8",
+    "Quận 9",
+    "Quận 10",
+    "Quận 11",
+    "Quận 12",
+    "Thủ Đức",
+    "Bình Thạnh",
+    "Tân Bình",
+    "Phú Nhuận",
+    "Gò Vấp",
   ];
 
   const toggleAmenity = (amenity: string) => {
@@ -524,17 +432,19 @@ function SearchView() {
   };
 
   const handleSearch = () => {
-    alert('Tìm kiếm với các tiêu chí:\n' + JSON.stringify(searchParams, null, 2));
+    alert(
+      "Tìm kiếm với các tiêu chí:\n" + JSON.stringify(searchParams, null, 2),
+    );
   };
 
   const handleReset = () => {
     setSearchParams({
-      keyword: '',
-      district: '',
-      priceMin: '',
-      priceMax: '',
-      areaMin: '',
-      areaMax: '',
+      keyword: "",
+      district: "",
+      priceMin: "",
+      priceMax: "",
+      areaMin: "",
+      areaMax: "",
       amenities: [],
       verified: false,
     });
@@ -559,7 +469,9 @@ function SearchView() {
           <Input
             type="text"
             value={searchParams.keyword}
-            onChange={(e) => setSearchParams({ ...searchParams, keyword: e.target.value })}
+            onChange={(e) =>
+              setSearchParams({ ...searchParams, keyword: e.target.value })
+            }
             placeholder="Tên phòng trọ, địa chỉ..."
             className="w-full"
           />
@@ -572,7 +484,9 @@ function SearchView() {
           </label>
           <select
             value={searchParams.district}
-            onChange={(e) => setSearchParams({ ...searchParams, district: e.target.value })}
+            onChange={(e) =>
+              setSearchParams({ ...searchParams, district: e.target.value })
+            }
             className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:border-green-600 focus:outline-none"
           >
             <option value="">Tất cả quận/huyện</option>
@@ -593,13 +507,17 @@ function SearchView() {
             <Input
               type="number"
               value={searchParams.priceMin}
-              onChange={(e) => setSearchParams({ ...searchParams, priceMin: e.target.value })}
+              onChange={(e) =>
+                setSearchParams({ ...searchParams, priceMin: e.target.value })
+              }
               placeholder="Từ"
             />
             <Input
               type="number"
               value={searchParams.priceMax}
-              onChange={(e) => setSearchParams({ ...searchParams, priceMax: e.target.value })}
+              onChange={(e) =>
+                setSearchParams({ ...searchParams, priceMax: e.target.value })
+              }
               placeholder="Đến"
             />
           </div>
@@ -614,13 +532,17 @@ function SearchView() {
             <Input
               type="number"
               value={searchParams.areaMin}
-              onChange={(e) => setSearchParams({ ...searchParams, areaMin: e.target.value })}
+              onChange={(e) =>
+                setSearchParams({ ...searchParams, areaMin: e.target.value })
+              }
               placeholder="Từ"
             />
             <Input
               type="number"
               value={searchParams.areaMax}
-              onChange={(e) => setSearchParams({ ...searchParams, areaMax: e.target.value })}
+              onChange={(e) =>
+                setSearchParams({ ...searchParams, areaMax: e.target.value })
+              }
               placeholder="Đến"
             />
           </div>
@@ -638,8 +560,8 @@ function SearchView() {
                 onClick={() => toggleAmenity(amenity)}
                 className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
                   searchParams.amenities.includes(amenity)
-                    ? 'bg-green-100 border-green-500 text-green-700'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-green-300'
+                    ? "bg-green-100 border-green-500 text-green-700"
+                    : "bg-white border-gray-300 text-gray-700 hover:border-green-300"
                 }`}
               >
                 {amenity}
@@ -659,7 +581,10 @@ function SearchView() {
             }
             className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
           />
-          <label htmlFor="verified" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="verified"
+            className="text-sm font-medium text-gray-700"
+          >
             Chỉ hiển thị trọ đã xác thực
           </label>
         </div>
@@ -691,37 +616,47 @@ function AppointmentsView({
   appointments: typeof mockAppointments;
   setAppointments: (appointments: typeof mockAppointments) => void;
 }) {
-  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>(
-    'all'
-  );
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "confirmed" | "completed" | "cancelled"
+  >("all");
 
   const filteredAppointments =
-    filter === 'all'
+    filter === "all"
       ? appointments
       : appointments.filter((a) => a.status === filter);
 
   const handleCancelAppointment = (id: number) => {
-    if (confirm('Bạn có chắc muốn hủy lịch hẹn này?')) {
+    if (confirm("Bạn có chắc muốn hủy lịch hẹn này?")) {
       setAppointments(
-        appointments.map((a) => (a.id === id ? { ...a, status: 'cancelled' } : a))
+        appointments.map((a) =>
+          a.id === id ? { ...a, status: "cancelled" } : a,
+        ),
       );
     }
   };
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      pending: { label: 'Chờ xác nhận', color: 'bg-orange-100 text-orange-800', icon: Clock },
+      pending: {
+        label: "Chờ xác nhận",
+        color: "bg-orange-100 text-orange-800",
+        icon: Clock,
+      },
       confirmed: {
-        label: 'Đã xác nhận',
-        color: 'bg-green-100 text-green-800',
+        label: "Đã xác nhận",
+        color: "bg-green-100 text-green-800",
         icon: CheckCircle,
       },
       completed: {
-        label: 'Đã hoàn thành',
-        color: 'bg-blue-100 text-blue-800',
+        label: "Đã hoàn thành",
+        color: "bg-blue-100 text-blue-800",
         icon: CheckCircle,
       },
-      cancelled: { label: 'Đã hủy', color: 'bg-red-100 text-red-800', icon: XCircle },
+      cancelled: {
+        label: "Đã hủy",
+        color: "bg-red-100 text-red-800",
+        icon: XCircle,
+      },
     };
     const badge = badges[status as keyof typeof badges];
     const Icon = badge.icon;
@@ -740,32 +675,39 @@ function AppointmentsView({
       {/* Filter Tabs */}
       <div className="bg-white rounded-xl shadow p-4">
         <div className="flex items-center gap-2 overflow-x-auto">
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
+          <FilterButton
+            active={filter === "all"}
+            onClick={() => setFilter("all")}
+          >
             Tất cả ({appointments.length})
           </FilterButton>
           <FilterButton
-            active={filter === 'pending'}
-            onClick={() => setFilter('pending')}
+            active={filter === "pending"}
+            onClick={() => setFilter("pending")}
           >
-            Chờ xác nhận ({appointments.filter((a) => a.status === 'pending').length})
+            Chờ xác nhận (
+            {appointments.filter((a) => a.status === "pending").length})
           </FilterButton>
           <FilterButton
-            active={filter === 'confirmed'}
-            onClick={() => setFilter('confirmed')}
+            active={filter === "confirmed"}
+            onClick={() => setFilter("confirmed")}
           >
-            Đã xác nhận ({appointments.filter((a) => a.status === 'confirmed').length})
+            Đã xác nhận (
+            {appointments.filter((a) => a.status === "confirmed").length})
           </FilterButton>
           <FilterButton
-            active={filter === 'completed'}
-            onClick={() => setFilter('completed')}
+            active={filter === "completed"}
+            onClick={() => setFilter("completed")}
           >
-            Đã hoàn thành ({appointments.filter((a) => a.status === 'completed').length})
+            Đã hoàn thành (
+            {appointments.filter((a) => a.status === "completed").length})
           </FilterButton>
           <FilterButton
-            active={filter === 'cancelled'}
-            onClick={() => setFilter('cancelled')}
+            active={filter === "cancelled"}
+            onClick={() => setFilter("cancelled")}
           >
-            Đã hủy ({appointments.filter((a) => a.status === 'cancelled').length})
+            Đã hủy (
+            {appointments.filter((a) => a.status === "cancelled").length})
           </FilterButton>
         </div>
       </div>
@@ -774,18 +716,20 @@ function AppointmentsView({
       {filteredAppointments.length === 0 ? (
         <div className="bg-white rounded-xl shadow p-12 text-center">
           <Calendar className="size-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Chưa có lịch hẹn nào</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Chưa có lịch hẹn nào
+          </h3>
           <p className="text-gray-600">
-            {filter === 'all'
-              ? 'Bạn chưa đặt lịch hẹn xem trọ nào'
+            {filter === "all"
+              ? "Bạn chưa đặt lịch hẹn xem trọ nào"
               : `Không có lịch hẹn ${
-                  filter === 'pending'
-                    ? 'chờ xác nhận'
-                    : filter === 'confirmed'
-                    ? 'đã xác nhận'
-                    : filter === 'completed'
-                    ? 'đã hoàn thành'
-                    : 'đã hủy'
+                  filter === "pending"
+                    ? "chờ xác nhận"
+                    : filter === "confirmed"
+                      ? "đã xác nhận"
+                      : filter === "completed"
+                        ? "đã hoàn thành"
+                        : "đã hủy"
                 }`}
           </p>
         </div>
@@ -851,7 +795,9 @@ function AppointmentsView({
                   {appointment.notes && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                       <p className="text-xs text-gray-500 mb-1">Ghi chú:</p>
-                      <p className="text-sm text-gray-700">{appointment.notes}</p>
+                      <p className="text-sm text-gray-700">
+                        {appointment.notes}
+                      </p>
                     </div>
                   )}
 
@@ -860,17 +806,19 @@ function AppointmentsView({
                       Đặt lịch: {appointment.createdAt}
                     </p>
                     <div className="flex items-center gap-2">
-                      {appointment.status === 'pending' && (
+                      {appointment.status === "pending" && (
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleCancelAppointment(appointment.id)}
+                          onClick={() =>
+                            handleCancelAppointment(appointment.id)
+                          }
                         >
                           <XCircle className="size-4 mr-2" />
                           Hủy lịch
                         </Button>
                       )}
-                      {appointment.status === 'confirmed' && (
+                      {appointment.status === "confirmed" && (
                         <>
                           <Button
                             variant="outline"
@@ -921,8 +869,8 @@ function FilterButton({
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
         active
-          ? 'bg-gradient-to-r from-green-600 to-blue-600 text-white'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ? "bg-gradient-to-r from-green-600 to-blue-600 text-white"
+          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
       }`}
     >
       {children}

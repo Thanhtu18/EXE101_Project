@@ -1,15 +1,60 @@
-import { useNavigate } from 'react-router';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { ArrowLeft, Home, UserPlus } from 'lucide-react';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'user' | 'landlord'>('user');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder for registration logic
-    alert('Chức năng đăng ký đang được phát triển!');
+    setError(null);
+    if (password !== confirmPassword) {
+      setError('Mật khẩu và xác nhận mật khẩu không khớp');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await register({
+        username,
+        email,
+        password,
+        confirmPassword,
+        fullName,
+        phone,
+        role,
+      });
+
+      if (!result.success) {
+        setError(result.message || 'Đăng ký thất bại');
+        setLoading(false);
+        return;
+      }
+
+      // No longer auto-login to follow user request
+      setSuccess("Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (err: any) {
+      setError(err?.message || 'Lỗi mạng');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,12 +88,26 @@ export function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tên đăng nhập
+              </label>
+              <Input
+                type="text"
+                placeholder="chutro123"
+                required
+                value={username}
+                onChange={(e) => setUsername((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Họ và tên
               </label>
               <Input
                 type="text"
                 placeholder="Nguyễn Văn A"
                 required
+                value={fullName}
+                onChange={(e) => setFullName((e.target as HTMLInputElement).value)}
               />
             </div>
 
@@ -60,6 +119,8 @@ export function RegisterPage() {
                 type="email"
                 placeholder="email@example.com"
                 required
+                value={email}
+                onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
               />
             </div>
 
@@ -71,6 +132,8 @@ export function RegisterPage() {
                 type="tel"
                 placeholder="0123456789"
                 required
+                value={phone}
+                onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
               />
             </div>
 
@@ -82,6 +145,8 @@ export function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 required
+                value={password}
+                onChange={(e) => setPassword((e.target as HTMLInputElement).value)}
               />
             </div>
 
@@ -93,23 +158,50 @@ export function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword((e.target as HTMLInputElement).value)}
               />
+            </div>
+
+            <div className="flex gap-4 items-center">
+              <label className="text-sm font-medium text-gray-700">Bạn là</label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="role"
+                  checked={role === 'landlord'}
+                  onChange={() => setRole('landlord')}
+                />
+                Chủ trọ
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="role"
+                  checked={role === 'user'}
+                  onChange={() => setRole('user')}
+                />
+                Người tìm trọ
+              </label>
             </div>
 
             <Button
               type="submit"
+              disabled={loading}
               className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
             >
               <UserPlus className="size-4 mr-2" />
-              Đăng ký
+              {loading ? 'Đang xử lý...' : 'Đăng ký'}
             </Button>
+            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+            {success && <p className="text-sm text-green-600 mt-2">{success}</p>}
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Đã có tài khoản?{' '}
               <button
-                onClick={() => alert('Chức năng đăng nhập đang được phát triển!')}
+                onClick={() => navigate('/login')}
                 className="text-green-600 font-medium hover:underline"
               >
                 Đăng nhập

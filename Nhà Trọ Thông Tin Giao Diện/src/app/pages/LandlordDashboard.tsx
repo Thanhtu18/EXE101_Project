@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { useProperties } from '@/app/contexts/PropertiesContext';
-import { useVerification } from '@/app/contexts/VerificationContext';
-import { Button } from '@/app/components/ui/button';
-import { RequestVerificationDialog } from '@/app/components/RequestVerificationDialog';
-import { SubscriptionManagement } from '@/app/components/SubscriptionManagement';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useProperties } from "@/app/contexts/PropertiesContext";
+import { useVerification } from "@/app/contexts/VerificationContext";
+import { Button } from "@/app/components/ui/button";
+import { RequestVerificationDialog } from "@/app/components/RequestVerificationDialog";
+import { SubscriptionManagement } from "@/app/components/SubscriptionManagement";
 import {
   Home,
   LogOut,
@@ -30,50 +30,18 @@ import {
   CreditCard,
   LayoutDashboard,
   Settings,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Active tab type
-type DashboardTab = 'overview' | 'posts' | 'subscription' | 'verification' | 'settings';
+type DashboardTab =
+  | "overview"
+  | "posts"
+  | "subscription"
+  | "verification"
+  | "settings";
 
 // Mock data - tin đăng của chủ trọ
-const mockLandlordPosts = [
-  {
-    id: 1,
-    title: 'Phòng trọ giá rẻ gần ĐH Bách Khoa',
-    price: '2.5 triệu/tháng',
-    area: 20,
-    address: 'Hai Bà Trưng, Hà Nội',
-    status: 'approved' as const,
-    views: 245,
-    favorites: 12,
-    createdAt: '2024-02-20',
-    verificationLevel: 3,
-  },
-  {
-    id: 2,
-    title: 'Căn hộ mini đầy đủ tiện nghi',
-    price: '4.0 triệu/tháng',
-    area: 35,
-    address: 'Đống Đa, Hà Nội',
-    status: 'pending' as const,
-    views: 0,
-    favorites: 0,
-    createdAt: '2024-02-24',
-    verificationLevel: 2,
-  },
-  {
-    id: 3,
-    title: 'Phòng trọ có gác lửng',
-    price: '3.2 triệu/tháng',
-    area: 25,
-    address: 'Thanh Xuân, Hà Nội',
-    status: 'rejected' as const,
-    views: 56,
-    favorites: 2,
-    createdAt: '2024-02-18',
-    verificationLevel: 1,
-  },
-];
+const mockLandlordPosts: any[] = [];
 
 export function LandlordDashboard() {
   const navigate = useNavigate();
@@ -81,47 +49,63 @@ export function LandlordDashboard() {
   const { properties } = useProperties();
   const { getRequestsByLandlord } = useVerification();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
 
-  // Filter properties by current landlord (for demo, we'll show all user-created properties)
-  // In production, this would filter by user.id
-  const landlordPosts = properties.filter(p => 
-    p.ownerName === 'Chủ trọ mới' || p.pinInfo // Properties with pinInfo are from landlords
+  // Filter properties by current landlord
+  const landlordPosts = properties.filter(
+    (p) => p.landlordId === user?.id || p.ownerName === user?.fullName || p.ownerName === user?.username || p.pinInfo,
   );
 
   // Get verification requests for this landlord
-  const verificationRequests = getRequestsByLandlord('landlord-demo'); // TODO: use actual user.id
+  const verificationRequests = getRequestsByLandlord(user?.id || "unknown");
 
   // Calculate stats from real data
   const stats = {
     totalPosts: landlordPosts.length,
-    approvedPosts: landlordPosts.filter(p => p.available).length,
+    approvedPosts: landlordPosts.filter((p) => p.available).length,
     pendingPosts: 0, // Can add status field later
     totalViews: landlordPosts.reduce((sum, p) => sum + (p.views || 0), 0),
-    totalFavorites: landlordPosts.reduce((sum, p) => sum + (p.favorites || 0), 0),
+    totalFavorites: landlordPosts.reduce(
+      (sum, p) => sum + (p.favorites || 0),
+      0,
+    ),
   };
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'landlord') {
-      navigate('/login');
+    if (!isAuthenticated || user?.role !== "landlord") {
+      navigate("/login");
     }
   }, [isAuthenticated, user, navigate]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
-  const getStatusBadge = (status: 'approved' | 'pending' | 'rejected') => {
+  const getStatusBadge = (status: "approved" | "pending" | "rejected") => {
     const badges = {
-      approved: { label: 'Đã duyệt', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      pending: { label: 'Chờ duyệt', color: 'bg-orange-100 text-orange-800', icon: Clock },
-      rejected: { label: 'Từ chối', color: 'bg-red-100 text-red-800', icon: XCircle },
+      approved: {
+        label: "Đã duyệt",
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      },
+      pending: {
+        label: "Chờ duyệt",
+        color: "bg-orange-100 text-orange-800",
+        icon: Clock,
+      },
+      rejected: {
+        label: "Từ chối",
+        color: "bg-red-100 text-red-800",
+        icon: XCircle,
+      },
     };
     const badge = badges[status];
     const Icon = badge.icon;
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.color} flex items-center gap-1 w-fit`}>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium ${badge.color} flex items-center gap-1 w-fit`}
+      >
         <Icon className="size-3" />
         {badge.label}
       </span>
@@ -130,20 +114,22 @@ export function LandlordDashboard() {
 
   const getVerificationBadge = (level: number) => {
     const badges = [
-      { label: 'Chưa xác thực', color: 'bg-gray-100 text-gray-800' },
-      { label: 'Cấp 1', color: 'bg-yellow-100 text-yellow-800' },
-      { label: 'Cấp 2', color: 'bg-blue-100 text-blue-800' },
-      { label: 'Cấp 3', color: 'bg-green-100 text-green-800' },
+      { label: "Chưa xác thực", color: "bg-gray-100 text-gray-800" },
+      { label: "Cấp 1", color: "bg-yellow-100 text-yellow-800" },
+      { label: "Cấp 2", color: "bg-blue-100 text-blue-800" },
+      { label: "Cấp 3", color: "bg-green-100 text-green-800" },
     ];
     const badge = badges[level] || badges[0];
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+      >
         {badge.label}
       </span>
     );
   };
 
-  if (!isAuthenticated || user?.role !== 'landlord') {
+  if (!isAuthenticated || user?.role !== "landlord") {
     return null;
   }
 
@@ -156,7 +142,9 @@ export function LandlordDashboard() {
             <div className="flex items-center gap-2">
               <Home className="size-8 text-green-600" />
               <div>
-                <h1 className="font-bold text-xl text-gray-900">MapHome - Chủ trọ</h1>
+                <h1 className="font-bold text-xl text-gray-900">
+                  MapHome - Chủ trọ
+                </h1>
                 <p className="text-xs text-gray-500">Quản lý tin đăng</p>
               </div>
             </div>
@@ -164,13 +152,16 @@ export function LandlordDashboard() {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.username}</p>
+              <p className="text-sm font-medium text-gray-900">
+                {user?.fullName || user?.username}
+              </p>
               <div className="flex items-center justify-end gap-2">
                 <p className="text-xs text-gray-500">Chủ trọ</p>
-                {user?.verificationLevel && getVerificationBadge(user.verificationLevel)}
+                {user?.verificationLevel &&
+                  getVerificationBadge(user.verificationLevel)}
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate('/')} size="sm">
+            <Button variant="outline" onClick={() => navigate("/")} size="sm">
               <Home className="size-4 mr-2" />
               Trang chủ
             </Button>
@@ -201,7 +192,9 @@ export function LandlordDashboard() {
               <p className="text-sm text-gray-600">Tổng tin đăng</p>
               <FileText className="size-5 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalPosts}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {stats.totalPosts}
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -209,7 +202,9 @@ export function LandlordDashboard() {
               <p className="text-sm text-gray-600">Đã duyệt</p>
               <CheckCircle className="size-5 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-green-600">{stats.approvedPosts}</p>
+            <p className="text-3xl font-bold text-green-600">
+              {stats.approvedPosts}
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -217,7 +212,9 @@ export function LandlordDashboard() {
               <p className="text-sm text-gray-600">Chờ duyệt</p>
               <Clock className="size-5 text-orange-600" />
             </div>
-            <p className="text-3xl font-bold text-orange-600">{stats.pendingPosts}</p>
+            <p className="text-3xl font-bold text-orange-600">
+              {stats.pendingPosts}
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -225,7 +222,9 @@ export function LandlordDashboard() {
               <p className="text-sm text-gray-600">Lượt xem</p>
               <Eye className="size-5 text-purple-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalViews}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {stats.totalViews}
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -233,7 +232,9 @@ export function LandlordDashboard() {
               <p className="text-sm text-gray-600">Yêu thích</p>
               <Star className="size-5 text-yellow-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalFavorites}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {stats.totalFavorites}
+            </p>
           </div>
         </div>
 
@@ -241,7 +242,7 @@ export function LandlordDashboard() {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold text-gray-900">Tin đăng của bạn</h3>
           <Button
-            onClick={() => navigate('/post-room')}
+            onClick={() => navigate("/post-room")}
             className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
           >
             <PlusCircle className="size-4 mr-2" />
@@ -259,10 +260,15 @@ export function LandlordDashboard() {
                   Nâng cấp xác thực để tăng độ tin cậy
                 </h4>
                 <p className="text-sm text-blue-800 mb-3">
-                  Tài khoản của bạn đang ở cấp {user.verificationLevel}. Nâng cấp lên cấp 3 để tin đăng
-                  được ưu tiên hiển thị và tăng độ tin cậy với người thuê.
+                  Tài khoản của bạn đang ở cấp {user.verificationLevel}. Nâng
+                  cấp lên cấp 3 để tin đăng được ưu tiên hiển thị và tăng độ tin
+                  cậy với người thuê.
                 </p>
-                <Button size="sm" variant="outline" className="border-blue-300 text-blue-700">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-700"
+                >
                   Nâng cấp ngay
                 </Button>
               </div>
@@ -278,9 +284,12 @@ export function LandlordDashboard() {
                 <Award className="size-8" />
               </div>
               <div>
-                <h3 className="text-xl font-bold mb-1">Yêu cầu kiểm tra & Cấp Tích Xanh</h3>
+                <h3 className="text-xl font-bold mb-1">
+                  Yêu cầu kiểm tra & Cấp Tích Xanh
+                </h3>
                 <p className="text-green-100 text-sm">
-                  Admin đến kiểm tra thực tế • Tăng 50% lượt xem • Ưu tiên hiển thị
+                  Admin đến kiểm tra thực tế • Tăng 50% lượt xem • Ưu tiên hiển
+                  thị
                 </p>
               </div>
             </div>
@@ -304,31 +313,38 @@ export function LandlordDashboard() {
             </h4>
             <div className="space-y-3">
               {verificationRequests.slice(0, 3).map((req) => (
-                <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900 text-sm">{req.propertyName}</p>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {req.propertyName}
+                    </p>
                     <p className="text-xs text-gray-600 mt-0.5">
-                      📅 {new Date(req.scheduledDate).toLocaleDateString('vi-VN')} • {req.scheduledTime}
+                      📅{" "}
+                      {new Date(req.scheduledDate).toLocaleDateString("vi-VN")}{" "}
+                      • {req.scheduledTime}
                     </p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      req.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : req.status === 'approved'
-                        ? 'bg-blue-100 text-blue-800'
-                        : req.status === 'rejected'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-orange-100 text-orange-800'
+                      req.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : req.status === "approved"
+                          ? "bg-blue-100 text-blue-800"
+                          : req.status === "rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-orange-100 text-orange-800"
                     }`}
                   >
-                    {req.status === 'completed'
-                      ? '✅ Hoàn thành'
-                      : req.status === 'approved'
-                      ? '✓ Đã duyệt'
-                      : req.status === 'rejected'
-                      ? '✗ Từ chối'
-                      : '⏳ Chờ duyệt'}
+                    {req.status === "completed"
+                      ? "✅ Hoàn thành"
+                      : req.status === "approved"
+                        ? "✓ Đã duyệt"
+                        : req.status === "rejected"
+                          ? "✗ Từ chối"
+                          : "⏳ Chờ duyệt"}
                   </span>
                 </div>
               ))}
@@ -340,27 +356,32 @@ export function LandlordDashboard() {
         <div className="space-y-4">
           {landlordPosts.map((post) => {
             // Map verification level from property
-            const getVerificationLevelNumber = () => {
-              if (!post.verificationLevel) return 0;
-              if (post.verificationLevel === 'location-verified') return 3;
-              if (post.verificationLevel === 'phone-verified') return 2;
-              return 1;
+            const getGreenBadgeLevelNumber = () => {
+              if (post.verificationLevel === "verified") return 3;
+              return 0;
             };
 
-            const verificationLevel = getVerificationLevelNumber();
-            const status = post.available ? 'approved' as const : 'pending' as const;
-            const createdAt = post.pinInfo?.pinnedAt 
-              ? new Date(post.pinInfo.pinnedAt).toLocaleDateString('vi-VN') 
-              : new Date().toLocaleDateString('vi-VN');
+            const greenBadgeLevel = getGreenBadgeLevelNumber();
+            const status = post.available
+              ? ("approved" as const)
+              : ("pending" as const);
+            const createdAt = post.pinInfo?.pinnedAt
+              ? new Date(post.pinInfo.pinnedAt).toLocaleDateString("vi-VN")
+              : new Date().toLocaleDateString("vi-VN");
 
             return (
-              <div key={post.id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+              <div
+                key={post.id}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow"
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h4 className="font-bold text-lg text-gray-900">{post.name}</h4>
+                      <h4 className="font-bold text-lg text-gray-900">
+                        {post.name}
+                      </h4>
                       {getStatusBadge(status)}
-                      {getVerificationBadge(verificationLevel)}
+                      {getVerificationBadge(greenBadgeLevel)}
                       {post.pinInfo && (
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 flex items-center gap-1">
                           📌 Đã ghim GPS
@@ -371,7 +392,7 @@ export function LandlordDashboard() {
                       <span className="flex items-center gap-1">
                         <DollarSign className="size-4" />
                         <span className="font-semibold text-green-600">
-                          {post.price.toLocaleString('vi-VN')}đ/tháng
+                          {post.price.toLocaleString("vi-VN")}đ/tháng
                         </span>
                       </span>
                       <span className="flex items-center gap-1">
@@ -400,12 +421,24 @@ export function LandlordDashboard() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/room/${post.id}`)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/room/${post.id}`)}
+                    >
                       <Eye className="size-4 mr-2" />
                       Xem
                     </Button>
-                    {status === 'approved' && (
-                      <Button variant="outline" size="sm" onClick={() => alert(`Chức năng sửa tin #${post.id} sẽ có trong phiên bản sau`)}>
+                    {status === "approved" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          alert(
+                            `Chức năng sửa tin #${post.id} sẽ có trong phiên bản sau`,
+                          )
+                        }
+                      >
                         <Edit className="size-4 mr-2" />
                         Sửa
                       </Button>
@@ -414,7 +447,11 @@ export function LandlordDashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Bạn có chắc muốn xóa tin đăng "${post.name}"?`)) {
+                        if (
+                          confirm(
+                            `Bạn có chắc muốn xóa tin đăng "${post.name}"?`,
+                          )
+                        ) {
                           alert(`Chức năng xóa tin sẽ có trong phiên bản sau`);
                         }
                       }}
@@ -429,7 +466,8 @@ export function LandlordDashboard() {
                 {post.pinInfo?.note && (
                   <div className="mt-4 bg-orange-50 border border-orange-100 rounded-lg p-3">
                     <p className="text-xs text-orange-800">
-                      <span className="font-semibold">📝 Ghi chú vị trí:</span> {post.pinInfo.note}
+                      <span className="font-semibold">📝 Ghi chú vị trí:</span>{" "}
+                      {post.pinInfo.note}
                     </p>
                   </div>
                 )}
@@ -437,7 +475,10 @@ export function LandlordDashboard() {
                 {post.locationAccuracy && (
                   <div className="mt-2 bg-green-50 border border-green-100 rounded-lg p-3">
                     <p className="text-xs text-green-800">
-                      <span className="font-semibold">🛰️ Độ chính xác GPS:</span> ±{post.locationAccuracy}m
+                      <span className="font-semibold">
+                        🛰️ Độ chính xác GPS:
+                      </span>{" "}
+                      ±{post.locationAccuracy}m
                     </p>
                   </div>
                 )}
@@ -457,7 +498,7 @@ export function LandlordDashboard() {
               Bắt đầu đăng tin cho thuê để tiếp cận hàng nghìn người tìm trọ
             </p>
             <Button
-              onClick={() => navigate('/post-room')}
+              onClick={() => navigate("/post-room")}
               className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
             >
               <PlusCircle className="size-4 mr-2" />
@@ -490,9 +531,9 @@ export function LandlordDashboard() {
       <RequestVerificationDialog
         isOpen={showVerificationDialog}
         onClose={() => setShowVerificationDialog(false)}
-        landlordId="landlord-demo"
-        landlordName={user?.fullName || user?.username || 'Chủ trọ'}
-        landlordPhone={user?.phone || '0123456789'}
+        landlordId={user?.id || "unknown"}
+        landlordName={user?.fullName || user?.username || "Chủ trọ"}
+        landlordPhone={user?.phone || "0123456789"}
       />
     </div>
   );

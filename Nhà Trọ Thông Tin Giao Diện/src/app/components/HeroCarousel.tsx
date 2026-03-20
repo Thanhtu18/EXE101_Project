@@ -1,35 +1,39 @@
-import Slider from 'react-slick';
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
-import { useNavigate } from 'react-router';
-import { Button } from '@/app/components/ui/button';
-import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import { useNavigate } from "react-router";
+import { Button } from "@/app/components/ui/button";
+import { MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 
 const heroSlides = [
   {
     id: 1,
-    title: 'Tìm Phòng Trọ Hoàn Hảo',
-    subtitle: 'Hàng ngàn phòng trọ chất lượng đang chờ bạn khám phá',
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=800&fit=crop&q=80'
+    title: "Tìm Phòng Trọ Hoàn Hảo",
+    subtitle: "Hàng ngàn phòng trọ chất lượng đang chờ bạn khám phá",
+    image:
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1920&h=800&fit=crop&q=80",
   },
   {
     id: 2,
-    title: 'Xác Thực 3 Cấp Độ',
-    subtitle: 'Trust is King - An toàn tuyệt đối cho mọi giao dịch',
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1920&h=800&fit=crop&q=80'
+    title: "Xác Thực 3 Cấp Độ",
+    subtitle: "Trust is King - An toàn tuyệt đối cho mọi giao dịch",
+    image:
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1920&h=800&fit=crop&q=80",
   },
   {
     id: 3,
-    title: 'Tìm Kiếm Thông Minh',
-    subtitle: 'Bản đồ tương tác với các tiện ích xung quanh',
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1920&h=800&fit=crop&q=80'
+    title: "Tìm Kiếm Thông Minh",
+    subtitle: "Bản đồ tương tác với các tiện ích xung quanh",
+    image:
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1920&h=800&fit=crop&q=80",
   },
   {
     id: 4,
-    title: 'Giá Cả Hợp Lý',
-    subtitle: 'Tìm được nhà trọ phù hợp với túi tiền của bạn',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1920&h=800&fit=crop&q=80'
-  }
+    title: "Giá Cả Hợp Lý",
+    subtitle: "Tìm được nhà trọ phù hợp với túi tiền của bạn",
+    image:
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1920&h=800&fit=crop&q=80",
+  },
 ];
 
 // Custom Arrow Components
@@ -81,7 +85,7 @@ export function HeroCarousel() {
     ),
     customPaging: () => (
       <button className="w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all duration-300" />
-    )
+    ),
   };
 
   return (
@@ -91,17 +95,17 @@ export function HeroCarousel() {
           <div key={slide.id} className="relative">
             <div className="relative h-[500px] md:h-[600px] lg:h-[700px] overflow-hidden">
               {/* Background Image */}
-              <div 
+              <div
                 className="absolute inset-0 bg-cover bg-center"
-                style={{ 
+                style={{
                   backgroundImage: `url(${slide.image})`,
-                  backgroundPosition: 'center center'
+                  backgroundPosition: "center center",
                 }}
               >
                 {/* Image Overlay for better text readability */}
                 <div className="absolute inset-0 bg-black/30" />
               </div>
-              
+
               {/* Content */}
               <div className="relative h-full flex flex-col items-center justify-center text-center px-4 text-white">
                 <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
@@ -114,7 +118,7 @@ export function HeroCarousel() {
                   <div className="pt-4 md:pt-6">
                     <Button
                       size="lg"
-                      onClick={() => navigate('/map')}
+                      onClick={() => navigate("/map")}
                       className="text-base md:text-lg px-8 md:px-12 py-5 md:py-7 h-auto bg-white text-gray-900 hover:bg-gray-100 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105"
                     >
                       <MapPin className="size-5 md:size-6 mr-2" />
