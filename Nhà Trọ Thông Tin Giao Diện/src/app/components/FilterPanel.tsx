@@ -7,26 +7,11 @@ import { Checkbox } from '@/app/components/ui/checkbox';
 import { Label } from '@/app/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Badge } from '@/app/components/ui/badge';
+import { RentalFilters } from '@/app/components/types';
 
-export interface FilterOptions {
-  priceRange: [number, number];
-  areaRange: [number, number];
-  amenities: {
-    wifi: boolean;
-    furniture: boolean;
-    tv: boolean;
-    washingMachine: boolean;
-    kitchen: boolean;
-    refrigerator: boolean;
-    airConditioner: boolean;
-  };
-  verificationLevel: 'all' | 'phone-verified' | 'location-verified';
-  availability: 'all' | 'available' | 'unavailable';
-  sortBy: 'price-asc' | 'price-desc' | 'distance' | 'rating' | 'area';
-  radius: number; // in km
-}
 
-export const defaultFilters: FilterOptions = {
+
+export const defaultFilters: RentalFilters = {
   priceRange: [1000000, 10000000],
   areaRange: [10, 50],
   amenities: {
@@ -45,8 +30,8 @@ export const defaultFilters: FilterOptions = {
 };
 
 interface FilterPanelProps {
-  filters: FilterOptions;
-  onFiltersChange: (filters: FilterOptions) => void;
+  filters: RentalFilters;
+  onFiltersChange: (filters: RentalFilters) => void;
   activeFiltersCount: number;
 }
 
@@ -75,11 +60,11 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
     return `${value / 1000}k`;
   };
 
-  const updateFilter = <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => {
+  const updateFilter = <K extends keyof RentalFilters>(key: K, value: RentalFilters[K]) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const updateAmenity = (amenity: keyof FilterOptions['amenities'], value: boolean) => {
+  const updateAmenity = (amenity: keyof RentalFilters['amenities'], value: boolean) => {
     onFiltersChange({
       ...filters,
       amenities: { ...filters.amenities, [amenity]: value },
@@ -123,7 +108,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
             <Label className="text-base font-semibold">Sắp xếp theo</Label>
             <RadioGroup 
               value={filters.sortBy} 
-              onValueChange={(value) => updateFilter('sortBy', value as FilterOptions['sortBy'])}
+              onValueChange={(value) => updateFilter('sortBy', value as RentalFilters['sortBy'])}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="distance" id="sort-distance" />
@@ -264,7 +249,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                         id={key}
                         checked={value}
                         onCheckedChange={(checked) => 
-                          updateAmenity(key as keyof FilterOptions['amenities'], checked as boolean)
+                          updateAmenity(key as keyof RentalFilters['amenities'], checked as boolean)
                         }
                       />
                       <Label htmlFor={key} className="cursor-pointer font-normal">
@@ -289,7 +274,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
             {expandedSections.availability && (
               <RadioGroup 
                 value={filters.availability} 
-                onValueChange={(value) => updateFilter('availability', value as FilterOptions['availability'])}
+                onValueChange={(value) => updateFilter('availability', value as RentalFilters['availability'])}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="all" id="availability-all" />
@@ -325,7 +310,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
             {expandedSections.verification && (
               <RadioGroup 
                 value={filters.verificationLevel} 
-                onValueChange={(value) => updateFilter('verificationLevel', value as FilterOptions['verificationLevel'])}
+                onValueChange={(value) => updateFilter('verificationLevel', value as RentalFilters['verificationLevel'])}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="all" id="verification-all" />
@@ -334,15 +319,15 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="phone-verified" id="verification-phone" />
-                  <Label htmlFor="verification-phone" className="cursor-pointer font-normal">
-                    🔹 Xác thực SĐT trở lên
+                  <RadioGroupItem value="verified" id="verification-verified" />
+                  <Label htmlFor="verification-verified" className="cursor-pointer font-normal">
+                    ✅ Đã xác thực
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="location-verified" id="verification-location" />
-                  <Label htmlFor="verification-location" className="cursor-pointer font-normal">
-                    ✅ Xác thực GPS
+                  <RadioGroupItem value="none" id="verification-none" />
+                  <Label htmlFor="verification-none" className="cursor-pointer font-normal">
+                    ⚠️ Chưa xác thực
                   </Label>
                 </div>
               </RadioGroup>

@@ -1,83 +1,93 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { Button } from '@/app/components/ui/button';
-import { Card, CardContent } from '@/app/components/ui/card';
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/app/components/ui/select';
+} from "@/app/components/ui/select";
 import {
-  X, AlertCircle, CreditCard, RefreshCw, MessageCircle,
-  ChevronLeft, CheckCircle2, Wallet, Phone, HelpCircle
-} from 'lucide-react';
+  X,
+  AlertCircle,
+  CreditCard,
+  RefreshCw,
+  MessageCircle,
+  ChevronLeft,
+  CheckCircle2,
+  Wallet,
+  Phone,
+  HelpCircle,
+} from "lucide-react";
 
 const failureReasons = [
-  { id: 'declined', label: 'Thẻ bị từ chối', icon: CreditCard },
-  { id: 'insufficient', label: 'Không đủ số dư', icon: Wallet },
-  { id: 'timeout', label: 'Hết thời gian giao dịch', icon: AlertCircle },
+  { id: "declined", label: "Thẻ bị từ chối", icon: CreditCard },
+  { id: "insufficient", label: "Không đủ số dư", icon: Wallet },
+  { id: "timeout", label: "Hết thời gian giao dịch", icon: AlertCircle },
 ];
 
 const suggestions = [
   {
     icon: Wallet,
-    title: 'Kiểm tra số dư tài khoản',
-    description: 'Đảm bảo tài khoản có đủ số dư để thanh toán',
+    title: "Kiểm tra số dư tài khoản",
+    description: "Đảm bảo tài khoản có đủ số dư để thanh toán",
   },
   {
     icon: CreditCard,
-    title: 'Thử phương thức thanh toán khác',
-    description: 'Sử dụng thẻ khác hoặc ví điện tử MoMo, ZaloPay',
+    title: "Thử phương thức thanh toán khác",
+    description: "Sử dụng thẻ khác hoặc ví điện tử MoMo, ZaloPay",
   },
   {
     icon: Phone,
-    title: 'Liên hệ ngân hàng nếu thẻ bị khóa',
-    description: 'Gọi hotline ngân hàng để kiểm tra tình trạng thẻ',
+    title: "Liên hệ ngân hàng nếu thẻ bị khóa",
+    description: "Gọi hotline ngân hàng để kiểm tra tình trạng thẻ",
   },
 ];
 
 export function PaymentFailurePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedReason, setSelectedReason] = useState('declined');
+  const [selectedReason, setSelectedReason] = useState("declined");
 
   // Get data from navigation state
   const tier = location.state?.tier;
   const amount = location.state?.amount;
-  const errorCode = location.state?.errorCode || 'VNP_099';
+  const errorCode = location.state?.errorCode || "VNP_099";
 
-  const currentTime = new Date().toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+  const currentTime = new Date().toLocaleString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 
   const handleRetry = () => {
     // Navigate back to checkout
-    navigate('/checkout', { 
-      state: { 
-        selectedTier: tier?.id || 'standard',
-        billingCycle: 'monthly'
-      } 
+    navigate("/checkout", {
+      state: {
+        selectedTier: tier?.id || "standard",
+        billingCycle: "monthly",
+      },
     });
   };
 
   const handleChangePaymentMethod = () => {
     // In real app, show payment method selector
-    alert('🔄 Chuyển đến trang chọn phương thức thanh toán...\n\nDemo: Bạn có thể chọn VNPay, MoMo, ZaloPay, v.v.');
+    alert(
+      "🔄 Chuyển đến trang chọn phương thức thanh toán...\n\nDemo: Bạn có thể chọn VNPay, MoMo, ZaloPay, v.v.",
+    );
     handleRetry();
   };
 
-  const SelectedReasonIcon = failureReasons.find(r => r.id === selectedReason)?.icon || AlertCircle;
+  const SelectedReasonIcon =
+    failureReasons.find((r) => r.id === selectedReason)?.icon || AlertCircle;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-gray-50 to-orange-50 flex items-center justify-center p-4">
       <div className="max-w-[600px] w-full">
-        
         {/* Error Icon */}
         <div className="flex justify-center mb-8">
           <div className="relative">
@@ -85,7 +95,7 @@ export function PaymentFailurePage() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-[80px] h-[80px] rounded-full bg-red-200 animate-pulse opacity-20"></div>
             </div>
-            
+
             {/* Main error icon */}
             <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-xl">
               <X className="size-9 text-white" strokeWidth={3} />
@@ -111,8 +121,13 @@ export function PaymentFailurePage() {
                 <SelectedReasonIcon className="size-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-red-900 mb-3">Nguyên nhân có thể</h3>
-                <Select value={selectedReason} onValueChange={setSelectedReason}>
+                <h3 className="font-semibold text-red-900 mb-3">
+                  Nguyên nhân có thể
+                </h3>
+                <Select
+                  value={selectedReason}
+                  onValueChange={setSelectedReason}
+                >
                   <SelectTrigger className="w-full bg-white border-red-300 focus:ring-red-500">
                     <SelectValue />
                   </SelectTrigger>
@@ -142,12 +157,15 @@ export function PaymentFailurePage() {
               <HelpCircle className="size-5 text-blue-600" />
               Bạn có thể làm gì?
             </h3>
-            
+
             <div className="space-y-4">
               {suggestions.map((suggestion, idx) => {
                 const Icon = suggestion.icon;
                 return (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                       <Icon className="size-4 text-blue-600" />
                     </div>
@@ -179,7 +197,7 @@ export function PaymentFailurePage() {
                   <p className="text-xs text-gray-500">1 tháng</p>
                 </div>
                 <p className="text-xl font-bold text-gray-900">
-                  {amount.toLocaleString('vi-VN')}đ
+                  {amount.toLocaleString("vi-VN")}đ
                 </p>
               </div>
             </CardContent>
@@ -211,7 +229,7 @@ export function PaymentFailurePage() {
         {/* Back to Pricing Link */}
         <div className="text-center mb-6">
           <button
-            onClick={() => navigate('/pricing')}
+            onClick={() => navigate("/pricing")}
             className="text-gray-600 hover:text-gray-900 font-medium text-sm inline-flex items-center gap-2 hover:gap-3 transition-all"
           >
             <ChevronLeft className="size-4" />
@@ -238,7 +256,7 @@ export function PaymentFailurePage() {
             <span className="font-mono bg-gray-100 px-2 py-1 rounded">
               Mã lỗi: {errorCode}
             </span>
-            {' · '}
+            {" · "}
             <span>Thời gian: {currentTime}</span>
           </p>
         </div>
@@ -254,8 +272,8 @@ export function PaymentFailurePage() {
                 Đảm bảo an toàn 100%
               </p>
               <p className="text-amber-800 text-xs leading-relaxed">
-                Không có khoản phí nào được trừ từ tài khoản của bạn. 
-                Thông tin thẻ được bảo mật hoàn toàn bởi VNPay.
+                Không có khoản phí nào được trừ từ tài khoản của bạn. Thông tin
+                thẻ được bảo mật hoàn toàn bởi VNPay.
               </p>
             </div>
           </div>

@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'landlord' | 'user';
+  role: "admin" | "landlord" | "user";
   phone?: string;
   fullName?: string;
   verificationLevel?: number;
@@ -12,8 +12,13 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => { success: boolean; role?: string };
-  register: (data: RegisterData) => { success: boolean; message?: string };
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{ success: boolean; role?: string; message?: string }>;
+  register: (
+    data: RegisterData,
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -22,134 +27,109 @@ interface RegisterData {
   username: string;
   email: string;
   password: string;
+  confirmPassword?: string;
   fullName: string;
   phone: string;
-  role: 'landlord' | 'user';
+  role: "landlord" | "user";
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Tài khoản demo
-const DEMO_ACCOUNTS = [
-  {
-    id: 'admin-001',
-    username: 'admin',
-    password: 'admin123',
-    email: 'admin@maphome.vn',
-    role: 'admin' as const,
-    fullName: 'Admin MapHome',
-  },
-  {
-    id: 'landlord-001',
-    username: 'chutro1',
-    password: '123456',
-    email: 'chutro1@example.com',
-    role: 'landlord' as const,
-    fullName: 'Nguyễn Văn A',
-    phone: '0912345678',
-    verificationLevel: 3,
-  },
-  {
-    id: 'landlord-002',
-    username: 'chutro2',
-    password: '123456',
-    email: 'chutro2@example.com',
-    role: 'landlord' as const,
-    fullName: 'Trần Thị B',
-    phone: '0987654321',
-    verificationLevel: 2,
-  },
-  {
-    id: 'user-001',
-    username: 'user1',
-    password: '123456',
-    email: 'user1@example.com',
-    role: 'user' as const,
-    fullName: 'Lê Văn C',
-    phone: '0934567890',
-    verificationLevel: 1,
-  },
-];
+// Note: mock demo accounts removed — prefer backend authentication.
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('auth');
+    const stored = localStorage.getItem("auth");
     return stored ? JSON.parse(stored) : null;
   });
 
-  const [registeredUsers, setRegisteredUsers] = useState<User[]>(() => {
-    const stored = localStorage.getItem('registeredUsers');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
-  const login = (username: string, password: string) => {
-    // Kiểm tra tài khoản demo
-    const demoAccount = DEMO_ACCOUNTS.find(
-      (acc) => acc.username === username && acc.password === password
-    );
+  // Check for token on mount and fetch profile
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (token && !user) {
+        try {
+          const res = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data);
+            localStorage.setItem("auth", JSON.stringify(data));
+          } else {
+            // Token expired or invalid
+            localStorage.removeItem("token");
+            localStorage.removeItem("auth");
+            setUser(null);
+          }
+        } catch (err) {
+          console.error("Auth check failed:", err);
+        }
+      }
+    };
+    checkAuth();
+  }, [API_BASE, user]);
 
-    if (demoAccount) {
-      const { password: _, ...userData } = demoAccount;
-      setUser(userData);
-      localStorage.setItem('auth', JSON.stringify(userData));
-      return { success: true, role: userData.role };
+  const login = async (username: string, password: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernameOrEmail: username, password }),
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        return { success: false, message: payload?.message || "Đăng nhập thất bại" };
+      }
+      if (payload.user) {
+        setUser(payload.user);
+        localStorage.setItem("auth", JSON.stringify(payload.user));
+      }
+      if (payload.token) {
+        localStorage.setItem("token", payload.token);
+      }
+      return { success: true, role: payload.user?.role };
+    } catch (err) {
+      return { success: false, message: "Lỗi kết nối máy chủ" };
     }
-
-    // Kiểm tra tài khoản đã đăng ký
-    const registeredAccount = registeredUsers.find(
-      (acc) => acc.username === username
-    );
-
-    if (registeredAccount) {
-      // Trong thực tế cần verify password hash
-      setUser(registeredAccount);
-      localStorage.setItem('auth', JSON.stringify(registeredAccount));
-      return { success: true, role: registeredAccount.role };
-    }
-
-    return { success: false };
   };
 
-  const register = (data: RegisterData) => {
-    // Kiểm tra username đã tồn tại
-    const existingDemo = DEMO_ACCOUNTS.find((acc) => acc.username === data.username);
-    const existingUser = registeredUsers.find((acc) => acc.username === data.username);
+  const register = async (data: RegisterData) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: data.username,
+          email: data.email,
+          password: data.password,
+          confirmPassword: data.confirmPassword || data.password,
+          fullName: data.fullName,
+          phone: data.phone,
+          role: data.role,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        return {
+          success: false,
+          message: payload?.message || "Đăng ký thất bại",
+        };
+      }
 
-    if (existingDemo || existingUser) {
-      return { success: false, message: 'Tên đăng nhập đã tồn tại' };
+      // No longer auto-login to follow user request
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err?.message || "Lỗi kết nối máy chủ" };
     }
-
-    // Kiểm tra email đã tồn tại
-    const existingEmail = registeredUsers.find((acc) => acc.email === data.email);
-    if (existingEmail) {
-      return { success: false, message: 'Email đã được sử dụng' };
-    }
-
-    // Tạo user mới
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      username: data.username,
-      email: data.email,
-      fullName: data.fullName,
-      phone: data.phone,
-      role: data.role,
-      verificationLevel: 1, // Mặc định cấp 1
-    };
-
-    const updatedUsers = [...registeredUsers, newUser];
-    setRegisteredUsers(updatedUsers);
-    localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
-
-    // Auto login sau khi đăng ký
-    setUser(newUser);
-    localStorage.setItem('auth', JSON.stringify(newUser));
-
-    return { success: true };
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('auth');
+    localStorage.removeItem("auth");
+    localStorage.removeItem("token");
   };
 
   return (
@@ -170,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

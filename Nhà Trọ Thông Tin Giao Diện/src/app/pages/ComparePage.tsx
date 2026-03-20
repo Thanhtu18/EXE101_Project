@@ -1,9 +1,9 @@
-import { useNavigate } from 'react-router';
-import { useCompare } from '@/app/contexts/CompareContext';
-import { getNearbyFacilitiesForProperties } from '@/app/utils/facilitiesCalculator';
-import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
-import { VerificationBadge } from '@/app/components/VerificationBadge';
+import { useNavigate } from "react-router-dom";
+import { useCompare } from "@/app/contexts/CompareContext";
+import { getNearbyFacilitiesForProperties } from "@/app/utils/facilitiesCalculator";
+import { Button } from "@/app/components/ui/button";
+import { Badge } from "@/app/components/ui/badge";
+import { VerificationBadge } from "@/app/components/VerificationBadge";
 import {
   ArrowLeft,
   MapPin,
@@ -20,8 +20,8 @@ import {
   User,
   GitCompare,
   Trash2,
-} from 'lucide-react';
-import { motion } from 'motion/react';
+} from "lucide-react";
+import { motion } from "motion/react";
 
 export function ComparePage() {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export function ComparePage() {
           <p className="text-gray-600 mb-6">
             Vui lòng chọn ít nhất 2 phòng trọ để bắt đầu so sánh
           </p>
-          <Button onClick={() => navigate('/map')} className="gap-2">
+          <Button onClick={() => navigate("/map")} className="gap-2">
             <MapPin className="w-4 h-4" />
             Tìm phòng trọ
           </Button>
@@ -61,7 +61,11 @@ export function ComparePage() {
             Bạn đã chọn 1 phòng. Hãy chọn thêm ít nhất 1 phòng nữa để so sánh.
           </p>
           <div className="flex gap-3 justify-center">
-            <Button variant="outline" onClick={() => navigate('/map')} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/map")}
+              className="gap-2"
+            >
               <MapPin className="w-4 h-4" />
               Tìm thêm phòng
             </Button>
@@ -76,18 +80,21 @@ export function ComparePage() {
   }
 
   // Tính toán tiện ích gần nhất
-  const propertiesWithFacilities = getNearbyFacilitiesForProperties(compareList);
+  const propertiesWithFacilities =
+    getNearbyFacilitiesForProperties(compareList);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(price);
   };
 
   const formatDistance = (distance: number | null) => {
-    if (distance === null) return 'N/A';
-    return distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(1)}km`;
+    if (distance === null) return "N/A";
+    return distance < 1
+      ? `${(distance * 1000).toFixed(0)}m`
+      : `${distance.toFixed(1)}km`;
   };
 
   return (
@@ -97,13 +104,22 @@ export function ComparePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="gap-2"
+              >
                 <ArrowLeft className="w-4 h-4" />
                 Quay lại
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">So sánh phòng trọ</h1>
-                <p className="text-sm text-gray-600">{compareList.length} phòng đang so sánh</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  So sánh phòng trọ
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {compareList.length} phòng đang so sánh
+                </p>
               </div>
             </div>
             <Button variant="outline" onClick={clearCompare} className="gap-2">
@@ -202,10 +218,14 @@ export function ComparePage() {
                   {propertiesWithFacilities.map(({ property }) => (
                     <td key={property.id} className="px-6 py-4 text-center">
                       <Badge
-                        variant={property.available ? 'default' : 'secondary'}
-                        className={property.available ? 'bg-green-100 text-green-800' : ''}
+                        variant={property.available ? "default" : "secondary"}
+                        className={
+                          property.available
+                            ? "bg-green-100 text-green-800"
+                            : ""
+                        }
                       >
-                        {property.available ? 'Còn trống' : 'Đã cho thuê'}
+                        {property.available ? "Còn trống" : "Đã cho thuê"}
                       </Badge>
                     </td>
                   ))}
@@ -236,7 +256,9 @@ export function ComparePage() {
                   {propertiesWithFacilities.map(({ property }) => (
                     <td key={property.id} className="px-6 py-4 text-center">
                       <div className="text-sm">
-                        <div className="font-medium text-gray-900">{property.ownerName}</div>
+                        <div className="font-medium text-gray-900">
+                          {property.ownerName}
+                        </div>
                         <div className="text-gray-600 flex items-center justify-center gap-1 mt-1">
                           <Phone className="w-3 h-3" />
                           {property.phone}
@@ -386,20 +408,22 @@ export function ComparePage() {
                       Bệnh viện gần nhất
                     </div>
                   </td>
-                  {propertiesWithFacilities.map(({ property, nearbyFacilities, distances }) => (
-                    <td key={property.id} className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-600">
-                          {formatDistance(distances.hospital)}
-                        </div>
-                        {nearbyFacilities.hospital && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            {nearbyFacilities.hospital.name}
+                  {propertiesWithFacilities.map(
+                    ({ property, nearbyFacilities, distances }) => (
+                      <td key={property.id} className="px-6 py-4 text-center">
+                        <div className="text-sm">
+                          <div className="font-semibold text-blue-600">
+                            {formatDistance(distances.hospital)}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                          {nearbyFacilities.hospital && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {nearbyFacilities.hospital.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ),
+                  )}
                 </tr>
 
                 {/* Trường học */}
@@ -410,20 +434,22 @@ export function ComparePage() {
                       Trường học gần nhất
                     </div>
                   </td>
-                  {propertiesWithFacilities.map(({ property, nearbyFacilities, distances }) => (
-                    <td key={property.id} className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-600">
-                          {formatDistance(distances.school)}
-                        </div>
-                        {nearbyFacilities.school && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            {nearbyFacilities.school.name}
+                  {propertiesWithFacilities.map(
+                    ({ property, nearbyFacilities, distances }) => (
+                      <td key={property.id} className="px-6 py-4 text-center">
+                        <div className="text-sm">
+                          <div className="font-semibold text-blue-600">
+                            {formatDistance(distances.school)}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                          {nearbyFacilities.school && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {nearbyFacilities.school.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ),
+                  )}
                 </tr>
 
                 {/* Siêu thị */}
@@ -434,20 +460,22 @@ export function ComparePage() {
                       Siêu thị gần nhất
                     </div>
                   </td>
-                  {propertiesWithFacilities.map(({ property, nearbyFacilities, distances }) => (
-                    <td key={property.id} className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-600">
-                          {formatDistance(distances.supermarket)}
-                        </div>
-                        {nearbyFacilities.supermarket && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            {nearbyFacilities.supermarket.name}
+                  {propertiesWithFacilities.map(
+                    ({ property, nearbyFacilities, distances }) => (
+                      <td key={property.id} className="px-6 py-4 text-center">
+                        <div className="text-sm">
+                          <div className="font-semibold text-blue-600">
+                            {formatDistance(distances.supermarket)}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                          {nearbyFacilities.supermarket && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {nearbyFacilities.supermarket.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ),
+                  )}
                 </tr>
 
                 {/* Công viên */}
@@ -458,20 +486,22 @@ export function ComparePage() {
                       Công viên gần nhất
                     </div>
                   </td>
-                  {propertiesWithFacilities.map(({ property, nearbyFacilities, distances }) => (
-                    <td key={property.id} className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-600">
-                          {formatDistance(distances.park)}
-                        </div>
-                        {nearbyFacilities.park && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            {nearbyFacilities.park.name}
+                  {propertiesWithFacilities.map(
+                    ({ property, nearbyFacilities, distances }) => (
+                      <td key={property.id} className="px-6 py-4 text-center">
+                        <div className="text-sm">
+                          <div className="font-semibold text-blue-600">
+                            {formatDistance(distances.park)}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                          {nearbyFacilities.park && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {nearbyFacilities.park.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ),
+                  )}
                 </tr>
 
                 {/* Trạm xe buýt */}
@@ -482,20 +512,22 @@ export function ComparePage() {
                       Trạm xe buýt gần nhất
                     </div>
                   </td>
-                  {propertiesWithFacilities.map(({ property, nearbyFacilities, distances }) => (
-                    <td key={property.id} className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="font-semibold text-blue-600">
-                          {formatDistance(distances.bus_stop)}
-                        </div>
-                        {nearbyFacilities.bus_stop && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            {nearbyFacilities.bus_stop.name}
+                  {propertiesWithFacilities.map(
+                    ({ property, nearbyFacilities, distances }) => (
+                      <td key={property.id} className="px-6 py-4 text-center">
+                        <div className="text-sm">
+                          <div className="font-semibold text-blue-600">
+                            {formatDistance(distances.bus_stop)}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                          {nearbyFacilities.bus_stop && (
+                            <div className="text-xs text-gray-600 mt-1">
+                              {nearbyFacilities.bus_stop.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ),
+                  )}
                 </tr>
               </tbody>
             </table>
