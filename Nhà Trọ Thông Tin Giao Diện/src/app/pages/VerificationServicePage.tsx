@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { Button } from '@/app/components/ui/button';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
 import {
   Check,
   Shield,
@@ -21,90 +21,95 @@ import {
   ChevronRight,
   Sparkles,
   Home,
-} from 'lucide-react';
+} from "lucide-react";
 
 const howItWorksSteps = [
   {
     icon: FileText,
-    title: 'Đăng ký & thanh toán',
-    description: 'Điền form đăng ký và thanh toán phí dịch vụ 299.000đ một lần',
-    step: '01',
+    title: "Đăng ký & thanh toán",
+    description: "Điền form đăng ký và thanh toán phí dịch vụ 299.000đ một lần",
+    step: "01",
   },
   {
     icon: UserCheck,
-    title: 'Đội ngũ MapHome đến kiểm tra thực tế',
-    description: 'Chuyên viên sẽ đến kiểm tra địa chỉ, điều kiện phòng trọ, và chụp ảnh thực tế',
-    step: '02',
+    title: "Đội ngũ MapHome đến kiểm tra thực tế",
+    description:
+      "Chuyên viên sẽ đến kiểm tra địa chỉ, điều kiện phòng trọ, và chụp ảnh thực tế",
+    step: "02",
   },
   {
     icon: Award,
-    title: 'Nhận Badge xác thực + hiển thị ưu tiên',
-    description: 'Tin đăng của bạn có badge xanh và được ưu tiên hiển thị trên bản đồ',
-    step: '03',
+    title: "Nhận Badge xác thực + hiển thị ưu tiên",
+    description:
+      "Tin đăng của bạn có badge xanh và được ưu tiên hiển thị trên bản đồ",
+    step: "03",
   },
 ];
 
 const features = [
   {
     icon: Shield,
-    title: 'Badge xanh trên bản đồ',
+    title: "Badge xanh trên bản đồ",
     description: 'Hiển thị rõ ràng "✓ Đã xác thực" trên mọi tin đăng',
   },
   {
     icon: Search,
-    title: 'Ưu tiên hiển thị tìm kiếm',
-    description: 'Tin của bạn xuất hiện đầu tiên trong kết quả tìm kiếm',
+    title: "Ưu tiên hiển thị tìm kiếm",
+    description: "Tin của bạn xuất hiện đầu tiên trong kết quả tìm kiếm",
   },
   {
     icon: FileCheck,
-    title: 'Báo cáo kiểm tra chi tiết',
-    description: 'Nhận báo cáo đầy đủ về tình trạng phòng trọ',
+    title: "Báo cáo kiểm tra chi tiết",
+    description: "Nhận báo cáo đầy đủ về tình trạng phòng trọ",
   },
   {
     icon: Calendar,
-    title: 'Hiệu lực 6 tháng',
-    description: 'Badge có giá trị trong 6 tháng kể từ ngày cấp',
+    title: "Hiệu lực 6 tháng",
+    description: "Badge có giá trị trong 6 tháng kể từ ngày cấp",
   },
   {
     icon: Users,
-    title: 'Tăng độ tin cậy với người thuê',
-    description: 'Người thuê tin tưởng hơn khi thấy badge xác thực',
+    title: "Tăng độ tin cậy với người thuê",
+    description: "Người thuê tin tưởng hơn khi thấy badge xác thực",
   },
   {
     icon: TrendingUp,
-    title: 'Hỗ trợ gia hạn với giá ưu đãi',
-    description: 'Gia hạn chỉ 199.000đ cho lần tiếp theo',
+    title: "Hỗ trợ gia hạn với giá ưu đãi",
+    description: "Gia hạn chỉ 199.000đ cho lần tiếp theo",
   },
 ];
 
 const testimonials = [
   {
-    name: 'Anh Minh',
-    role: 'Chủ trọ tại Cầu Giấy',
-    avatar: 'M',
+    name: "Anh Minh",
+    role: "Chủ trọ tại Cầu Giấy",
+    avatar: "M",
     rating: 5,
-    content: 'Sau khi có badge xác thực, số lượng người liên hệ tăng gấp 3 lần. Người thuê cảm thấy yên tâm hơn nhiều!',
+    content:
+      "Sau khi có badge xác thực, số lượng người liên hệ tăng gấp 3 lần. Người thuê cảm thấy yên tâm hơn nhiều!",
   },
   {
-    name: 'Chị Hương',
-    role: 'Chủ trọ tại Đống Đa',
-    avatar: 'H',
+    name: "Chị Hương",
+    role: "Chủ trọ tại Đống Đa",
+    avatar: "H",
     rating: 5,
-    content: 'Dịch vụ kiểm tra rất chuyên nghiệp. Đội ngũ đến đúng hẹn và báo cáo chi tiết. Đáng đồng tiền!',
+    content:
+      "Dịch vụ kiểm tra rất chuyên nghiệp. Đội ngũ đến đúng hẹn và báo cáo chi tiết. Đáng đồng tiền!",
   },
   {
-    name: 'Anh Tuấn',
-    role: 'Chủ trọ tại Thanh Xuân',
-    avatar: 'T',
+    name: "Anh Tuấn",
+    role: "Chủ trọ tại Thanh Xuân",
+    avatar: "T",
     rating: 5,
-    content: 'Badge xanh giúp phòng của tôi nổi bật hơn hẳn. Thuê nhanh hơn và giảm được thời gian trống phòng.',
+    content:
+      "Badge xanh giúp phòng của tôi nổi bật hơn hẳn. Thuê nhanh hơn và giảm được thời gian trống phòng.",
   },
 ];
 
 const stats = [
-  { value: '1,200+', label: 'Phòng đã xác thực' },
-  { value: '4.8/5', label: 'Đánh giá chủ trọ' },
-  { value: '68%', label: 'Tăng lượt liên hệ' },
+  { value: "1,200+", label: "Phòng đã xác thực" },
+  { value: "4.8/5", label: "Đánh giá chủ trọ" },
+  { value: "68%", label: "Tăng lượt liên hệ" },
 ];
 
 export function VerificationServicePage() {
@@ -114,15 +119,15 @@ export function VerificationServicePage() {
 
   const handleRegister = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
-    
+
     // Navigate to checkout for verification service
-    navigate('/checkout', {
+    navigate("/checkout", {
       state: {
-        selectedTier: 'verification',
-        billingCycle: 'once',
+        selectedTier: "verification",
+        billingCycle: "once",
         isVerificationService: true,
       },
     });
@@ -143,7 +148,9 @@ export function VerificationServicePage() {
                     <Check className="size-6" strokeWidth={4} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium opacity-90">Đã xác thực bởi</p>
+                    <p className="text-sm font-medium opacity-90">
+                      Đã xác thực bởi
+                    </p>
                     <p className="font-black text-xl">MapHome</p>
                   </div>
                 </div>
@@ -155,8 +162,11 @@ export function VerificationServicePage() {
                   Tăng 3x lượt liên hệ với Badge Xác Thực
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed">
-                  Người thuê tin tưởng hơn khi thấy phòng trọ của bạn đã được đội ngũ MapHome{' '}
-                  <span className="font-semibold text-blue-600">kiểm tra thực tế</span>
+                  Người thuê tin tưởng hơn khi thấy phòng trọ của bạn đã được
+                  đội ngũ MapHome{" "}
+                  <span className="font-semibold text-blue-600">
+                    kiểm tra thực tế
+                  </span>
                 </p>
               </div>
 
@@ -183,10 +193,13 @@ export function VerificationServicePage() {
                 >
                   <Shield className="size-6 mr-3" />
                   Đăng ký kiểm tra ngay
-                  <ChevronRight className={`size-6 ml-2 transition-transform ${isHovered ? 'translate-x-1' : ''}`} />
+                  <ChevronRight
+                    className={`size-6 ml-2 transition-transform ${isHovered ? "translate-x-1" : ""}`}
+                  />
                 </Button>
                 <p className="text-sm text-gray-500 mt-3">
-                  ✓ Không cần cam kết dài hạn · ✓ Hoàn 50% nếu không đạt tiêu chuẩn
+                  ✓ Không cần cam kết dài hạn · ✓ Hoàn 50% nếu không đạt tiêu
+                  chuẩn
                 </p>
               </div>
             </div>
@@ -198,17 +211,20 @@ export function VerificationServicePage() {
                 <div className="relative mx-auto w-96 h-96">
                   {/* Background glow */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-green-200 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-                  
+
                   {/* Main pin */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="relative">
                       {/* Map pin */}
                       <div className="w-48 h-48 bg-gradient-to-br from-green-500 to-blue-600 rounded-full rounded-br-none transform rotate-45 shadow-2xl flex items-center justify-center">
                         <div className="transform -rotate-45">
-                          <Home className="size-20 text-white" strokeWidth={2.5} />
+                          <Home
+                            className="size-20 text-white"
+                            strokeWidth={2.5}
+                          />
                         </div>
                       </div>
-                      
+
                       {/* Checkmark badge */}
                       <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full shadow-2xl flex items-center justify-center border-8 border-white animate-bounce">
                         <Check className="size-14 text-white" strokeWidth={5} />
@@ -220,21 +236,27 @@ export function VerificationServicePage() {
                   <div className="absolute top-8 left-8 bg-white rounded-xl shadow-lg p-3 animate-float">
                     <div className="flex items-center gap-2">
                       <Shield className="size-5 text-green-600" />
-                      <span className="text-sm font-semibold text-gray-900">Đã kiểm tra</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        Đã kiểm tra
+                      </span>
                     </div>
                   </div>
 
                   <div className="absolute bottom-12 left-4 bg-white rounded-xl shadow-lg p-3 animate-float-delay-1">
                     <div className="flex items-center gap-2">
                       <Star className="size-5 text-yellow-500" />
-                      <span className="text-sm font-semibold text-gray-900">Ưu tiên hiển thị</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        Ưu tiên hiển thị
+                      </span>
                     </div>
                   </div>
 
                   <div className="absolute top-16 right-8 bg-white rounded-xl shadow-lg p-3 animate-float-delay-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="size-5 text-blue-600" />
-                      <span className="text-sm font-semibold text-gray-900">+68% liên hệ</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        +68% liên hệ
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -251,7 +273,9 @@ export function VerificationServicePage() {
             <Badge className="bg-blue-100 text-blue-700 border border-blue-300 px-4 py-2 text-sm font-semibold mb-4">
               Quy trình đơn giản
             </Badge>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Cách thức hoạt động</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Cách thức hoạt động
+            </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Chỉ 3 bước để nhận badge xác thực và tăng độ tin cậy
             </p>
@@ -266,7 +290,9 @@ export function VerificationServicePage() {
                     <CardContent className="p-8 text-center">
                       {/* Step number */}
                       <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-white font-black text-lg">{step.step}</span>
+                        <span className="text-white font-black text-lg">
+                          {step.step}
+                        </span>
                       </div>
 
                       {/* Icon */}
@@ -289,7 +315,10 @@ export function VerificationServicePage() {
                   {/* Arrow between steps */}
                   {idx < howItWorksSteps.length - 1 && (
                     <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10">
-                      <ChevronRight className="size-8 text-blue-300" strokeWidth={3} />
+                      <ChevronRight
+                        className="size-8 text-blue-300"
+                        strokeWidth={3}
+                      />
                     </div>
                   )}
                 </div>
@@ -306,7 +335,9 @@ export function VerificationServicePage() {
             <Badge className="bg-green-100 text-green-700 border border-green-300 px-4 py-2 text-sm font-semibold mb-4">
               Lợi ích vượt trội
             </Badge>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Chủ trọ nhận được gì?</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Chủ trọ nhận được gì?
+            </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Đầu tư 299.000đ một lần, nhận lại nhiều hơn gấp bội
             </p>
@@ -316,7 +347,10 @@ export function VerificationServicePage() {
             {features.map((feature, idx) => {
               const Icon = feature.icon;
               return (
-                <Card key={idx} className="border-2 border-gray-200 hover:border-green-300 hover:shadow-lg transition-all">
+                <Card
+                  key={idx}
+                  className="border-2 border-gray-200 hover:border-green-300 hover:shadow-lg transition-all"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -346,7 +380,9 @@ export function VerificationServicePage() {
             <Badge className="bg-purple-100 text-purple-700 border border-purple-300 px-4 py-2 text-sm font-semibold mb-4">
               Chủ trọ yêu thích
             </Badge>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Đánh giá từ chủ trọ</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Đánh giá từ chủ trọ
+            </h2>
           </div>
 
           {/* Stats */}
@@ -371,7 +407,10 @@ export function VerificationServicePage() {
                   {/* Stars */}
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="size-5 text-yellow-500 fill-yellow-500" />
+                      <Star
+                        key={i}
+                        className="size-5 text-yellow-500 fill-yellow-500"
+                      />
                     ))}
                   </div>
 
@@ -386,8 +425,12 @@ export function VerificationServicePage() {
                       {testimonial.avatar}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900">{testimonial.name}</p>
-                      <p className="text-sm text-gray-600">{testimonial.role}</p>
+                      <p className="font-bold text-gray-900">
+                        {testimonial.name}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {testimonial.role}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -420,7 +463,9 @@ export function VerificationServicePage() {
                   <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600 mb-2">
                     299.000đ
                   </p>
-                  <p className="text-gray-600 font-semibold">Hiệu lực 6 tháng</p>
+                  <p className="text-gray-600 font-semibold">
+                    Hiệu lực 6 tháng
+                  </p>
                 </div>
               </div>
 
@@ -428,14 +473,17 @@ export function VerificationServicePage() {
               <div className="max-w-md mx-auto mb-8 space-y-3">
                 {[
                   'Badge "✓ Đã xác thực" trên tin đăng',
-                  'Kiểm tra thực tế tại địa chỉ',
-                  'Báo cáo chi tiết tình trạng phòng',
-                  'Ưu tiên hiển thị trong tìm kiếm',
-                  'Hỗ trợ gia hạn giá ưu đãi',
+                  "Kiểm tra thực tế tại địa chỉ",
+                  "Báo cáo chi tiết tình trạng phòng",
+                  "Ưu tiên hiển thị trong tìm kiếm",
+                  "Hỗ trợ gia hạn giá ưu đãi",
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                      <Check className="size-4 text-green-600" strokeWidth={3} />
+                      <Check
+                        className="size-4 text-green-600"
+                        strokeWidth={3}
+                      />
                     </div>
                     <p className="text-gray-700 font-medium">{item}</p>
                   </div>

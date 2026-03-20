@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Button } from '@/app/components/ui/button';
-import { ExpiryWarningModal } from '@/app/components/ExpiryWarningModal';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/app/components/ui/button";
+import { ExpiryWarningModal } from "@/app/components/ExpiryWarningModal";
 import {
   AlertCircle,
   X,
@@ -11,7 +11,7 @@ import {
   Eye,
   Star,
   Clock,
-} from 'lucide-react';
+} from "lucide-react";
 
 /**
  * Demo page showing all 3 expiry warning states:
@@ -24,14 +24,14 @@ export function ExpiryWarningDemo() {
   const [showBanner, setShowBanner] = useState(true);
   const [showModal, setShowModal] = useState(true);
 
-  const expiryDate = '2025-01-17';
+  const expiryDate = "2025-01-17";
   const daysRemaining = 3;
-  const planName = 'Gói Standard';
+  const planName = "Gói Standard";
   const renewalPrice = 100000;
 
   const handleRenew = () => {
     setShowModal(false);
-    navigate('/pricing');
+    navigate("/pricing");
   };
 
   return (
@@ -48,10 +48,12 @@ export function ExpiryWarningDemo() {
                 </div>
                 <div>
                   <p className="font-semibold text-amber-900 text-base">
-                    Gói Standard của bạn sẽ hết hạn sau {daysRemaining} ngày ({new Date(expiryDate).toLocaleDateString('vi-VN')})
+                    Gói Standard của bạn sẽ hết hạn sau {daysRemaining} ngày (
+                    {new Date(expiryDate).toLocaleDateString("vi-VN")})
                   </p>
                   <p className="text-sm text-amber-800">
-                    Gia hạn ngay để tiếp tục sử dụng dịch vụ và tránh tin đăng bị gỡ
+                    Gia hạn ngay để tiếp tục sử dụng dịch vụ và tránh tin đăng
+                    bị gỡ
                   </p>
                 </div>
               </div>
@@ -61,7 +63,7 @@ export function ExpiryWarningDemo() {
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-amber-700 to-orange-700 hover:from-amber-800 hover:to-orange-800 text-white font-bold shadow-lg"
-                  onClick={() => navigate('/pricing')}
+                  onClick={() => navigate("/pricing")}
                 >
                   Gia hạn ngay
                 </Button>
@@ -86,7 +88,8 @@ export function ExpiryWarningDemo() {
             Expiry Warning States Demo
           </h1>
           <p className="text-gray-600">
-            Hiển thị tất cả 3 trạng thái cảnh báo hết hạn: Banner, Listing Card, và Modal
+            Hiển thị tất cả 3 trạng thái cảnh báo hết hạn: Banner, Listing Card,
+            và Modal
           </p>
         </div>
 
@@ -97,14 +100,14 @@ export function ExpiryWarningDemo() {
             onClick={() => setShowBanner(!showBanner)}
             className="border-2"
           >
-            {showBanner ? 'Ẩn' : 'Hiện'} Top Banner
+            {showBanner ? "Ẩn" : "Hiện"} Top Banner
           </Button>
           <Button
             variant="outline"
             onClick={() => setShowModal(!showModal)}
             className="border-2"
           >
-            {showModal ? 'Ẩn' : 'Hiện'} Modal
+            {showModal ? "Ẩn" : "Hiện"} Modal
           </Button>
         </div>
 
@@ -143,7 +146,9 @@ export function ExpiryWarningDemo() {
                 </span>
                 <span className="flex items-center gap-1">
                   <DollarSign className="size-4" />
-                  <span className="font-semibold text-green-600">2.5 triệu/tháng</span>
+                  <span className="font-semibold text-green-600">
+                    2.5 triệu/tháng
+                  </span>
                 </span>
                 <span className="flex items-center gap-1">
                   <Maximize className="size-4" />
@@ -166,9 +171,9 @@ export function ExpiryWarningDemo() {
             {/* Warning Message */}
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 mb-4">
               <p className="text-sm font-semibold text-orange-900">
-                ⚠️ Gói {planName} của bạn sẽ hết hạn vào{' '}
+                ⚠️ Gói {planName} của bạn sẽ hết hạn vào{" "}
                 <span className="font-bold">
-                  {new Date(expiryDate).toLocaleDateString('vi-VN')}
+                  {new Date(expiryDate).toLocaleDateString("vi-VN")}
                 </span>
               </p>
               <p className="text-xs text-orange-800 mt-1">
@@ -180,7 +185,7 @@ export function ExpiryWarningDemo() {
             <Button
               size="lg"
               className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold shadow-lg"
-              onClick={() => navigate('/pricing')}
+              onClick={() => navigate("/pricing")}
             >
               <Clock className="size-5 mr-2" />
               Gia hạn để tiếp tục hiển thị
@@ -200,7 +205,9 @@ export function ExpiryWarningDemo() {
                 </span>
                 <span className="flex items-center gap-1">
                   <DollarSign className="size-4" />
-                  <span className="font-semibold text-green-600">4.0 triệu/tháng</span>
+                  <span className="font-semibold text-green-600">
+                    4.0 triệu/tháng
+                  </span>
                 </span>
                 <span className="flex items-center gap-1">
                   <Maximize className="size-4" />
@@ -214,8 +221,7 @@ export function ExpiryWarningDemo() {
                   182 lượt xem
                 </span>
                 <span className="flex items-center gap-1">
-                  <Star className="size-4 text-yellow-500" />
-                  8 yêu thích
+                  <Star className="size-4 text-yellow-500" />8 yêu thích
                 </span>
               </div>
             </div>
@@ -236,13 +242,16 @@ export function ExpiryWarningDemo() {
           <h3 className="font-bold text-blue-900 mb-3">📋 Hướng dẫn Demo</h3>
           <div className="space-y-2 text-sm text-blue-800">
             <p>
-              <strong>1. Top Banner:</strong> Sticky warning ở đầu trang, có thể dismiss bằng nút X
+              <strong>1. Top Banner:</strong> Sticky warning ở đầu trang, có thể
+              dismiss bằng nút X
             </p>
             <p>
-              <strong>2. Listing Card:</strong> Card đầu tiên có border cam, badge "Sắp hết hạn", và CTA button
+              <strong>2. Listing Card:</strong> Card đầu tiên có border cam,
+              badge "Sắp hết hạn", và CTA button
             </p>
             <p>
-              <strong>3. Modal Popup:</strong> Hiển thị khi load trang, có countdown timer real-time
+              <strong>3. Modal Popup:</strong> Hiển thị khi load trang, có
+              countdown timer real-time
             </p>
           </div>
         </div>

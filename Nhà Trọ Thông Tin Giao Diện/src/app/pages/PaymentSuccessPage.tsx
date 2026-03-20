@@ -1,19 +1,26 @@
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { Button } from '@/app/components/ui/button';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Badge } from '@/app/components/ui/badge';
-import { Separator } from '@/app/components/ui/separator';
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/app/components/ui/button";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Separator } from "@/app/components/ui/separator";
 import {
-  Check, Home, ArrowRight, LayoutDashboard, Mail, ShieldCheck, Calendar, MapPin
-} from 'lucide-react';
+  Check,
+  Home,
+  ArrowRight,
+  LayoutDashboard,
+  Mail,
+  ShieldCheck,
+  Calendar,
+  MapPin,
+} from "lucide-react";
 
 export function PaymentSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const checkoutType = location.state?.type || 'subscription';
-  const isInspection = checkoutType === 'inspection';
+  const checkoutType = location.state?.type || "subscription";
+  const isInspection = checkoutType === "inspection";
   const tier = location.state?.tier;
   const amount = location.state?.amount;
   const orderId = location.state?.orderId;
@@ -21,7 +28,7 @@ export function PaymentSuccessPage() {
 
   useEffect(() => {
     if (!tier || !amount || !orderId) {
-      navigate(isInspection ? '/admin/dashboard' : '/pricing');
+      navigate(isInspection ? "/admin/dashboard" : "/pricing");
     }
   }, [tier, amount, orderId, navigate, isInspection]);
 
@@ -34,16 +41,15 @@ export function PaymentSuccessPage() {
   expiryDate.setDate(expiryDate.getDate() + 30);
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 relative overflow-hidden">
-      
       {/* Confetti Elements */}
       <div className="confetti-container">
         {[...Array(30)].map((_, i) => (
@@ -53,7 +59,13 @@ export function PaymentSuccessPage() {
             style={{
               left: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 3}s`,
-              backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'][Math.floor(Math.random() * 5)],
+              backgroundColor: [
+                "#3b82f6",
+                "#10b981",
+                "#f59e0b",
+                "#ec4899",
+                "#8b5cf6",
+              ][Math.floor(Math.random() * 5)],
               animationDuration: `${3 + Math.random() * 2}s`,
             }}
           />
@@ -105,7 +117,6 @@ export function PaymentSuccessPage() {
 
       {/* Main Content */}
       <div className="max-w-[700px] mx-auto px-4 py-16 relative z-10">
-        
         {/* Success Icon */}
         <div className="flex justify-center mb-8">
           <div className="relative">
@@ -116,7 +127,7 @@ export function PaymentSuccessPage() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-[90px] h-[90px] rounded-full bg-green-300 animate-pulse opacity-30"></div>
             </div>
-            
+
             {/* Main icon */}
             <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl">
               <Check className="size-10 text-white" strokeWidth={4} />
@@ -131,7 +142,7 @@ export function PaymentSuccessPage() {
           </h1>
           <p className="text-xl text-gray-600">
             {isInspection
-              ? 'Lịch kiểm tra thực địa đã được xác nhận'
+              ? "Lịch kiểm tra thực địa đã được xác nhận"
               : `Gói ${tier.name} của bạn đã được kích hoạt`}
           </p>
         </div>
@@ -141,13 +152,15 @@ export function PaymentSuccessPage() {
           <CardContent className="p-8">
             <h3 className="font-bold text-gray-900 text-lg mb-6 flex items-center gap-2">
               {isInspection && <ShieldCheck className="size-5 text-blue-600" />}
-              {isInspection ? 'Thông tin lịch kiểm tra' : 'Thông tin kích hoạt'}
+              {isInspection ? "Thông tin lịch kiểm tra" : "Thông tin kích hoạt"}
             </h3>
-            
+
             <div className="space-y-4">
               {/* Dịch vụ */}
               <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <span className="text-gray-600">{isInspection ? 'Dịch vụ' : 'Gói đăng ký'}</span>
+                <span className="text-gray-600">
+                  {isInspection ? "Dịch vụ" : "Gói đăng ký"}
+                </span>
                 <span className="font-semibold text-gray-900">{tier.name}</span>
               </div>
 
@@ -163,7 +176,7 @@ export function PaymentSuccessPage() {
               <div className="flex items-center justify-between py-3 border-b border-gray-100">
                 <span className="text-gray-600">Số tiền</span>
                 <span className="font-bold text-green-600 text-lg">
-                  {amount.toLocaleString('vi-VN')}đ
+                  {amount.toLocaleString("vi-VN")}đ
                 </span>
               </div>
 
@@ -172,7 +185,9 @@ export function PaymentSuccessPage() {
                   {/* Căn trọ */}
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Căn trọ</span>
-                    <span className="font-semibold text-gray-900">{inspectionData.propertyName}</span>
+                    <span className="font-semibold text-gray-900">
+                      {inspectionData.propertyName}
+                    </span>
                   </div>
 
                   {/* Địa chỉ */}
@@ -182,7 +197,9 @@ export function PaymentSuccessPage() {
                     </span>
                     <span className="font-semibold text-gray-900 text-right max-w-[60%]">
                       {inspectionData.propertyAddress}
-                      {inspectionData.district ? `, ${inspectionData.district}` : ''}
+                      {inspectionData.district
+                        ? `, ${inspectionData.district}`
+                        : ""}
                     </span>
                   </div>
 
@@ -190,7 +207,8 @@ export function PaymentSuccessPage() {
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Chủ trọ</span>
                     <span className="font-semibold text-gray-900">
-                      {inspectionData.landlordName} - {inspectionData.landlordPhone}
+                      {inspectionData.landlordName} -{" "}
+                      {inspectionData.landlordPhone}
                     </span>
                   </div>
 
@@ -200,7 +218,15 @@ export function PaymentSuccessPage() {
                       <Calendar className="size-3.5" /> Ngày kiểm tra
                     </span>
                     <span className="font-semibold text-blue-700">
-                      {new Date(inspectionData.scheduledDate).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })} - {inspectionData.scheduledTime}
+                      {new Date(
+                        inspectionData.scheduledDate,
+                      ).toLocaleDateString("vi-VN", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}{" "}
+                      - {inspectionData.scheduledTime}
                     </span>
                   </div>
 
@@ -218,13 +244,17 @@ export function PaymentSuccessPage() {
                   {/* Ngày kích hoạt */}
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Ngày kích hoạt</span>
-                    <span className="font-semibold text-gray-900">{formatDate(today)}</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatDate(today)}
+                    </span>
                   </div>
 
                   {/* Ngày hết hạn */}
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Ngày hết hạn</span>
-                    <span className="font-semibold text-gray-900">{formatDate(expiryDate)}</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatDate(expiryDate)}
+                    </span>
                   </div>
 
                   {/* Trạng thái */}
@@ -248,7 +278,7 @@ export function PaymentSuccessPage() {
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-semibold shadow-lg h-14 text-base"
-                onClick={() => navigate('/admin/dashboard')}
+                onClick={() => navigate("/admin/dashboard")}
               >
                 <LayoutDashboard className="size-5 mr-2" />
                 Về Admin Dashboard
@@ -259,7 +289,7 @@ export function PaymentSuccessPage() {
                 size="lg"
                 variant="outline"
                 className="border-2 border-gray-300 hover:border-gray-400 font-semibold h-14 text-base"
-                onClick={() => navigate('/')}
+                onClick={() => navigate("/")}
               >
                 <Home className="size-5 mr-2" />
                 Về trang chủ
@@ -270,7 +300,7 @@ export function PaymentSuccessPage() {
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg h-14 text-base"
-                onClick={() => navigate('/post-room')}
+                onClick={() => navigate("/post-room")}
               >
                 <Home className="size-5 mr-2" />
                 Đăng tin ngay
@@ -281,7 +311,7 @@ export function PaymentSuccessPage() {
                 size="lg"
                 variant="outline"
                 className="border-2 border-gray-300 hover:border-gray-400 font-semibold h-14 text-base"
-                onClick={() => navigate('/landlord/dashboard')}
+                onClick={() => navigate("/landlord/dashboard")}
               >
                 <LayoutDashboard className="size-5 mr-2" />
                 Về trang quản lý
@@ -294,9 +324,16 @@ export function PaymentSuccessPage() {
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <Mail className="size-4 text-blue-600 flex-shrink-0" />
           <p>
-            {isInspection
-              ? 'Thông tin kiểm tra đã được gửi đến đội ngũ xác thực. Chúng tôi sẽ liên hệ xác nhận trong 24h.'
-              : <>Email xác nhận đã được gửi đến{' '}<span className="font-semibold text-blue-700">landlord@example.com</span></>}
+            {isInspection ? (
+              "Thông tin kiểm tra đã được gửi đến đội ngũ xác thực. Chúng tôi sẽ liên hệ xác nhận trong 24h."
+            ) : (
+              <>
+                Email xác nhận đã được gửi đến{" "}
+                <span className="font-semibold text-blue-700">
+                  landlord@example.com
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
