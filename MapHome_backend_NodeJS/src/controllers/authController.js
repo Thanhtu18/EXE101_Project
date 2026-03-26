@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Landlord = require("../models/Landlord");
 
 // POST /api/auth/register
 const register = async (req, res) => {
@@ -72,6 +73,16 @@ const register = async (req, res) => {
       phone,
       role: normalizedRole,
     });
+
+    // Auto-create Landlord profile if role is landlord
+    if (normalizedRole === "landlord") {
+      await Landlord.create({
+        name: fullName || username,
+        phone: phone || "0000000000",
+        email,
+        userId: user._id,
+      });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },

@@ -20,6 +20,7 @@ import { useProperties } from "@/app/contexts/PropertiesContext";
 import { RentalProperty, LandlordProfile } from "@/app/components/types";
 import { Navbar } from "@/app/components/Navbar";
 import { Footer } from "@/app/components/Footer";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { CompareFloatingBar } from "@/app/components/CompareFloatingBar";
 import { Toaster } from "@/app/components/ui/sonner";
 import {
@@ -300,6 +301,7 @@ function MiniMap({ property }: { property: RentalProperty }) {
 export function RoomDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { properties } = useProperties();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -369,12 +371,76 @@ export function RoomDetailPage() {
     }
   };
 
-  // Reviews for this property (mock - use property id to vary)
-  const reviews = useMemo(() => {
-    if (!property) return [];
-    const offset = parseInt(property.id) % 2;
-    return mockReviews.slice(offset, offset + 3);
-  }, [property]);
+  // Reviews logic
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [newReviewText, setNewReviewText] = useState("");
+  const [newRating, setNewRating] = useState(5);
+
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+  useEffect(() => {
+    if (!property) return;
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/reviews/property/${property.id || property._id}`);
+        if (res.ok) {
+          setReviews(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+      }
+    };
+    fetchReviews();
+  }, [property, API_BASE]);
+
+  const handleSubmitReview = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để đánh giá");
+      return;
+    }
+    if (!newReviewText.trim()) return;
+
+    setIsSubmittingReview(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          propertyId: property!.id || property!._id,
+          rating: newRating,
+          comment: newReviewText
+        })
+      });
+
+      if (res.ok) {
+        const newReview = await res.json();
+        const constructedReview = {
+          ...newReview,
+          userId: {
+            fullName: user.fullName || "",
+            username: user.username || "",
+            avatar: (user.fullName || user.username || "U").charAt(0)
+          }
+        };
+        setReviews([constructedReview, ...reviews]);
+        setNewReviewText("");
+        setNewRating(5);
+      } else {
+        const err = await res.json();
+        alert(err.message || "Không thể gửi đánh giá");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi gửi đánh giá");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const avgRating =
     reviews.length > 0
@@ -1048,31 +1114,70 @@ export function RoomDetailPage() {
                   <div className="space-y-4">
                     {reviews.map((review) => (
                       <div
-                        key={review.id}
+                        key={review._id}
                         className="bg-white rounded-xl p-5 border shadow-sm"
                       >
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                            {review.avatar}
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm uppercase">
+                            {review.userId?.avatar || review.userId?.fullName?.charAt(0) || review.userId?.username?.charAt(0) || "U"}
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold text-gray-900">
-                              {review.author}
+                              {review.userId?.fullName || review.userId?.username || "Người dùng ẩn danh"}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {new Date(review.date).toLocaleDateString(
-                                "vi-VN",
-                              )}
+                              {new Date(review.createdAt).toLocaleDateString("vi-VN")}
                             </p>
                           </div>
                           <StarRating rating={review.rating} />
                         </div>
                         <p className="text-sm text-gray-700 leading-relaxed">
-                          {review.text}
+                          {review.comment}
                         </p>
+                        {review.reply && (
+                          <div className="mt-4 bg-gray-50 border border-gray-100 rounded-lg p-3 ml-8 relative">
+                            <div className="absolute -left-2 top-3 text-2xl text-gray-300">↳</div>
+                            <p className="text-xs font-semibold text-gray-900 mb-1">Chủ nhà phản hồi:</p>
+                            <p className="text-sm text-gray-700">{review.reply}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
+
+                  {/* Add Review Form */}
+                  {user && (
+                    <div className="bg-white rounded-xl p-6 border shadow-sm mt-6">
+                      <h4 className="font-semibold text-gray-900 mb-4">Viết đánh giá của bạn</h4>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-sm text-gray-600">Chọn đánh giá:</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setNewRating(star)}
+                            >
+                              <Star className={`size-6 ${newRating >= star ? "fill-amber-400 text-amber-400" : "text-gray-300"} hover:scale-110 transition-transform`} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <textarea
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-green-500 focus:border-green-500 min-h-[100px] mb-3"
+                        placeholder="Chia sẻ trải nghiệm của bạn về phòng trọ này..."
+                        value={newReviewText}
+                        onChange={(e) => setNewReviewText(e.target.value)}
+                      />
+                      <Button
+                        onClick={handleSubmitReview}
+                        disabled={isSubmittingReview || !newReviewText.trim()}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {isSubmittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1289,8 +1394,8 @@ export function RoomDetailPage() {
         open={isRequestInspectionOpen}
         onOpenChange={setIsRequestInspectionOpen}
         property={property}
-        currentUserId="user-001"
-        currentUserName="Nguyễn Văn A"
+        currentUserId={(user as any)?._id || user?.id || ""}
+        currentUserName={user?.fullName || user?.username || ""}
       />
     </div>
   );

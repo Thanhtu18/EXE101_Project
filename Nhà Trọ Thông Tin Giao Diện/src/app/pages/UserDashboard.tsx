@@ -493,10 +493,10 @@ function SearchView() {
     });
   };
 
+  const navigate = useNavigate();
+
   const handleSearch = () => {
-    alert(
-      "Tìm kiếm với các tiêu chí:\n" + JSON.stringify(searchParams, null, 2),
-    );
+    navigate("/map");
   };
 
   const handleReset = () => {

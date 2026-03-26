@@ -13,7 +13,7 @@ export function RevenueView() {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/admin/revenue-stats`, {
+        const res = await fetch(`${API_BASE}/api/admin/stats/revenue`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -226,7 +226,7 @@ export function RevenueView() {
 
           {/* Chart */}
           <div className="relative h-[120px] mb-3">
-            <svg className="w-full h-full">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               {/* Grid Lines */}
               <line x1="0" y1="20%" x2="100%" y2="20%" stroke="#f1f5f9" strokeWidth="1" />
               <line x1="0" y1="40%" x2="100%" y2="40%" stroke="#f1f5f9" strokeWidth="1" />
@@ -235,14 +235,20 @@ export function RevenueView() {
 
               {/* Revenue Line */}
               <polyline
-                points={revenueData.map((val, idx) => `${(idx / 5) * 100}%,${100 - val}%`).join(' ')}
+                points={revenueData.map((val: number, idx: number) => {
+                  const x = (idx / Math.max(1, revenueData.length - 1)) * 100;
+                  const y = 100 - Math.min(100, Math.max(0, (val / (Math.max(...revenueData) || 1)) * 100));
+                  return `${x},${y}`;
+                }).join(' ')}
                 fill="none"
                 stroke="#16a34a"
                 strokeWidth="2"
               />
-              {revenueData.map((val, idx) => (
-                <circle key={idx} cx={`${(idx / 5) * 100}%`} cy={`${100 - val}%`} r="4" fill="#16a34a" />
-              ))}
+              {revenueData.map((val: number, idx: number) => {
+                const x = (idx / Math.max(1, revenueData.length - 1)) * 100;
+                const y = 100 - Math.min(100, Math.max(0, (val / (Math.max(...revenueData) || 1)) * 100));
+                return <circle key={idx} cx={`${x}`} cy={`${y}`} r="2" fill="#16a34a" />;
+              })}
 
               {/* Cost Line hidden as per "Remove mock data" rule if not in backend */}
             </svg>

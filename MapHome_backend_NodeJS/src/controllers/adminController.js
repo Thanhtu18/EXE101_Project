@@ -114,13 +114,17 @@ const rejectVerification = async (req, res) => {
   }
 };
 
-// @desc    Complete inspection and award green badge
-// @route   PUT /api/admin/verification/:id/complete
 const completeVerification = async (req, res) => {
   try {
+    const { badgeAwarded, inspectorNotes } = req.body;
+
     const verification = await VerificationRequest.findByIdAndUpdate(
       req.params.id,
-      { status: "completed", completedAt: new Date() },
+      { 
+        status: badgeAwarded === "none" ? "rejected" : "completed", 
+        completedAt: new Date(),
+        inspectorNotes: inspectorNotes || ""
+      },
       { new: true },
     );
 
@@ -130,11 +134,17 @@ const completeVerification = async (req, res) => {
         .json({ message: "Verification request not found" });
     }
 
-    // Update property with verified badge
-    await Property.findByIdAndUpdate(verification.propertyId, {
-      verified: true,
-      verifiedDate: new Date(),
-    });
+    // Update property with verified badge if awarded
+    if (badgeAwarded === "verified") {
+      await Property.findByIdAndUpdate(verification.propertyId, {
+        greenBadge: {
+          level: "verified",
+          awardedAt: new Date(),
+          awardedBy: "admin", // Or req.user.id if available
+          inspectionNotes: inspectorNotes || ""
+        }
+      });
+    }
 
     res.status(200).json({
       message: "Verification completed and property verified",

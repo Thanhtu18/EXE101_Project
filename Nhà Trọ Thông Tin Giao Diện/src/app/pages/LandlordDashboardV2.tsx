@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { useProperties } from "@/app/contexts/PropertiesContext";
-import { useVerification } from "@/app/contexts/VerificationContext";
 import { Button } from "@/app/components/ui/button";
 import { RequestVerificationDialog } from "@/app/components/RequestVerificationDialog";
 import { SubscriptionManagement } from "@/app/components/SubscriptionManagement";
+import { EditPropertyDialog } from "@/app/components/EditPropertyDialog";
 import {
   Home,
   LogOut,
@@ -20,6 +19,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  CalendarDays,
   TrendingUp,
   Star,
   ShieldCheck,
@@ -34,6 +34,7 @@ import {
 type DashboardTab =
   | "overview"
   | "posts"
+  | "bookings"
   | "subscription"
   | "verification"
   | "settings";
@@ -46,6 +47,7 @@ const menuItems: Array<{
 }> = [
   { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
   { id: "posts", label: "Tin đăng của tôi", icon: FileText },
+  { id: "bookings", label: "Lịch hẹn", icon: CalendarDays },
   { id: "subscription", label: "Gói đăng ký", icon: CreditCard },
   { id: "verification", label: "Yêu cầu xác thực", icon: ShieldCheck },
   { id: "settings", label: "Cài đặt", icon: Settings },
@@ -55,38 +57,75 @@ export function LandlordDashboardV2() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout, isAuthenticated } = useAuth();
-  const { properties } = useProperties();
-  const { getRequestsByLandlord } = useVerification();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<any>(null);
+
+  // States for API data
+  const [landlordPosts, setLandlordPosts] = useState<any[]>([]);
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalPosts: 0,
+    approvedPosts: 0,
+    pendingPosts: 0,
+    totalViews: 0,
+    totalFavorites: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get active tab from URL params, default to 'overview'
   const activeTab = (searchParams.get("tab") as DashboardTab) || "overview";
 
-  // Filter properties by current landlord
-  const landlordPosts = properties.filter(
-    (p) => p.landlordId === user?.id || p.ownerName === user?.fullName || p.ownerName === user?.username || p.pinInfo,
-  );
-
-  // Get verification requests
-  const verificationRequests = getRequestsByLandlord(user?.id || "unknown");
-
-  // Calculate stats
-  const stats = {
-    totalPosts: landlordPosts.length,
-    approvedPosts: landlordPosts.filter((p) => p.available).length,
-    pendingPosts: 0,
-    totalViews: landlordPosts.reduce((sum, p) => sum + (p.views || 0), 0),
-    totalFavorites: landlordPosts.reduce(
-      (sum, p) => sum + (p.favorites || 0),
-      0,
-    ),
-  };
-
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "landlord") {
       navigate("/login");
+      return;
     }
-  }, [isAuthenticated, user, navigate]);
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+      const headers = { Authorization: `Bearer ${token}` };
+
+      try {
+        if (activeTab === "overview") {
+          const statsRes = await fetch(`${API_BASE}/api/landlord/analytics`, { headers });
+          if (statsRes.ok) {
+            const data = await statsRes.json();
+            setStats({
+              totalPosts: data.totalProperties || 0,
+              approvedPosts: data.totalProperties || 0, // Can be improved
+              pendingPosts: 0,
+              totalViews: data.totalViews || 0,
+              totalFavorites: 0, // Need backend support or local calculation
+            });
+          }
+        } else if (activeTab === "posts") {
+          const propsRes = await fetch(`${API_BASE}/api/landlord/properties`, { headers });
+          if (propsRes.ok) {
+            setLandlordPosts(await propsRes.json());
+          }
+        } else if (activeTab === "bookings") {
+          const bookingsRes = await fetch(`${API_BASE}/api/landlord/bookings`, { headers });
+          if (bookingsRes.ok) {
+            setBookings(await bookingsRes.json());
+          }
+        } else if (activeTab === "verification") {
+          const reqsRes = await fetch(`${API_BASE}/api/landlord/verification-requests`, { headers });
+          if (reqsRes.ok) {
+            setVerificationRequests(await reqsRes.json());
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch landlord data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isAuthenticated, user, navigate, activeTab]);
 
   const handleLogout = () => {
     logout();
@@ -204,7 +243,7 @@ export function LandlordDashboardV2() {
                 <div className="space-y-3">
                   {verificationRequests.map((req) => (
                     <div
-                      key={req.id}
+                      key={req._id || req.id}
                       className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -271,18 +310,220 @@ export function LandlordDashboardV2() {
           </div>
         );
 
+      case "bookings":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Lịch hẹn xem phòng</h2>
+              <p className="text-gray-600">Quản lý các yêu cầu xem phòng từ khách thuê</p>
+            </div>
+            
+            { bookings.length > 0 ? (
+              <div className="space-y-4">
+                {bookings.map((booking) => (
+                  <div key={booking._id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-lg text-gray-900">{booking.propertyId?.name || "Phòng trọ"}</h4>
+                        <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                          <MapPin className="size-4" /> {booking.propertyId?.address || "Đang cập nhật"}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        booking.status === 'confirmed' ? "bg-blue-100 text-blue-800" :
+                        booking.status === 'completed' ? "bg-green-100 text-green-800" :
+                        booking.status === 'cancelled' ? "bg-red-100 text-red-800" :
+                        "bg-orange-100 text-orange-800"
+                      }`}>
+                        {booking.status === 'confirmed' ? "Đã xác nhận" :
+                         booking.status === 'completed' ? "Hoàn thành" :
+                         booking.status === 'cancelled' ? "Đã huỷ" : "Chờ xác nhận"}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Thời gian xem</p>
+                        <p className="font-medium text-gray-900 flex items-center gap-2">
+                          <Clock className="size-4 text-green-600" />
+                          {booking.bookingTime} - {new Date(booking.bookingDate).toLocaleDateString("vi-VN")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Thông tin khách</p>
+                        <p className="font-medium text-gray-900">{booking.customerName}</p>
+                        <p className="text-sm text-gray-600">{booking.customerPhone}</p>
+                      </div>
+                      {booking.note && (
+                        <div className="col-span-2">
+                          <p className="text-sm text-gray-500 mb-1">Ghi chú</p>
+                          <p className="text-sm text-gray-900 bg-white p-2 border rounded">{booking.note}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {booking.status === 'pending' && (
+                      <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
+                        <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={async () => {
+                          const token = localStorage.getItem("token");
+                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ status: "cancelled" })
+                          });
+                          window.location.reload();
+                        }}>Từ chối</Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={async () => {
+                          const token = localStorage.getItem("token");
+                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ status: "confirmed" })
+                          });
+                          window.location.reload();
+                        }}>Xác nhận lịch hẹn</Button>
+                      </div>
+                    )}
+                    
+                    {booking.status === 'confirmed' && (
+                      <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
+                        <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                          const token = localStorage.getItem("token");
+                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ status: "completed" })
+                          });
+                          window.location.reload();
+                        }}>Đã hoàn thành xem phòng</Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <CalendarDays className="size-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Chưa có lịch hẹn nào</h3>
+                <p className="text-gray-600 mb-6">Bạn sẽ nhận được lịch hẹn khi khách thuê chọn xem phòng của bạn</p>
+              </div>
+            )}
+          </div>
+        );
+
       case "settings":
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Cài đặt</h2>
-              <p className="text-gray-600">
-                Quản lý thông tin tài khoản và cài đặt
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Cài đặt tài khoản</h2>
+              <p className="text-gray-600">Quản lý thông tin cá nhân và bảo mật của bạn</p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-600">Tính năng đang phát triển...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Profile Info */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                  <Settings className="size-5 text-gray-500" /> Thông tin cá nhân
+                </h3>
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const target = e.target as any;
+                    const fullName = target.fullName.value;
+                    const phone = target.phone.value;
+                    const token = localStorage.getItem("token");
+                    const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                    
+                    try {
+                      // Note: /api/users/:id endpoint needs to exist on backend
+                      const res = await fetch(`${API_BASE}/api/users/${user?.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ fullName, phone })
+                      });
+                      if (res.ok) {
+                        alert("✅ Cập nhật thông tin thành công!");
+                        window.location.reload();
+                      } else {
+                        const data = await res.json();
+                        alert("❌ " + (data.message || "Cập nhật thất bại."));
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert("❌ Cập nhật thất bại.");
+                    }
+                  }} 
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                    <input name="fullName" defaultValue={user?.fullName || user?.username} className="w-full px-4 py-2 border rounded-md" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                    <input name="phone" defaultValue={user?.phone || ""} className="w-full px-4 py-2 border rounded-md" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email (Không thể đổi)</label>
+                    <input disabled value={user?.email || ""} className="w-full px-4 py-2 border bg-gray-50 text-gray-500 rounded-md" />
+                  </div>
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4">
+                    Lưu thông tin
+                  </Button>
+                </form>
+              </div>
+
+              {/* Security */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                  <ShieldCheck className="size-5 text-green-500" /> Bảo mật
+                </h3>
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const target = e.target as any;
+                    const currentPassword = target.currentPassword.value;
+                    const newPassword = target.newPassword.value;
+                    const token = localStorage.getItem("token");
+                    const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                    
+                    try {
+                      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ currentPassword, newPassword })
+                      });
+                      if (res.ok) {
+                        alert("✅ Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+                        logout();
+                        navigate("/login");
+                      } else {
+                        const data = await res.json();
+                        alert("❌ " + (data.message || "Đổi mật khẩu thất bại."));
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert("❌ Lỗi đổi mật khẩu.");
+                    }
+                  }} 
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
+                    <input type="password" name="currentPassword" placeholder="••••••••" className="w-full px-4 py-2 border rounded-md" required minLength={6} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+                    <input type="password" name="newPassword" placeholder="••••••••" className="w-full px-4 py-2 border rounded-md" required minLength={6} />
+                  </div>
+                  <Button type="submit" className="w-full bg-gray-800 hover:bg-gray-900 text-white mt-4">
+                    Đổi mật khẩu
+                  </Button>
+                </form>
+              </div>
             </div>
           </div>
         );
@@ -442,22 +683,31 @@ export function LandlordDashboardV2() {
                           <Eye className="size-4 mr-2" />
                           Xem
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => setEditingProperty(post)}>
                           <Edit className="size-4 mr-2" />
                           Sửa
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Bạn có chắc muốn xóa tin đăng "${post.name}"?`,
-                              )
-                            ) {
-                              window.alert(
-                                "Chức năng xóa tin sẽ có trong phiên bản sau",
-                              );
+                          onClick={async () => {
+                            if (window.confirm(`Bạn có chắc muốn xóa tin đăng "${post.name}"?`)) {
+                              const token = localStorage.getItem("token");
+                              const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                              try {
+                                const res = await fetch(`${API_BASE}/api/properties/${post._id || post.id}`, {
+                                  method: "DELETE",
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                if (res.ok) {
+                                  // Update state directly or reload
+                                  setLandlordPosts(prev => prev.filter(p => (p._id || p.id) !== (post._id || post.id)));
+                                } else {
+                                  window.alert("Xóa thất bại!");
+                                }
+                              } catch (err) {
+                                console.error(err);
+                              }
                             }
                           }}
                         >
@@ -588,6 +838,23 @@ export function LandlordDashboardV2() {
         landlordId={user?.id || "unknown"}
         landlordName={user?.fullName || user?.username || "Chủ trọ"}
         landlordPhone={user?.phone || "0123456789"}
+      />
+
+      {/* Edit Property Dialog */}
+      <EditPropertyDialog
+        isOpen={!!editingProperty}
+        onClose={() => setEditingProperty(null)}
+        property={editingProperty}
+        onSuccess={() => {
+          const token = localStorage.getItem("token");
+          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+          fetch(`${API_BASE}/api/landlord/properties`, { 
+            headers: { Authorization: `Bearer ${token}` } 
+          })
+            .then(res => res.json())
+            .then(data => setLandlordPosts(data))
+            .catch(console.error);
+        }}
       />
     </div>
   );
