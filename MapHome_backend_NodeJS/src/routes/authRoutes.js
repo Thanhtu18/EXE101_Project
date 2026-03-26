@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, changePassword, forgotPassword, resetPassword } = require("../controllers/authController");
+const { register, login, changePassword, forgotPassword, resetPassword, googleLogin } = require("../controllers/authController");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
 /**
@@ -130,25 +130,29 @@ router.get("/me", authMiddleware, (req, res) => res.status(200).json(req.user));
  * @swagger
  * /api/auth/google:
  *   post:
- *     summary: Google login stub
+ *     summary: Google login
  *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
  *     responses:
- *       501:
- *         description: Not implemented yet
+ *       200:
+ *         description: Login successful
+ *       500:
+ *         description: Error verifying token
  */
-router.post("/google", (req, res) => res.status(501).json({ message: "Google login is currently under development" }));
+router.post("/google", googleLogin);
 
-/**
- * @swagger
- * /api/auth/zalo:
- *   post:
- *     summary: Zalo login stub
- *     tags: [Authentication]
- *     responses:
- *       501:
- *         description: Not implemented yet
- */
-router.post("/zalo", (req, res) => res.status(501).json({ message: "Zalo login is currently under development" }));
+
+
 
 /**
  * @swagger

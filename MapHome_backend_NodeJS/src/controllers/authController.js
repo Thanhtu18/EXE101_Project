@@ -1,6 +1,11 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
+const Landlord = require("../models/Landlord");
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 // POST /api/auth/register
 const register = async (req, res) => {
@@ -72,6 +77,16 @@ const register = async (req, res) => {
       phone,
       role: normalizedRole,
     });
+
+    // Auto-create Landlord profile if role is landlord
+    if (normalizedRole === "landlord") {
+      await Landlord.create({
+        name: fullName || username,
+        phone: phone || "0000000000",
+        email,
+        userId: user._id,
+      });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -217,4 +232,114 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, changePassword, forgotPassword, resetPassword };
+// POST /api/auth/google
+const googleLogin = async (req, res) => {
+  try {
+    const { idToken, accessToken, role } = req.body;
+    if (!idToken && !accessToken) {
+      return res.status(400).json({ message: "Google ID Token or Access Token required" });
+    }
+
+    let payload;
+    let googleId, email, name, picture;
+
+    if (idToken) {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+      googleId = payload.sub;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else {
+      // Verify using accessToken
+      const userInfo = await client.request({
+        url: "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      payload = userInfo.data;
+      googleId = payload.sub;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    }
+
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (!user) {
+      // Normalize role if provided
+      let normalizedRole = "user";
+      if (role) {
+        const r = String(role).toLowerCase();
+        if (
+          r.includes("landlord") ||
+          r.includes("chutro") ||
+          r.includes("chủ") ||
+          r.includes("owner")
+        ) {
+          normalizedRole = "landlord";
+        } else if (r.includes("admin")) {
+          normalizedRole = "admin";
+        } else {
+          normalizedRole = "user";
+        }
+      }
+
+      // Create new user if not exists
+      const username = email.split("@")[0] + "_" + Math.floor(Math.random() * 1000);
+      user = await User.create({
+        username,
+        email,
+        googleId,
+        fullName: name,
+        role: normalizedRole,
+        status: "active",
+      });
+
+      // Auto-create Landlord profile if role is landlord
+      if (normalizedRole === "landlord") {
+        await Landlord.create({
+          name: name || username,
+          email,
+          userId: user._id,
+        });
+      }
+    } else if (!user.googleId) {
+      // Link googleId to existing user with same email
+      user.googleId = googleId;
+      await user.save();
+    }
+
+    if (user.status === "blocked") {
+      return res.status(403).json({ message: "Account is blocked. Please contact support." });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "7d" },
+    );
+
+    const userSafe = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+      phone: user.phone,
+      verificationLevel: user.verificationLevel,
+      picture
+    };
+
+    res.status(200).json({ user: userSafe, token });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { register, login, changePassword, forgotPassword, resetPassword, googleLogin };
+

@@ -791,3 +791,33 @@ For issues, please check:
 2. JWT token validity
 3. User role permissions for protected endpoints
 4. Network/firewall settings for uploads
+
+---
+
+
+## Subscriptions API [NEW]
+
+### Get My Subscription
+
+`GET /api/subscriptions/me`
+(Requires Auth)
+
+### Get Available Plans
+
+`GET /api/subscriptions/plans`
+
+### Subscribe
+
+`POST /api/subscriptions/subscribe`
+(Requires Auth)
+
+Body: `{ "planId": "standard" | "pro" }`
+
+---
+
+## Transactions API [NEW]
+
+### Get My Transactions
+
+`GET /api/transactions/me`
+(Requires Auth)

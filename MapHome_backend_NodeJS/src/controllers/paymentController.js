@@ -1,5 +1,7 @@
-// Payment stubs (VNPay integration points)
-// Real integration requires VNPay credentials and server-side signature handling.
+const Transaction = require("../models/Transaction");
+const Subscription = require("../models/Subscription");
+const User = require("../models/User");
+const Notification = require("../models/Notification");
 
 // POST /api/payments/create
 const createPayment = async (req, res) => {
@@ -16,16 +18,47 @@ const createPayment = async (req, res) => {
 // GET /api/payments/callback
 const paymentCallback = async (req, res) => {
   try {
-    const { status, userId, planId, orderId } = req.query;
+    const { status, userId, planId, orderId, amount, description } = req.query;
     
     if (status === "success" && userId) {
-      const User = require("../models/User");
-      const Notification = require("../models/Notification");
-      
-      // Update user subscription (mock logic)
-      await User.findByIdAndUpdate(userId, { 
-        verificationLevel: planId === "pro" ? 2 : 1 
+      // Record transaction
+      await Transaction.create({
+        userId,
+        amount: Number(amount) || 0,
+        description: description || `Thanh toán gói ${planId}`,
+        status: "success",
+        invoiceId: orderId || "INV-" + Date.now(),
+        orderId: orderId || "ORD-" + Date.now(),
+        paymentMethod: "VNPay"
       });
+
+      // Update user subscription level (simple version)
+      if (planId) {
+        const plans = {
+          standard: { name: "Standard", term: 30, features: ["20 tin đăng", "Ưu tiên"] },
+          pro: { name: "Pro", term: 30, features: ["50 tin đăng", "Ưu tiên cao"] },
+        };
+        const plan = plans[planId];
+        if (plan) {
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+          
+          await Subscription.findOneAndUpdate(
+            { userId },
+            { 
+              planName: plan.name, 
+              status: "active", 
+              expiryDate, 
+              features: plan.features 
+            },
+            { upsert: true, new: true }
+          );
+
+          if (planId === "pro") {
+            await User.findByIdAndUpdate(userId, { verificationLevel: 3 });
+          }
+        }
+      }
 
       // Create notification for user
       await Notification.create({
@@ -33,6 +66,17 @@ const paymentCallback = async (req, res) => {
         title: "Thanh toán thành công",
         message: `Bạn đã thanh toán thành công gói ${planId || "dịch vụ"}. Hóa đơn: ${orderId || "N/A"}.`,
         type: "success"
+      });
+    } else if (status === "success" === false && userId) {
+       // Record failed transaction
+       await Transaction.create({
+        userId,
+        amount: Number(amount) || 0,
+        description: description || `Thanh toán gói ${planId} thất bại`,
+        status: "failed",
+        invoiceId: orderId || "INV-" + Date.now(),
+        orderId: orderId || "ORD-" + Date.now(),
+        paymentMethod: "VNPay"
       });
     }
 
