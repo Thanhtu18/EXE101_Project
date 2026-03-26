@@ -7,8 +7,10 @@ interface PropertiesContextType {
   loading: boolean;
   addProperty: (property: Omit<RentalProperty, 'id'>) => Promise<boolean>;
   updateProperty: (id: string, updates: Partial<RentalProperty>) => Promise<boolean>;
+  searchProperties: (filters: any) => Promise<void>;
   refreshProperties: () => Promise<void>;
 }
+
 
 const PropertiesContext = createContext<PropertiesContextType | undefined>(undefined);
 
@@ -91,15 +93,42 @@ export function PropertiesProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const searchProperties = async (filters: any) => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+          queryParams.append(key, String(value));
+        }
+      });
+
+      const res = await fetch(`${API_BASE}/api/properties/search?${queryParams.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : (data.properties || []);
+        setProperties(results.map(mapBackendProperty));
+      }
+
+    } catch (err) {
+      console.error("Failed to search properties:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
+
     <PropertiesContext.Provider 
       value={{ 
         properties, 
         loading, 
         addProperty, 
         updateProperty,
+        searchProperties,
         refreshProperties: fetchProperties 
       }}
+
     >
       {children}
     </PropertiesContext.Provider>

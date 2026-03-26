@@ -26,9 +26,12 @@ import {
   AlertCircle,
   MessageCircle,
   Navigation,
+  ShieldCheck,
 } from "lucide-react";
 
-type UserView = "favorites" | "search" | "appointments" | "book";
+
+type UserView = "favorites" | "search" | "appointments" | "inspections" | "book";
+
 
 export function UserDashboard() {
   const navigate = useNavigate();
@@ -36,7 +39,9 @@ export function UserDashboard() {
   const [activeView, setActiveView] = useState<UserView>("favorites");
   const [favorites, setFavorites] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
@@ -48,17 +53,22 @@ export function UserDashboard() {
         setLoading(true);
         const token = localStorage.getItem("token");
         
-        const [favRes, bookRes] = await Promise.all([
+        const [favRes, bookRes, inspRes] = await Promise.all([
           fetch(`${API_BASE}/api/user/me/favorites`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API_BASE}/api/user/bookings`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          fetch(`${API_BASE}/api/user/inspections`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         if (favRes.ok) setFavorites(await favRes.json());
         if (bookRes.ok) setAppointments(await bookRes.json());
+        if (inspRes.ok) setInspections(await inspRes.json());
+
       } catch (err) {
         console.error("Failed to fetch user dashboard data:", err);
       } finally {
@@ -206,6 +216,14 @@ export function UserDashboard() {
           >
             Lịch hẹn của tôi
           </TabButton>
+          <TabButton
+            active={activeView === "inspections"}
+            onClick={() => setActiveView("inspections")}
+            icon={<ShieldCheck className="size-4" />}
+          >
+            Yêu cầu kiểm tra
+          </TabButton>
+
         </div>
 
         {/* Content Views */}
@@ -213,12 +231,20 @@ export function UserDashboard() {
           <FavoritesView favorites={favorites} setFavorites={setFavorites} />
         )}
         {activeView === "search" && <SearchView />}
+        {activeView === "appointments"}
         {activeView === "appointments" && (
           <AppointmentsView
             appointments={appointments}
             setAppointments={setAppointments}
           />
         )}
+        {activeView === "inspections" && (
+          <InspectionsView
+            inspections={inspections}
+            setInspections={setInspections}
+          />
+        )}
+
       </main>
     </div>
   );
@@ -493,10 +519,10 @@ function SearchView() {
     });
   };
 
+  const navigate = useNavigate();
+
   const handleSearch = () => {
-    alert(
-      "Tìm kiếm với các tiêu chí:\n" + JSON.stringify(searchParams, null, 2),
-    );
+    navigate("/map");
   };
 
   const handleReset = () => {
@@ -928,5 +954,179 @@ function FilterButton({
     >
       {children}
     </button>
+  );
+}
+
+// Inspections View Component
+function InspectionsView({
+  inspections,
+  setInspections,
+}: {
+  inspections: any[];
+  setInspections: (inspections: any[]) => void;
+}) {
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+  const [filter, setFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
+
+  const filteredInspections =
+    filter === "all"
+      ? inspections
+      : inspections.filter((i) => i.status === filter);
+
+  const handleCancelInspection = async (id: string) => {
+    if (confirm("Bạn có chắc muốn hủy yêu cầu kiểm tra này?")) {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API_BASE}/api/inspections/${id}/cancel`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          setInspections(
+            inspections.map((i) =>
+              i._id === id ? { ...i, status: "cancelled" } : i,
+            ),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to cancel inspection:", err);
+      }
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      pending: {
+        label: "Đang chờ",
+        color: "bg-orange-100 text-orange-800",
+        icon: Clock,
+      },
+      completed: {
+        label: "Đã hoàn thành",
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      },
+      cancelled: {
+        label: "Đã hủy",
+        color: "bg-red-100 text-red-800",
+        icon: XCircle,
+      },
+    };
+    const badge = badges[status as keyof typeof badges] || badges.pending;
+    const Icon = badge.icon;
+    return (
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium ${badge.color} flex items-center gap-1 w-fit`}
+      >
+        <Icon className="size-3" />
+        {badge.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow p-4">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>
+            Tất cả ({inspections.length})
+          </FilterButton>
+          <FilterButton active={filter === "pending"} onClick={() => setFilter("pending")}>
+            Đang chờ ({inspections.filter((i) => i.status === "pending").length})
+          </FilterButton>
+          <FilterButton active={filter === "completed"} onClick={() => setFilter("completed")}>
+            Đã hoàn thành ({inspections.filter((i) => i.status === "completed").length})
+          </FilterButton>
+          <FilterButton active={filter === "cancelled"} onClick={() => setFilter("cancelled")}>
+            Đã hủy ({inspections.filter((i) => i.status === "cancelled").length})
+          </FilterButton>
+        </div>
+      </div>
+
+      {filteredInspections.length === 0 ? (
+        <div className="bg-white rounded-xl shadow p-12 text-center">
+          <ShieldCheck className="size-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Chưa có yêu cầu kiểm tra nào
+          </h3>
+          <p className="text-gray-600">
+            {filter === "all"
+              ? "Bạn chưa gửi yêu cầu kiểm tra trọ nào"
+              : "Không tìm thấy yêu cầu nào với trạng thái này"}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredInspections.map((insp) => (
+            <div
+              key={insp._id}
+              className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
+            >
+              <div className="flex items-start gap-6">
+                <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
+                  <img
+                    src={insp.propertyId?.image?.startsWith("http") ? insp.propertyId?.image : `${API_BASE}${insp.propertyId?.image || ""}`}
+                    alt={insp.propertyId?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900 mb-1">
+                        {insp.propertyId?.name || "Căn trọ cũ"}
+                      </h4>
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <MapPin className="size-4" />
+                        {insp.propertyId?.address?.split(",")[0] || "Hồ Chí Minh"}
+                      </p>
+                    </div>
+                    {getStatusBadge(insp.status)}
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 py-3 border-y border-gray-100 mt-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Mã yêu cầu</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        #{insp._id?.slice(-8).toUpperCase()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Ngày gửi</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {new Date(insp.createdAt).toLocaleDateString("vi-VN")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Địa điểm</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {insp.propertyId?.address}
+                      </p>
+                    </div>
+                  </div>
+
+                  {insp.status === "pending" && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => handleCancelInspection(insp._id)}
+                      >
+                        <XCircle className="size-4 mr-2" />
+                        Hủy yêu cầu
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
