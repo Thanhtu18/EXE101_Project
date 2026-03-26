@@ -1,5 +1,18 @@
 const Landlord = require("../models/Landlord");
 
+const getOrCreateLandlord = async (user) => {
+  let landlord = await Landlord.findOne({ userId: user._id });
+  if (!landlord) {
+    landlord = await Landlord.create({
+      userId: user._id,
+      name: user.fullName || user.username || "Chủ Trọ",
+      email: user.email || "",
+      phone: user.phone || "0000000000",
+    });
+  }
+  return landlord;
+};
+
 // @desc    Get all landlords
 // @route   GET /api/landlords
 const getLandlords = async (req, res) => {
@@ -71,10 +84,7 @@ const deleteLandlord = async (req, res) => {
 // @route   GET /api/landlord/profile
 const getLandlordProfile = async (req, res) => {
   try {
-    const landlord = await Landlord.findOne({ userId: req.user._id });
-    if (!landlord) {
-      return res.status(404).json({ message: "Landlord profile not found" });
-    }
+    const landlord = await getOrCreateLandlord(req.user);
     res.status(200).json(landlord);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -86,10 +96,7 @@ const getLandlordProfile = async (req, res) => {
 const getLandlordProperties = async (req, res) => {
   try {
     const Property = require("../models/Property");
-    const landlord = await Landlord.findOne({ userId: req.user._id });
-    if (!landlord) {
-      return res.status(404).json({ message: "Landlord profile not found" });
-    }
+    const landlord = await getOrCreateLandlord(req.user);
 
     const properties = await Property.find({ landlordId: landlord._id });
     res.status(200).json(properties);
@@ -103,10 +110,7 @@ const getLandlordProperties = async (req, res) => {
 const getLandlordVerificationRequests = async (req, res) => {
   try {
     const VerificationRequest = require("../models/VerificationRequest");
-    const landlord = await Landlord.findOne({ userId: req.user._id });
-    if (!landlord) {
-      return res.status(404).json({ message: "Landlord profile not found" });
-    }
+    const landlord = await getOrCreateLandlord(req.user);
 
     const requests = await VerificationRequest.find({
       landlordId: landlord._id,
@@ -124,10 +128,7 @@ const getLandlordVerificationRequests = async (req, res) => {
 const getLandlordBookings = async (req, res) => {
   try {
     const Booking = require("../models/Booking");
-    const landlord = await Landlord.findOne({ userId: req.user._id });
-    if (!landlord) {
-      return res.status(404).json({ message: "Landlord profile not found" });
-    }
+    const landlord = await getOrCreateLandlord(req.user);
 
     const bookings = await Booking.find({ landlordId: landlord._id })
       .populate("propertyId", "name address")
@@ -147,10 +148,7 @@ const getLandlordAnalytics = async (req, res) => {
     const Booking = require("../models/Booking");
     const VerificationRequest = require("../models/VerificationRequest");
 
-    const landlord = await Landlord.findOne({ userId: req.user._id });
-    if (!landlord) {
-      return res.status(404).json({ message: "Landlord profile not found" });
-    }
+    const landlord = await getOrCreateLandlord(req.user);
 
     const totalProperties = await Property.countDocuments({
       landlordId: landlord._id,
@@ -163,7 +161,7 @@ const getLandlordAnalytics = async (req, res) => {
     });
     const verifiedProperties = await Property.countDocuments({
       landlordId: landlord._id,
-      verified: true,
+      "greenBadge.level": "verified",
     });
 
     const propertyViews = await Property.aggregate([

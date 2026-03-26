@@ -1,4 +1,5 @@
 const Booking = require("../models/Booking");
+const Landlord = require("../models/Landlord");
 
 const getBookings = async (req, res) => {
   try {
@@ -32,7 +33,6 @@ const getBookingById = async (req, res) => {
 
 const createBooking = async (req, res) => {
   try {
-    const Property = require("../models/Property");
     const payload = { ...req.body };
     
     if (req.user && req.user.role === "user") {
@@ -56,11 +56,21 @@ const createBooking = async (req, res) => {
 
 const updateBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, {
+    let booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Ownership check for landlord
+    if (req.user.role === "landlord") {
+      const landlord = await Landlord.findOne({ userId: req.user._id });
+      if (!landlord || String(booking.landlordId) !== String(landlord._id)) {
+        return res.status(403).json({ message: "Not authorized to update this booking" });
+      }
+    }
+
+    booking = await Booking.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
     res.status(200).json(booking);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -69,8 +79,18 @@ const updateBooking = async (req, res) => {
 
 const deleteBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByIdAndDelete(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Ownership check for landlord
+    if (req.user.role === "landlord") {
+      const landlord = await Landlord.findOne({ userId: req.user._id });
+      if (!landlord || String(booking.landlordId) !== String(landlord._id)) {
+        return res.status(403).json({ message: "Not authorized to delete this booking" });
+      }
+    }
+
+    await Booking.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Booking removed" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -108,7 +128,11 @@ const updateBookingStatus = async (req, res) => {
 
     const query = { _id: req.params.id };
     if (req.user.role === "landlord") {
-      query.landlordId = req.user._id;
+      const landlord = await Landlord.findOne({ userId: req.user._id });
+      if (!landlord) {
+        return res.status(403).json({ message: "Landlord profile not found" });
+      }
+      query.landlordId = landlord._id;
     }
 
     const booking = await Booking.findOne(query);

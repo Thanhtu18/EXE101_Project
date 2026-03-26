@@ -14,7 +14,7 @@ const {
 
 router
   .route("/")
-  .get(getLandlords)
+  .get(authMiddleware, requireAnyRole(["admin"]), getLandlords)
   .post(authMiddleware, requireAnyRole(["admin"]), createLandlord);
 router
   .route("/:id")

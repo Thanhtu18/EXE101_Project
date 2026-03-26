@@ -9,7 +9,9 @@ import {
   Send,
   MessageSquare,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
+
 import { Footer } from "@/app/components/Footer";
 import { Navbar } from "@/app/components/Navbar";
 
@@ -23,22 +25,50 @@ export function ContactPage() {
     message: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate form submission
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "",
-        message: "",
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-    }, 3000);
+
+      if (res.ok) {
+        setIsSubmitted(true);
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          subject: "",
+          message: "",
+        });
+        
+        // Modal stays for 5 seconds then resets
+        setTimeout(() => {
+          setIsSubmitted(false);
+        }, 5000);
+      } else {
+        const data = await res.json();
+        setError(data.message || "Có lỗi xảy ra khi gửi tin nhắn.");
+      }
+    } catch (err) {
+      console.error("Contact submission error:", err);
+      setError("Không thể kết nối tới máy chủ.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -153,7 +183,14 @@ export function ContactPage() {
                   <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Gửi Tin Nhắn
                   </h3>
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 border border-red-100 animate-shake">
+                      <AlertCircle className="size-5" />
+                      {error}
+                    </div>
+                  )}
                   <form onSubmit={handleSubmit} className="space-y-6">
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -230,11 +267,17 @@ export function ContactPage() {
 
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                      disabled={isSubmitting}
+                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:opacity-70"
                     >
-                      <Send className="size-4 mr-2" />
-                      Gửi tin nhắn
+                      {isSubmitting ? (
+                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      ) : (
+                        <Send className="size-4 mr-2" />
+                      )}
+                      {isSubmitting ? "Đang gửi..." : "Gửi tin nhắn"}
                     </Button>
+
                   </form>
                 </>
               )}

@@ -57,6 +57,7 @@ export interface PinInfo {
 
 export interface RentalProperty {
   id: string;
+  _id?: string;
   name: string;
   address: string;
   price: number;

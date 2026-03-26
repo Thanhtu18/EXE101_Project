@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -26,7 +27,8 @@ import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 
 // ─── Blog Data ────────────────────────────────────────────────
 interface BlogPost {
-  id: number;
+  id: number | string;
+  _id?: string;
   title: string;
   excerpt: string;
   content?: string;
@@ -42,6 +44,7 @@ interface BlogPost {
   tags: string[];
   featured?: boolean;
 }
+
 
 const blogPosts: BlogPost[] = [
   {
@@ -230,10 +233,40 @@ export function BlogPage() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [searchQuery, setSearchQuery] = useState("");
-  const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
+  const [bookmarked, setBookmarked] = useState<Set<number | string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleBookmark = (id: number) => {
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/api/blogs`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            setBlogs(data.map((b: any) => ({ ...b, id: b._id })));
+          } else {
+            setBlogs(blogPosts);
+          }
+        } else {
+          setBlogs(blogPosts);
+        }
+      } catch (err) {
+        console.error("Failed to fetch blogs:", err);
+        setBlogs(blogPosts);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBlogs();
+  }, [API_BASE]);
+
+  const toggleBookmark = (id: number | string) => {
+
     setBookmarked((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -243,12 +276,15 @@ export function BlogPage() {
   };
 
   // Featured post
-  const featuredPost = blogPosts.find((p) => p.featured)!;
+  const featuredPost = blogs.find((p) => p.featured) || blogs[0];
 
   // Filtered posts (excluding featured from grid)
   const filteredPosts = useMemo(() => {
-    return blogPosts
-      .filter((p) => !p.featured)
+    if (!blogs.length) return [];
+    
+    return blogs
+      .filter((p) => p.id !== (featuredPost?.id || featuredPost?._id))
+
       .filter(
         (p) => activeCategory === "Tất cả" || p.category === activeCategory,
       )
@@ -271,9 +307,22 @@ export function BlogPage() {
   );
 
   // Popular posts (top 4 by views)
-  const popularPosts = [...blogPosts]
-    .sort((a, b) => b.views - a.views)
+  const popularPosts = [...blogs]
+    .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 4);
+
+  if (loading && blogs.length === 0) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
