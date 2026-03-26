@@ -22,6 +22,7 @@ import { CheckoutPage } from "@/app/pages/CheckoutPage";
 import { PaymentSuccessPage } from "@/app/pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "@/app/pages/PaymentFailurePage";
 import { ExpiryWarningDemo } from "@/app/pages/ExpiryWarningDemo";
+import { AIChatAssistant } from "@/app/components/AIChatAssistant";
 
 const router = createBrowserRouter([
   { path: "/", Component: HomePage },
@@ -52,6 +53,7 @@ export default function App() {
         <VerificationProvider>
           <CompareProvider>
             <RouterProvider router={router} />
+            <AIChatAssistant />
           </CompareProvider>
         </VerificationProvider>
       </PropertiesProvider>

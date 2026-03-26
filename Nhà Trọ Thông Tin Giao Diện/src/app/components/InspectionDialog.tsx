@@ -19,9 +19,10 @@ export function InspectionDialog({ isOpen, onClose, request }: InspectionDialogP
   const [isApproved, setIsApproved] = useState(true);
 
   const handleComplete = () => {
+    const requestId = (request as any)._id || request.id;
     if (!isApproved) {
       // Reject
-      completeInspection(request.id, 'none', notes || 'Không đạt yêu cầu kiểm tra');
+      completeInspection(requestId, 'none', notes || 'Không đạt yêu cầu kiểm tra');
       alert('❌ Đã từ chối yêu cầu');
       onClose();
       return;
@@ -35,8 +36,9 @@ export function InspectionDialog({ isOpen, onClose, request }: InspectionDialogP
       inspectionNotes: notes,
     };
 
-    updateProperty(request.propertyId, { greenBadge });
-    completeInspection(request.id, 'verified', notes);
+    const propId = typeof request.propertyId === 'object' ? (request.propertyId as any)._id : request.propertyId;
+    updateProperty(propId, { greenBadge });
+    completeInspection(requestId, 'verified', notes);
 
     alert(
       `✅ Đã hoàn thành kiểm tra!\n\n` +

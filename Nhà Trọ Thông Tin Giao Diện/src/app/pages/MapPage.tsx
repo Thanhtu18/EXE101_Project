@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 import { useNavigate } from "react-router-dom";
 import { RentalMapView } from "@/app/components/RentalMapView";
 import { PropertyList } from "@/app/components/PropertyList";
@@ -27,7 +28,8 @@ import { Toaster } from "@/app/components/ui/sonner";
 
 export function MapPage() {
   const navigate = useNavigate();
-  const { properties } = useProperties();
+  const { properties, searchProperties } = useProperties();
+
   const [selectedProperty, setSelectedProperty] =
     useState<RentalProperty | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,7 +49,31 @@ export function MapPage() {
     return findOptimalLocation(searchLocations.map((l) => l.coordinates));
   }, [searchLocations, userLocation]);
 
+
+  // Server-side search trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const selectedAmenities = Object.entries(filters.amenities)
+        .filter(([_, value]) => value)
+        .map(([key]) => key)
+        .join(",");
+
+      searchProperties({
+        q: searchTerm,
+        minPrice: filters.priceRange[0],
+        maxPrice: filters.priceRange[1],
+        minArea: filters.areaRange[0],
+        maxArea: filters.areaRange[1],
+        amenities: selectedAmenities,
+        verified: filters.verificationLevel === "verified" ? "true" : undefined
+      });
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, filters]);
+
   // Add distances to all properties
+
   const propertiesWithDistance = useMemo(() => {
     return addDistanceToProperties(properties, searchCenter);
   }, [properties, searchCenter]);
@@ -73,49 +99,6 @@ export function MapPage() {
     // Radius filter
     result = result.filter((property: PropertyWithDistance) => property.distance <= filters.radius);
 
-    // Price range filter
-    result = result.filter(
-      (property: PropertyWithDistance) =>
-        property.price >= filters.priceRange[0] &&
-        property.price <= filters.priceRange[1],
-    );
-
-    // Area range filter
-    result = result.filter(
-      (property: PropertyWithDistance) =>
-        property.area >= filters.areaRange[0] &&
-        property.area <= filters.areaRange[1],
-    );
-
-    // Amenities filter
-    const selectedAmenities = Object.entries(filters.amenities)
-      .filter(([_, value]) => value)
-      .map(([key]) => key);
-
-    if (selectedAmenities.length > 0) {
-      result = result.filter((property: PropertyWithDistance) =>
-        selectedAmenities.every(
-          (amenity) =>
-            property.amenities[amenity as keyof typeof property.amenities],
-        ),
-      );
-    }
-
-    // Availability filter
-    if (filters.availability !== "all") {
-      result = result.filter((property: PropertyWithDistance) =>
-        filters.availability === "available"
-          ? property.available
-          : !property.available,
-      );
-    }
-
-    // Verification level filter
-    if (filters.verificationLevel !== "all") {
-      result = result.filter(
-        (property: PropertyWithDistance) => property.verificationLevel === filters.verificationLevel,
-      );
-    }
 
     // Sorting
     switch (filters.sortBy) {

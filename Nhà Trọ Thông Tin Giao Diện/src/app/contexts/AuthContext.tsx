@@ -17,9 +17,13 @@ interface AuthContextType {
     username: string,
     password: string,
   ) => Promise<{ success: boolean; role?: string; message?: string }>;
+  googleLogin: (
+    tokens: { idToken?: string; accessToken?: string; role?: string },
+  ) => Promise<{ success: boolean; role?: string; message?: string }>;
   register: (
     data: RegisterData,
   ) => Promise<{ success: boolean; message?: string }>;
+
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -97,7 +101,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const googleLogin = async (tokens: {
+    idToken?: string;
+    accessToken?: string;
+    role?: string;
+  }) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tokens),
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        return { success: false, message: payload?.message || "Đăng nhập Google thất bại" };
+      }
+      if (payload.user) {
+        setUser(payload.user);
+        localStorage.setItem("auth", JSON.stringify(payload.user));
+      }
+      if (payload.token) {
+        localStorage.setItem("token", payload.token);
+      }
+      return { success: true, role: payload.user?.role };
+    } catch (err) {
+      return { success: false, message: "Lỗi kết nối máy chủ" };
+    }
+  };
+
   const register = async (data: RegisterData) => {
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
@@ -138,9 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         login,
+        googleLogin,
         register,
         logout,
         isAuthenticated: !!user,
+
       }}
     >
       {children}

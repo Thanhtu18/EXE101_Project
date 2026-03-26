@@ -38,6 +38,8 @@ type AdminView =
   | "posts"
   | "users"
   | "verification"
+  | "bookings"
+  | "reviews"
   | "revenue"
   | "inspections";
 
@@ -54,7 +56,11 @@ export function AdminPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [verifications, setVerifications] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVerification, setSelectedVerification] = useState<any>(null);
+  const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
 
   const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
@@ -62,51 +68,65 @@ export function AdminPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       const headers = { Authorization: `Bearer ${token}` };
 
       // Parallel fetch for dashboard data
-      const [statsRes, searchRes, topRoomsRes, postsRes, usersRes, verificationsRes] = await Promise.all([
+      const [
+        statsRes, searchRes, topRoomsRes, 
+        postsRes, usersRes, verificationsRes, 
+        bookingsRes, reviewsRes
+      ] = await Promise.all([
         fetch(`${API_BASE}/api/admin/stats`, { headers }),
         fetch(`${API_BASE}/api/admin/stats/weekly-search`, { headers }),
         fetch(`${API_BASE}/api/admin/stats/top-rooms`, { headers }),
         fetch(`${API_BASE}/api/admin/properties`, { headers }),
         fetch(`${API_BASE}/api/admin/users`, { headers }),
         fetch(`${API_BASE}/api/admin/verification-requests`, { headers }),
+        fetch(`${API_BASE}/api/admin/bookings`, { headers }),
+        fetch(`${API_BASE}/api/admin/reviews`, { headers }),
       ]);
 
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (searchRes.ok) setWeeklySearchData(await searchRes.json());
-      if (topRoomsRes.ok) {
-        const rooms = await topRoomsRes.json();
-        setTopRooms(rooms.map((room: any, idx: number) => ({
-          rank: idx + 1,
-          name: room.name,
-          location: room.address,
-          views: room.views || 0,
-        })));
-      }
-      if (postsRes.ok) setPosts(await postsRes.json());
-      if (usersRes.ok) setUsers(await usersRes.json());
-      if (verificationsRes.ok) setVerifications(await verificationsRes.json());
+      const stats = statsRes.ok ? await statsRes.json() : null;
+      const searchData = searchRes.ok ? await searchRes.json() : [];
+      const topRoomsData = topRoomsRes.ok ? await topRoomsRes.json() : [];
+      const postsData = postsRes.ok ? await postsRes.json() : [];
+      const usersData = usersRes.ok ? await usersRes.json() : [];
+      const verificationsData = verificationsRes.ok ? await verificationsRes.json() : [];
+      const bookingsData = bookingsRes.ok ? await bookingsRes.json() : [];
+      const reviewsData = reviewsRes.ok ? await reviewsRes.json() : [];
 
-      // Mock some recent activities based on fetched data if needed, 
-      // or just leave empty if backend doesn't provide them yet.
-      // Derive recent activities from real data
+      if (stats) setStats(stats);
+      setWeeklySearchData(searchData);
+      setTopRooms(topRoomsData.map((room: any, idx: number) => ({
+        rank: idx + 1,
+        name: room.name,
+        location: room.address,
+        views: room.views || 0,
+      })));
+      setPosts(postsData);
+      setUsers(usersData);
+      setVerifications(verificationsData);
+      setBookings(bookingsData);
+      setReviews(reviewsData);
+
       const activities = [
-        ...(verificationsRes.ok ? (await verificationsRes.clone().json()).slice(0, 2).map((v: any) => ({
+        ...verificationsData.slice(0, 2).map((v: any) => ({
           id: `v-${v._id}`,
-          text: `Yêu cầu Tích Xanh cho '${v.propertyName}' đang ${v.status}`,
+          text: `Yêu cầu Tích Xanh cho '${v.propertyId?.name || v.propertyName}' đang ${v.status}`,
           time: new Date(v.requestedAt || v.createdAt).toLocaleTimeString('vi-VN'),
           color: v.status === 'pending' ? 'blue' : 'green'
-        })) : []),
-        ...(postsRes.ok ? (await postsRes.clone().json()).slice(0, 1).map((p: any) => ({
+        })),
+        ...postsData.slice(0, 1).map((p: any) => ({
           id: `p-${p._id}`,
           text: `Tin đăng mới: '${p.name}'`,
           time: new Date(p.createdAt).toLocaleTimeString('vi-VN'),
           color: 'green'
-        })) : [])
+        }))
       ];
       setRecentActivities(activities);
 
@@ -128,6 +148,151 @@ export function AdminPage() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleUpdatePropertyStatus = async (id: string, status: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/admin/properties/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setPosts(posts.map((p) => (p._id === id ? { ...p, status } : p)));
+        alert("Cập nhật trạng thái tin đăng thành công! ✅");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleToggleUserStatus = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/admin/users/${id}/status`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setUsers(
+          users.map((u) =>
+            u._id === id
+              ? { ...u, status: u.status === "blocked" ? "active" : "blocked" }
+              : u
+          )
+        );
+        alert("Cập nhật trạng thái người dùng thành công! ✅");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleApproveVerification = async (id: string, date: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE}/api/admin/verification/${id}/approve`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ scheduledDate: date }),
+        }
+      );
+      if (res.ok) {
+        setVerifications(
+          verifications.map((v) =>
+            v._id === id ? { ...v, status: "approved", scheduledDate: date } : v
+          )
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleCompleteVerification = async (id: string, badgeLevel: string, notes?: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE}/api/admin/verification/${id}/complete`,
+        {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({ badgeAwarded: badgeLevel, inspectorNotes: notes })
+        }
+      );
+      if (res.ok) {
+        setVerifications(
+          verifications.map((v) =>
+            v._id === id ? { ...v, status: badgeLevel === 'none' ? 'rejected' : 'completed', inspectorNotes: notes } : v
+          )
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!window.confirm("Bác có chắc muốn xóa lịch hẹn này?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/admin/bookings/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setBookings(bookings.filter((b) => b._id !== id));
+        alert("Đã xóa lịch hẹn thành công! ✅");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!window.confirm("Bác có chắc muốn xóa đánh giá này?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/admin/reviews/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setReviews(reviews.filter((r) => r._id !== id));
+        alert("Đã xóa đánh giá thành công! ✅");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!window.confirm("Bác có chắc muốn XÓA VĨNH VIỄN người dùng này?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/admin/users/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setUsers(users.filter((u) => u._id !== id));
+        alert("Đã xóa người dùng thành công! ✅");
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   if (!isAuthenticated || user?.role !== "admin") {
@@ -230,6 +395,34 @@ export function AdminPage() {
               </span>
             </button>
             <button
+              onClick={() => setActiveView("bookings")}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
+                activeView === "bookings"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
+              }`}
+            >
+              {activeView === "bookings" && (
+                <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
+              )}
+              <Calendar className="size-4" />
+              Lịch hẹn
+            </button>
+            <button
+              onClick={() => setActiveView("reviews")}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
+                activeView === "reviews"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
+              }`}
+            >
+              {activeView === "reviews" && (
+                <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
+              )}
+              <Award className="size-4" />
+              Đánh giá
+            </button>
+            <button
               onClick={() => setActiveView("inspections")}
               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
                 activeView === "inspections"
@@ -307,10 +500,18 @@ export function AdminPage() {
             {activeView === "posts" && "Quản lý Tin đăng"}
             {activeView === "users" && "Quản lý Người dùng"}
             {activeView === "verification" && "Xác thực Tích Xanh ✅"}
+            {activeView === "bookings" && "Quản lý Lịch hẹn"}
+            {activeView === "reviews" && "Quản lý Đánh giá"}
             {activeView === "revenue" && "Doanh Thu"}
             {activeView === "inspections" && "Kiểm tra thực địa"}
           </h2>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => fetchData()}
+              className="px-3.5 py-1.5 bg-[#dcfce7] text-[#16a34a] border border-[#bbf7d0] rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-[#bbf7d0] transition-colors"
+            >
+              🔄 Làm mới
+            </button>
             <button className="px-3.5 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors">
               <Calendar className="size-4" />
               {new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
@@ -330,25 +531,48 @@ export function AdminPage() {
           ) : (
             <>
               {activeView === "dashboard" && <DashboardView stats={stats} weeklySearchData={weeklySearchData} recentActivities={recentActivities} topRooms={topRooms} posts={posts} />}
-              {activeView === "posts" && <PostsView posts={posts} />}
-              {activeView === "users" && <UsersView users={users} />}
-              {activeView === "verification" && <VerificationView verifications={verifications} />}
+              {activeView === "posts" && <PostsView posts={posts} onUpdateStatus={handleUpdatePropertyStatus} />}
+              {activeView === "users" && <UsersView users={users} onToggleStatus={handleToggleUserStatus} onDeleteUser={handleDeleteUser} />}
+              {activeView === "verification" && (
+                <VerificationView 
+                  verifications={verifications} 
+                  onApprove={handleApproveVerification} 
+                  onComplete={handleCompleteVerification} 
+                  onOpenInspect={(v) => { setSelectedVerification(v); setIsInspectionDialogOpen(true); }}
+                />
+              )}
+              {activeView === "bookings" && <BookingsView bookings={bookings} onDeleteBooking={handleDeleteBooking} />}
+              {activeView === "reviews" && <ReviewsView reviews={reviews} onDeleteReview={handleDeleteReview} />}
               {activeView === "revenue" && <RevenueView />}
               {activeView === "inspections" && <InspectionsView />}
             </>
           )}
         </div>
       </main>
+
+      {/* Inspection Dialog */}
+      {selectedVerification && (
+        <InspectionDialog
+          isOpen={isInspectionDialogOpen}
+          onClose={() => {
+            setIsInspectionDialogOpen(false);
+            setSelectedVerification(null);
+            fetchData(); // Refresh data after dialog closes
+          }}
+          request={selectedVerification}
+        />
+      )}
     </div>
   );
 }
 
 // Dashboard View Component
 function DashboardView({ stats, weeklySearchData, recentActivities, topRooms, posts }: { stats: any; weeklySearchData: any[]; recentActivities: any[]; topRooms: any[]; posts: any[] }) {
-  const total = posts.length || 1; // Avoid division by zero
-  const approvedPct = Math.round((posts.filter(p => p.status === 'approved').length / total) * 100);
-  const pendingPct = Math.round((posts.filter(p => p.status === 'pending').length / total) * 100);
-  const reportedPct = Math.round((posts.filter(p => p.status === 'reported').length / total) * 100);
+  const safePosts = Array.isArray(posts) ? posts : [];
+  const total = safePosts.length || 1; // Avoid division by zero
+  const approvedPct = Math.round((safePosts.filter(p => p.status === 'approved').length / total) * 100);
+  const pendingPct = Math.round((safePosts.filter(p => p.status === 'pending').length / total) * 100);
+  const reportedPct = Math.round((safePosts.filter(p => p.status === 'reported').length / total) * 100);
 
   return (
     <div className="space-y-3.5">
@@ -629,7 +853,7 @@ function KPICard({
 }
 
 // Posts View Component
-function PostsView({ posts }: { posts: any[] }) {
+function PostsView({ posts, onUpdateStatus }: { posts: any[], onUpdateStatus: (id: string, status: string) => void }) {
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "reported" | "approved"
   >("all");
@@ -768,25 +992,40 @@ function PostsView({ posts }: { posts: any[] }) {
                   <div className="flex items-center gap-1.5">
                     {post.status === "pending" && (
                       <>
-                        <button className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]">
+                        <button 
+                          onClick={() => onUpdateStatus(post._id, "approved")}
+                          className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]"
+                        >
                           Duyệt
                         </button>
-                        <button className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]">
+                        <button 
+                          onClick={() => onUpdateStatus(post._id, "rejected")}
+                          className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]"
+                        >
                           Từ chối
                         </button>
                       </>
                     )}
                     {post.status === "approved" && (
-                      <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
+                      <button 
+                        onClick={() => onUpdateStatus(post._id, "reported")}
+                        className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]"
+                      >
                         Ẩn tin
                       </button>
                     )}
                     {post.status === "reported" && (
                       <>
-                        <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
+                        <button 
+                          onClick={() => onUpdateStatus(post._id, "approved")}
+                          className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]"
+                        >
                           Giữ tin
                         </button>
-                        <button className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]">
+                        <button 
+                          onClick={() => onUpdateStatus(post._id, "rejected")}
+                          className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]"
+                        >
                           Xoá
                         </button>
                       </>
@@ -806,7 +1045,7 @@ function PostsView({ posts }: { posts: any[] }) {
 }
 
 // Users View Component
-function UsersView({ users }: { users: any[] }) {
+function UsersView({ users, onToggleStatus, onDeleteUser }: { users: any[], onToggleStatus: (id: string) => void, onDeleteUser: (id: string) => void }) {
   const totalLandlords = users.filter(u => u.role === "landlord").length;
   const totalUsers = users.filter(u => u.role === "user").length;
   const totalBlocked = users.filter(u => u.status === "blocked").length;
@@ -929,14 +1168,26 @@ function UsersView({ users }: { users: any[] }) {
                       Chi tiết
                     </button>
                     {user.status === "blocked" ? (
-                      <button className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]">
+                      <button 
+                        onClick={() => onToggleStatus(user._id)}
+                        className="px-2.5 py-1 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold hover:bg-[#bbf7d0]"
+                      >
                         Mở khoá
                       </button>
                     ) : (
-                      <button className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]">
+                      <button 
+                        onClick={() => onToggleStatus(user._id)}
+                        className="px-2.5 py-1 bg-[#fee2e2] border border-[#fecaca] text-[#dc2626] rounded-lg text-[11px] font-semibold hover:bg-[#fecaca]"
+                      >
                         Khoá
                       </button>
                     )}
+                    <button 
+                      onClick={() => onDeleteUser(user._id)}
+                      className="px-2.5 py-1 bg-white border border-red-200 text-red-600 rounded-lg text-[11px] font-semibold hover:bg-red-50"
+                    >
+                      Xoá
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -949,57 +1200,17 @@ function UsersView({ users }: { users: any[] }) {
 }
 
 // Verification View Component
-function VerificationView({ verifications }: { verifications: any[] }) {
-  const navigate = useNavigate();
-  const [showScheduleForm, setShowScheduleForm] = useState(false);
-  const [scheduleData, setScheduleData] = useState({
-    landlordName: "",
-    landlordPhone: "",
-    propertyName: "",
-    propertyAddress: "",
-    district: "",
-    roomCount: "",
-    scheduledDate: "",
-    scheduledTime: "09:00",
-    inspectionType: "standard",
-    notes: "",
-  });
-
-  const handleScheduleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate ALL required fields in JS (không dựa hoàn toàn vào HTML5 native validation)
-    const errors: string[] = [];
-    if (!scheduleData.landlordName.trim()) errors.push("Họ tên chủ trọ");
-    if (!scheduleData.landlordPhone.trim()) errors.push("Số điện thoại");
-    if (!scheduleData.propertyName.trim()) errors.push("Tên căn trọ");
-    if (!scheduleData.propertyAddress.trim()) errors.push("Địa chỉ căn trọ");
-    if (!scheduleData.scheduledDate) errors.push("Ngày kiểm tra");
-
-    if (errors.length > 0) {
-      alert(
-        `Vui lòng điền đầy đủ thông tin bắt buộc:\n• ${errors.join("\n• ")}`,
-      );
-      return;
-    }
-
-    const checkoutPayload = {
-      type: "inspection",
-      inspectionData: scheduleData,
-      amount: 199000,
-    };
-
-    // Backup vào sessionStorage để tránh mất state do môi trường iframe/sandbox
-    try {
-      sessionStorage.setItem(
-        "inspectionCheckoutData",
-        JSON.stringify(checkoutPayload),
-      );
-    } catch (_) {}
-
-    navigate("/checkout", { state: checkoutPayload });
-  };
-
+function VerificationView({ 
+  verifications, 
+  onApprove, 
+  onComplete,
+  onOpenInspect 
+}: { 
+  verifications: any[], 
+  onApprove: (id: string, date: string) => void, 
+  onComplete: (id: string, level: string, notes?: string) => void,
+  onOpenInspect: (v: any) => void
+}) {
   return (
     <div className="space-y-4">
       {/* Pipeline */}
@@ -1023,362 +1234,6 @@ function VerificationView({ verifications }: { verifications: any[] }) {
           <div className="text-[10px] text-[#94a3b8]">Đã cấp ✅</div>
         </div>
       </div>
-
-      {/* Schedule Inspection CTA */}
-      {!showScheduleForm && (
-        <div className="bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
-                <ShieldCheck className="size-7 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">
-                  Đặt lịch kiểm tra ngay
-                </h3>
-                <p className="text-blue-100 text-sm">
-                  Xác thực thực địa để cấp Tích Xanh cho chủ trọ
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-white/70 text-xs">Chi phí mỗi lần</div>
-                <div className="text-white font-bold text-2xl">{(199000).toLocaleString()}đ</div>
-              </div>
-              <button
-                onClick={() => setShowScheduleForm(true)}
-                className="px-6 py-3 bg-white text-[#2563eb] rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-md"
-              >
-                <Calendar className="size-4 inline mr-2" />
-                Đặt lịch ngay
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Inspection Form */}
-      {showScheduleForm && (
-        <div className="bg-white rounded-xl border-2 border-[#2563eb] shadow-lg overflow-hidden">
-          {/* Form Header */}
-          <div className="bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="size-6 text-white" />
-                <div>
-                  <h3 className="text-white font-bold text-base">
-                    Đặt lịch kiểm tra thực địa
-                  </h3>
-                  <p className="text-blue-100 text-xs">
-                    Phí: 199.000đ / 1 lần kiểm tra
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowScheduleForm(false)}
-                className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <XCircle className="size-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Form Body */}
-          <form
-            onSubmit={handleScheduleSubmit}
-            className="p-6 space-y-5"
-            noValidate
-          >
-            {/* Row 1: Thông tin chủ trọ */}
-            <div>
-              <div className="text-xs font-bold uppercase text-[#94a3b8] mb-3 flex items-center gap-1.5">
-                <Users className="size-3.5" />
-                Thông tin chủ trọ
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Họ tên chủ trọ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={scheduleData.landlordName}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        landlordName: e.target.value,
-                      })
-                    }
-                    placeholder="VD: Nguyễn Văn An"
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Số điện thoại <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={scheduleData.landlordPhone}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        landlordPhone: e.target.value,
-                      })
-                    }
-                    placeholder="VD: 0901 234 567"
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Row 2: Thông tin căn trọ */}
-            <div>
-              <div className="text-xs font-bold uppercase text-[#94a3b8] mb-3 flex items-center gap-1.5">
-                <Home className="size-3.5" />
-                Thông tin căn trọ
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Tên căn trọ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={scheduleData.propertyName}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        propertyName: e.target.value,
-                      })
-                    }
-                    placeholder="VD: Trọ Cao Cấp FPTU"
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Số phòng
-                  </label>
-                  <input
-                    type="number"
-                    value={scheduleData.roomCount}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        roomCount: e.target.value,
-                      })
-                    }
-                    placeholder="VD: 12"
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Địa chỉ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={scheduleData.propertyAddress}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        propertyAddress: e.target.value,
-                      })
-                    }
-                    placeholder="VD: 123 Đường Lê Văn Việt, P. Hiệp Phú"
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Quận/Huyện
-                  </label>
-                  <select
-                    value={scheduleData.district}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        district: e.target.value,
-                      })
-                    }
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                  >
-                    <option value="">-- Chọn --</option>
-                    <option value="Q9">TP. Thủ Đức (Q9)</option>
-                    <option value="Thủ Đức">Thủ Đức</option>
-                    <option value="Bình Thạnh">Bình Thạnh</option>
-                    <option value="Gò Vấp">Gò Vấp</option>
-                    <option value="Tân Bình">Tân Bình</option>
-                    <option value="Q12">Quận 12</option>
-                    <option value="Bình Dương">Bình Dương</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Row 3: Lịch hẹn */}
-            <div>
-              <div className="text-xs font-bold uppercase text-[#94a3b8] mb-3 flex items-center gap-1.5">
-                <Calendar className="size-3.5" />
-                Lịch hẹn kiểm tra
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Ngày kiểm tra <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={scheduleData.scheduledDate}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        scheduledDate: e.target.value,
-                      })
-                    }
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Khung giờ <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={scheduleData.scheduledTime}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        scheduledTime: e.target.value,
-                      })
-                    }
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                    required
-                  >
-                    <option value="08:00">08:00 - 09:00</option>
-                    <option value="09:00">09:00 - 10:00</option>
-                    <option value="10:00">10:00 - 11:00</option>
-                    <option value="13:00">13:00 - 14:00</option>
-                    <option value="14:00">14:00 - 15:00</option>
-                    <option value="15:00">15:00 - 16:00</option>
-                    <option value="16:00">16:00 - 17:00</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                    Loại kiểm tra
-                  </label>
-                  <select
-                    value={scheduleData.inspectionType}
-                    onChange={(e) =>
-                      setScheduleData({
-                        ...scheduleData,
-                        inspectionType: e.target.value,
-                      })
-                    }
-                    className="w-full h-10 px-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none"
-                  >
-                    <option value="standard">Kiểm tra tiêu chuẩn</option>
-                    <option value="detailed">Kiểm tra chi tiết</option>
-                    <option value="urgent">Kiểm tra khẩn cấp</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Ghi chú */}
-            <div>
-              <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                Ghi chú thêm (tùy chọn)
-              </label>
-              <textarea
-                value={scheduleData.notes}
-                onChange={(e) =>
-                  setScheduleData({ ...scheduleData, notes: e.target.value })
-                }
-                placeholder="VD: Hẹn tại cổng chính, gọi trước 15 phút, cần kiểm tra kỹ hệ thống PCCC..."
-                className="w-full min-h-[70px] px-3 py-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-sm focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb] focus:outline-none resize-none"
-              />
-            </div>
-
-            {/* Summary & Price */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#2563eb] flex items-center justify-center">
-                    <ShieldCheck className="size-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-[#0f172a]">
-                      Phí kiểm tra thực địa
-                    </div>
-                    <div className="text-[11px] text-[#94a3b8]">
-                      1 lần kiểm tra - Bao gồm báo cáo chi tiết
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-[#2563eb]">
-                    199.000đ
-                  </div>
-                  <div className="text-[10px] text-[#94a3b8]">
-                    Đã bao gồm VAT
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-[11px]">
-                <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
-                  <div className="text-blue-600 mb-0.5">📍</div>
-                  <div className="font-semibold text-[#0f172a]">
-                    Xác thực GPS
-                  </div>
-                </div>
-                <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
-                  <div className="text-blue-600 mb-0.5">📸</div>
-                  <div className="font-semibold text-[#0f172a]">
-                    Chụp ảnh thực tế
-                  </div>
-                </div>
-                <div className="bg-white/70 rounded-lg p-2.5 text-center border border-blue-100">
-                  <div className="text-blue-600 mb-0.5">📋</div>
-                  <div className="font-semibold text-[#0f172a]">
-                    Báo cáo đánh giá
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowScheduleForm(false)}
-                className="flex-1 h-11 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="flex-[2] h-11 bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg"
-              >
-                <ShieldCheck className="size-4" />
-                Tiếp tục thanh toán — 199.000đ
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Verification Cards */}
       <div className="space-y-2.5">
@@ -1438,11 +1293,26 @@ function VerificationView({ verifications }: { verifications: any[] }) {
 
             {/* Actions */}
             <div className="flex flex-col gap-1.5 text-right">
-              {item.status === "pending" ? (
-                <button className="px-4 py-2 bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white rounded-lg text-xs font-bold hover:opacity-90">
+              {item.status === "pending" && (
+                <button
+                  onClick={() => {
+                    const scheduledDate = prompt("Nhập ngày kiểm tra (YYYY-MM-DD):");
+                    if (scheduledDate) onApprove(item._id, scheduledDate);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white rounded-lg text-xs font-bold hover:opacity-90"
+                >
                   📍 Phân công thực địa
                 </button>
-              ) : item.status === "completed" ? (
+              )}
+              {item.status === "approved" && (
+                <button
+                  onClick={() => onOpenInspect(item)}
+                  className="px-4 py-2 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold"
+                >
+                  ✓ Đánh dấu hoàn thành
+                </button>
+              )}
+              {item.status === "completed" ? (
                 <button className="px-4 py-2 bg-[#dcfce7] border border-[#bbf7d0] text-[#16a34a] rounded-lg text-[11px] font-semibold">
                   ✓ Đã xác thực
                 </button>
@@ -1525,5 +1395,81 @@ function StatusPill({
       <span className="w-1.5 h-1.5 rounded-full bg-current" />
       {labels[status]}
     </span>
+  );
+}
+
+// Bookings View Component
+function BookingsView({ bookings, onDeleteBooking }: { bookings: any[], onDeleteBooking: (id: string) => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-[#e2e8f0]">
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">CĂN TRỌ</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">KHÁCH THUÊ</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">CHỦ TRỌ</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">NGÀY HẸN</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">TRẠNG THÁI</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">HÀNH ĐỘNG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bookings.map((b) => (
+              <tr key={b._id} className="border-b border-[#e2e8f0] hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium">{b.propertyId?.name || "N/A"}</td>
+                <td className="px-4 py-3 text-gray-600">{b.userId?.fullName || b.userId?.username || "Ẩn danh"}</td>
+                <td className="px-4 py-3 text-gray-600">{b.landlordId?.name || "Ẩn danh"}</td>
+                <td className="px-4 py-3 text-gray-600">
+                  {new Date(b.bookingDate).toLocaleDateString()} {b.bookingTime}
+                </td>
+                <td className="px-4 py-3 font-semibold uppercase text-[10px]">
+                  {b.status}
+                </td>
+                <td className="px-4 py-3">
+                  <button onClick={() => onDeleteBooking(b._id)} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold border border-red-200">Xóa</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {bookings.length === 0 && <div className="p-4 text-center text-sm text-gray-500">Chưa có lịch hẹn nào.</div>}
+      </div>
+    </div>
+  );
+}
+
+// Reviews View Component
+function ReviewsView({ reviews, onDeleteReview }: { reviews: any[], onDeleteReview: (id: string) => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-[#e2e8f0]">
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">CĂN TRỌ</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">USER</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">RATING</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">COMMENT</th>
+              <th className="px-4 py-3 text-left font-bold uppercase text-[#94a3b8] text-[10px]">HÀNH ĐỘNG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reviews.map((r) => (
+              <tr key={r._id} className="border-b border-[#e2e8f0] hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium">{r.propertyId?.name || "N/A"}</td>
+                <td className="px-4 py-3 text-gray-600">{r.userId?.username || "Ẩn danh"}</td>
+                <td className="px-4 py-3 text-orange-500 font-bold">{r.rating} ⭐</td>
+                <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={r.comment}>{r.comment}</td>
+                <td className="px-4 py-3">
+                  <button onClick={() => onDeleteReview(r._id)} className="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold border border-red-200">Xóa</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {reviews.length === 0 && <div className="p-4 text-center text-sm text-gray-500">Chưa có đánh giá nào.</div>}
+      </div>
+    </div>
   );
 }

@@ -3,7 +3,6 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { RentalProperty } from '@/app/components/types';
-import { useVerification } from '@/app/contexts/VerificationContext';
 import { useProperties } from '@/app/contexts/PropertiesContext';
 import { X, Calendar, Clock, ShieldCheck, Award, CheckCircle } from 'lucide-react';
 
@@ -23,7 +22,7 @@ export function RequestVerificationDialog({
   landlordPhone,
 }: RequestVerificationDialogProps) {
   const { properties } = useProperties();
-  const { addRequest } = useVerification();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('09:00');
@@ -34,7 +33,7 @@ export function RequestVerificationDialog({
     (p) => p.ownerName === landlordName || p.pinInfo?.pinnedBy === landlordId
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedPropertyId || !scheduledDate) {
@@ -42,23 +41,49 @@ export function RequestVerificationDialog({
       return;
     }
 
-    const property = properties.find((p) => p.id === selectedPropertyId);
+    const property = properties.find((p) => (p.id || p._id) === selectedPropertyId);
     if (!property) return;
 
-    addRequest({
-      propertyId: property.id,
-      propertyName: property.name,
-      landlordId,
-      landlordName,
-      scheduledDate,
-      scheduledTime,
-      notes,
-      address: property.address,
-      phone: landlordPhone,
-    });
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+      
+      const payload = {
+        propertyId: property.id || property._id,
+        propertyName: property.name,
+        landlordId,
+        landlordName,
+        scheduledDate,
+        scheduledTime,
+        notes,
+        address: property.address,
+        phone: landlordPhone,
+      };
 
-    alert('✅ Yêu cầu kiểm tra đã được gửi!\n\nAdmin sẽ xem xét và liên hệ với bạn sớm.');
-    onClose();
+      const res = await fetch(`${API_BASE}/api/verifications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error("Gửi yêu cầu thất bại");
+      }
+
+      alert('✅ Yêu cầu kiểm tra đã được gửi!\n\nAdmin sẽ xem xét và liên hệ với bạn sớm.');
+      onClose();
+      // Reload is needed to show the new request in the dashboard
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('❌ Có lỗi xảy ra. Không thể gửi yêu cầu.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -127,7 +152,7 @@ export function RequestVerificationDialog({
             >
               <option value="">-- Chọn căn trọ --</option>
               {landlordProperties.map((property) => (
-                <option key={property.id} value={property.id}>
+                <option key={property._id || property.id} value={property._id || property.id}>
                   {property.name} - {property.address}
                   {property.greenBadge ? ' ✅ (Đã có tích xanh)' : ''}
                 </option>
@@ -232,10 +257,10 @@ export function RequestVerificationDialog({
             <Button
               type="submit"
               className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-              disabled={landlordProperties.length === 0}
+              disabled={landlordProperties.length === 0 || isSubmitting}
             >
               <ShieldCheck className="size-4 mr-2" />
-              Gửi yêu cầu
+              {isSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
             </Button>
           </div>
         </form>

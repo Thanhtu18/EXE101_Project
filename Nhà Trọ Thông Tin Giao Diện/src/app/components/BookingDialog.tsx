@@ -40,7 +40,9 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:5000';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedDate || !selectedTime) {
@@ -48,36 +50,51 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
       return;
     }
 
-    // Show confirmation
-    const dateStr = format(selectedDate, 'dd/MM/yyyy', { locale: vi });
-    const timeSlot = TIME_SLOTS.find(t => t.value === selectedTime)?.label;
-    
-    const message = 
-      `✓ Đặt lịch xem nhà thành công!\n\n` +
-      `Phòng: ${property.name}\n` +
-      `Địa chỉ: ${property.address}\n\n` +
-      `Ngày: ${dateStr}\n` +
-      `Giờ: ${timeSlot}\n\n` +
-      `Người xem: ${customerName}\n` +
-      `SĐT: ${customerPhone}\n` +
-      `${note ? `Ghi chú: ${note}\n\n` : '\n'}` +
-      `Chủ nhà sẽ liên hệ lại với bạn để xác nhận.`;
-    
-    setIsSubmitted(true);
-    
-    // Reset after 2 seconds and close
-    setTimeout(() => {
-      alert(message);
-      onOpenChange(false);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Vui lòng đăng nhập để đặt lịch!');
+        return;
+      }
+
+      // Format date manually or simply pass date + time strings to backend
+      const res = await fetch(`${API_BASE}/api/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          propertyId: property.id || property._id,
+          // The backend controller automatically sets userId and landlordId
+          date: selectedDate.toISOString(),
+          time: selectedTime,
+          message: note || `Tên: ${customerName}\nSĐT: ${customerPhone}`
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Không thể đặt lịch. Vui lòng thử lại.');
+      }
+
+      setIsSubmitted(true);
+      
+      // Reset after 1.5 seconds and close
       setTimeout(() => {
-        setIsSubmitted(false);
-        setSelectedDate(undefined);
-        setSelectedTime('');
-        setCustomerName('');
-        setCustomerPhone('');
-        setNote('');
-      }, 300);
-    }, 1500);
+        onOpenChange(false);
+        setTimeout(() => {
+          setIsSubmitted(false);
+          setSelectedDate(undefined);
+          setSelectedTime('');
+          setCustomerName('');
+          setCustomerPhone('');
+          setNote('');
+        }, 300);
+      }, 1500);
+
+    } catch (err: any) {
+      alert(err.message || 'Lỗi đặt lịch');
+    }
   };
 
   const today = startOfDay(new Date());
