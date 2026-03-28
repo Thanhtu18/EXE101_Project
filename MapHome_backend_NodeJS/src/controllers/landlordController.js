@@ -153,6 +153,14 @@ const getLandlordAnalytics = async (req, res) => {
     const totalProperties = await Property.countDocuments({
       landlordId: landlord._id,
     });
+    const approvedProperties = await Property.countDocuments({
+      landlordId: landlord._id,
+      status: "approved",
+    });
+    const pendingProperties = await Property.countDocuments({
+      landlordId: landlord._id,
+      status: "pending",
+    });
     const totalBookings = await Booking.countDocuments({
       landlordId: landlord._id,
     });
@@ -164,9 +172,13 @@ const getLandlordAnalytics = async (req, res) => {
       "greenBadge.level": "verified",
     });
 
-    const propertyViews = await Property.aggregate([
+    const propertyStats = await Property.aggregate([
       { $match: { landlordId: landlord._id } },
-      { $group: { _id: null, totalViews: { $sum: "$views" } } },
+      { $group: { 
+          _id: null, 
+          totalViews: { $sum: "$views" }, 
+          totalFavorites: { $sum: "$favorites" } 
+      }},
     ]);
 
     // Trend: Bookings per month (last 6 months)
@@ -184,10 +196,13 @@ const getLandlordAnalytics = async (req, res) => {
 
     res.status(200).json({
       totalProperties,
+      approvedProperties,
+      pendingProperties,
       totalBookings,
       totalVerifications,
       verifiedProperties,
-      totalViews: propertyViews[0]?.totalViews || 0,
+      totalViews: propertyStats[0]?.totalViews || 0,
+      totalFavorites: propertyStats[0]?.totalFavorites || 0,
       bookingTrend
     });
   } catch (error) {

@@ -22,6 +22,7 @@ const {
   getTopRooms,
   getWeeklySearchStats,
   broadcastNotification,
+  getAdminNotifications,
 } = require("../controllers/adminController");
 const {
   updateSubscriptionPlan,
@@ -74,6 +75,7 @@ router.get("/properties", getAllProperties);
 router.put("/properties/:id/status", updatePropertyStatus);
 
 // Notification Management
+router.get("/notifications", getAdminNotifications);
 router.post("/notifications/broadcast", broadcastNotification);
 
 // Booking Management

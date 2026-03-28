@@ -1,4 +1,23 @@
 /**
+ * Utility to get the full image URL.
+ * Handles relative paths from the backend and provides a default if no image is present.
+ */
+export const getImageUrl = (imagePath: string | undefined): string | null => {
+  if (!imagePath) return null;
+  
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+  
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+  
+  // Ensure we don't have double slashes if the path already starts with /
+  const normalizedPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  
+  return `${API_BASE}${normalizedPath}`;
+};
+
+/**
  * Utility to get the full avatar URL.
  * Handles relative paths from the backend and provides a default if no avatar is present.
  */
@@ -10,15 +29,9 @@ export const getAvatarUrl = (avatarPath: string | undefined): string | null => {
     if (avatarPath.includes("googleusercontent.com")) {
       return avatarPath.replace(/=s\d+(-c)?/, "=s256-c");
     }
-    return avatarPath;
   }
   
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-  
-  // Ensure we don't have double slashes if the path already starts with /
-  const normalizedPath = avatarPath.startsWith("/") ? avatarPath : `/${avatarPath}`;
-  
-  return `${API_BASE}${normalizedPath}`;
+  return getImageUrl(avatarPath);
 };
 
 /**

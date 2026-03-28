@@ -50,6 +50,7 @@ import {
   TooltipTrigger,
 } from "@/app/components/ui/tooltip";
 import { Navbar } from "@/app/components/Navbar";
+import api from "@/app/utils/api";
 import { Footer } from "@/app/components/Footer";
 import { VerificationBadge } from "@/app/components/VerificationBadge";
 import { BookingDialog } from "@/app/components/BookingDialog";
@@ -273,7 +274,6 @@ export function RoomDetailPage() {
 
   const { user } = useAuth();
   const { properties, loading: loadingProps } = useProperties();
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
   
   const property = useMemo(
     () => properties.find((p) => p.id === routeId || p._id === routeId),
@@ -292,33 +292,30 @@ export function RoomDetailPage() {
 
       try {
         const propertyKey = property._id || property.id;
-        const res = await fetch(`${API_BASE}/api/reviews/property/${propertyKey}`);
-        if (!res.ok) {
-          setReviews([]);
-          return;
+        const res = await api.get(`/api/reviews/property/${propertyKey}`);
+        if (res.status === 200) {
+          const data = res.data;
+          const mapped: Review[] = (Array.isArray(data) ? data : []).map((item: any) => ({
+            id: item._id || item.id,
+            propertyId:
+              typeof item.propertyId === "object"
+                ? item.propertyId?._id || item.propertyId?.id || propertyKey
+                : item.propertyId || propertyKey,
+            userName: item.userId?.fullName || item.userId?.username || "Người dùng MapHome",
+            userAvatar: item.userId?.avatar || "/avatars/default.png",
+            rating: Number(item.rating) || 0,
+            content: item.comment || "",
+            createdAt: item.createdAt || new Date().toISOString(),
+          }));
+          setReviews(mapped);
         }
-
-        const data = await res.json();
-        const mapped: Review[] = (Array.isArray(data) ? data : []).map((item: any) => ({
-          id: item._id || item.id,
-          propertyId:
-            typeof item.propertyId === "object"
-              ? item.propertyId?._id || item.propertyId?.id || propertyKey
-              : item.propertyId || propertyKey,
-          userName: item.userId?.fullName || item.userId?.username || "Người dùng MapHome",
-          userAvatar: item.userId?.avatar || "/avatars/default.png",
-          rating: Number(item.rating) || 0,
-          content: item.comment || "",
-          createdAt: item.createdAt || new Date().toISOString(),
-        }));
-        setReviews(mapped);
-      } catch {
+      } catch (err) {
         setReviews([]);
       }
     };
 
     fetchReviews();
-  }, [property, API_BASE]);
+  }, [property]);
 
   if (loadingProps) {
     return (
@@ -363,44 +360,30 @@ export function RoomDetailPage() {
     setIsSubmittingReview(true);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setIsSubmittingReview(false);
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/api/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          propertyId: property._id || property.id,
-          rating: newRating,
-          comment: newReview,
-        }),
+      const res = await api.post("/api/reviews", {
+        propertyId: property._id || property.id,
+        rating: newRating,
+        comment: newReview,
       });
 
-      if (!res.ok) {
-        setIsSubmittingReview(false);
-        return;
+      if (res.status === 200 || res.status === 201) {
+        const created = res.data;
+        const review: Review = {
+          id: created._id || created.id,
+          propertyId: created.propertyId || (property._id || property.id),
+          userName: user.fullName || user.username || "Người dùng MapHome",
+          userAvatar: user.avatar || "/avatars/default.png",
+          rating: Number(created.rating) || newRating,
+          content: created.comment || newReview,
+          createdAt: created.createdAt || new Date().toISOString(),
+        };
+
+        setReviews((prev) => [review, ...prev]);
+        setNewReview("");
+        setNewRating(5);
       }
-
-      const created = await res.json();
-      const review: Review = {
-        id: created._id || created.id,
-        propertyId: created.propertyId || (property._id || property.id),
-        userName: user.fullName || user.username || "Người dùng MapHome",
-        userAvatar: user.avatar || "/avatars/default.png",
-        rating: Number(created.rating) || newRating,
-        content: created.comment || newReview,
-        createdAt: created.createdAt || new Date().toISOString(),
-      };
-
-      setReviews((prev) => [review, ...prev]);
-      setNewReview("");
-      setNewRating(5);
+    } catch (err) {
+      console.error("Review error:", err);
     } finally {
       setIsSubmittingReview(false);
     }

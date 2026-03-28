@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
+import api from '@/app/utils/api';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { toast } from 'sonner';
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:5000';
 
 export function useFavorites() {
   const { isAuthenticated } = useAuth();
@@ -16,12 +16,9 @@ export function useFavorites() {
         return;
       }
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/api/user/me/favorites`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const res = await api.get("/api/user/me/favorites");
+        if (res.status === 200) {
+          const data = res.data;
           // Backend trả về mảng các property details hoặc mảng IDs (tuỳ setup)
           // Ở userController, populate("favorites") trả về mảng document. Phải parse lấy _id
           const ids = data.map((item: any) => item._id || item);
@@ -50,16 +47,8 @@ export function useFavorites() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/api/user/me/favorites/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ propertyId })
-      });
-      if (!res.ok) {
+      const res = await api.post("/api/user/me/favorites/toggle", { propertyId });
+      if (res.status !== 200 && res.status !== 201) {
         throw new Error('Failed to toggle favorite on server');
       }
     } catch (err) {

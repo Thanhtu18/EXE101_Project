@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import api from '@/app/utils/api';
 import { VerificationRequest, GreenBadgeLevel } from '@/app/components/types';
 import { useAuth } from './AuthContext';
 
@@ -18,7 +19,6 @@ interface VerificationContextType {
 
 const VerificationContext = createContext<VerificationContextType | undefined>(undefined);
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
 export function VerificationProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
@@ -33,15 +33,9 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const res = await fetch(`${API_BASE}/api/verifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data.map(mapBackendRequest));
+      const res = await api.get("/api/verifications");
+      if (res.status === 200) {
+        setRequests(res.data.map(mapBackendRequest));
       }
     } catch (err) {
       console.error("Failed to fetch verification requests:", err);
@@ -58,18 +52,9 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
 
   const addRequest = async (newRequest: Omit<VerificationRequest, 'id' | 'requestedAt' | 'status'>) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/verifications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newRequest),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRequests((prev) => [mapBackendRequest(data), ...prev]);
+      const res = await api.post("/api/verifications", newRequest);
+      if (res.status === 200 || res.status === 201) {
+        setRequests((prev) => [mapBackendRequest(res.data), ...prev]);
         return true;
       }
       return false;
@@ -81,19 +66,10 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
 
   const updateRequestStatus = async (requestId: string, status: VerificationRequest['status']) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/verifications/${requestId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await api.put(`/api/verifications/${requestId}`, { status });
+      if (res.status === 200) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? mapBackendRequest(data) : req))
+          prev.map((req) => (req.id === requestId ? mapBackendRequest(res.data) : req))
         );
         return true;
       }
@@ -106,19 +82,10 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
 
   const completeInspection = async (requestId: string, badgeLevel: GreenBadgeLevel, notes?: string) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/verifications/${requestId}/complete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ badgeAwarded: badgeLevel, inspectorNotes: notes }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await api.post(`/api/verifications/${requestId}/complete`, { badgeAwarded: badgeLevel, inspectorNotes: notes });
+      if (res.status === 200 || res.status === 201) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? mapBackendRequest(data) : req))
+          prev.map((req) => (req.id === requestId ? mapBackendRequest(res.data) : req))
         );
         return true;
       }
@@ -143,15 +110,10 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
 
   const notifyUserAboutPhotos = async (requestId: string) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/verifications/${requestId}/notify`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await api.post(`/api/verifications/${requestId}/notify`);
+      if (res.status === 200 || res.status === 201) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? mapBackendRequest(data) : req))
+          prev.map((req) => (req.id === requestId ? mapBackendRequest(res.data) : req))
         );
         return true;
       }
@@ -164,19 +126,10 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
 
   const submitUserPhotos = async (requestId: string, photos: string[]) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/verifications/${requestId}/photos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ photos }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await api.post(`/api/verifications/${requestId}/photos`, { photos });
+      if (res.status === 200 || res.status === 201) {
         setRequests((prev) =>
-          prev.map((req) => (req.id === requestId ? mapBackendRequest(data) : req))
+          prev.map((req) => (req.id === requestId ? mapBackendRequest(res.data) : req))
         );
         return true;
       }

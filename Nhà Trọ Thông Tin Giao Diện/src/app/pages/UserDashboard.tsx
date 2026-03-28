@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
+import { getAvatarUrl, getInitials, getImageUrl } from "@/app/utils/avatarUtils";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -32,8 +32,14 @@ import {
   Settings,
   Camera,
   Upload,
+  Building,
+  Sparkles,
+  ArrowRight,
+  RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { amenityMeta } from "@/app/constants/amenities";
+import api from "@/app/utils/api";
 
 
 // Define available views for the user dashboard
@@ -49,32 +55,20 @@ export function UserDashboard() {
   const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated) return;
       
       try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-        
         const [favRes, bookRes, inspRes] = await Promise.all([
-          fetch(`${API_BASE}/api/user/me/favorites`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE}/api/user/bookings`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE}/api/user/inspections`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          api.get("/api/user/me/favorites"),
+          api.get("/api/user/bookings"),
+          api.get("/api/user/inspections"),
         ]);
 
-        if (favRes.ok) setFavorites(await favRes.json());
-        if (bookRes.ok) setAppointments(await bookRes.json());
-        if (inspRes.ok) setInspections(await inspRes.json());
+        setFavorites(favRes.data);
+        setAppointments(bookRes.data);
+        setInspections(inspRes.data);
 
       } catch (err) {
         console.error("Failed to fetch user dashboard data:", err);
@@ -88,7 +82,7 @@ export function UserDashboard() {
     } else {
       navigate("/login");
     }
-  }, [isAuthenticated, navigate, API_BASE]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -180,7 +174,7 @@ export function UserDashboard() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-gray-500 text-lg font-medium"
+            className="text-indigo-500/80 text-lg font-bold"
           >
             Nơi quản lý hành trình tìm kiếm ngôi nhà mơ ước của bạn
           </motion.p>
@@ -204,57 +198,76 @@ export function UserDashboard() {
                   <stat.icon className="size-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">{stat.label}</p>
+              <p className="text-3xl font-black text-indigo-600 mb-1">{stat.value}</p>
+              <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-widest leading-none">{stat.label}</p>
             </motion.div>
           ))}
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-4 no-scrollbar">
+        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-4 no-scrollbar relative">
           {[
             { id: "favorites", label: "Trọ yêu thích", icon: Heart },
             { id: "search", label: "Tìm kiếm thông minh", icon: Search },
             { id: "appointments", label: "Lịch hẹn của tôi", icon: Calendar },
             { id: "inspections", label: "Yêu cầu kiểm tra", icon: ShieldCheck },
             { id: "settings", label: "Cài đặt", icon: Settings },
-          ].map((tab) => (
-            <motion.button
-              key={tab.id}
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setActiveView(tab.id as UserView)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap shadow-sm ${
-                activeView === tab.id
-                  ? "bg-gradient-to-r from-green-600 to-blue-600 text-white shadow-lg shadow-green-500/20"
-                  : "bg-white text-gray-500 hover:text-gray-900 border border-gray-100"
-              }`}
-            >
-              <tab.icon className="size-4" />
-              {tab.label}
-            </motion.button>
-          ))}
+          ].map((tab) => {
+            const isActive = activeView === tab.id;
+            return (
+              <motion.button
+                key={tab.id}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveView(tab.id as UserView)}
+                className={`relative flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap shadow-sm z-10 ${
+                  isActive
+                    ? "text-white"
+                    : "bg-white text-gray-500 hover:text-gray-900 border border-gray-100"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-600 rounded-2xl z-[-1] shadow-lg shadow-green-500/20"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <tab.icon className={`size-4 ${isActive ? "text-white" : ""}`} />
+                {tab.label}
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Content Views */}
-        {activeView === "favorites" && (
-          <FavoritesView favorites={favorites} setFavorites={setFavorites} />
-        )}
-        {activeView === "search" && <SearchView />}
-        {activeView === "appointments"}
-        {activeView === "appointments" && (
-          <AppointmentsView
-            appointments={appointments}
-            setAppointments={setAppointments}
-          />
-        )}
-        {activeView === "inspections" && (
-          <InspectionsView
-            inspections={inspections}
-            setInspections={setInspections}
-          />
-        )}
-        {activeView === "settings" && <SettingsView />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            {activeView === "favorites" && (
+              <FavoritesView favorites={favorites} setFavorites={setFavorites} />
+            )}
+            {activeView === "search" && <SearchView />}
+            {activeView === "appointments" && (
+              <AppointmentsView
+                appointments={appointments}
+                setAppointments={setAppointments}
+              />
+            )}
+            {activeView === "inspections" && (
+              <InspectionsView
+                inspections={inspections}
+                setInspections={setInspections}
+              />
+            )}
+            {activeView === "settings" && <SettingsView />}
+          </motion.div>
+        </AnimatePresence>
 
       </motion.main>
     </div>
@@ -296,22 +309,13 @@ function FavoritesView({
   favorites: any[];
   setFavorites: (favorites: any[]) => void;
 }) {
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   const handleRemoveFavorite = async (propertyId: string) => {
     if (confirm("Bạn có chắc muốn xóa khỏi danh sách yêu thích?")) {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/user/me/favorites/toggle`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}` 
-          },
-          body: JSON.stringify({ propertyId }),
-        });
+        const res = await api.post("/api/user/me/favorites/toggle", { propertyId });
         
-        if (res.ok) {
+        if (res.status === 200 || res.status === 201) {
           setFavorites(favorites.filter((f) => f._id !== propertyId));
           toast.success("Đã xóa khỏi danh sách yêu thích! ✨");
         }
@@ -325,22 +329,20 @@ function FavoritesView({
 
   if (favorites.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow p-12 text-center">
-        <Heart className="size-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Chưa có trọ yêu thích nào
-        </h3>
-        <p className="text-gray-600 mb-6">
-          Bắt đầu khám phá và lưu các căn trọ bạn thích
-        </p>
-        <Button
-          onClick={() => navigate("/map")}
-          className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-        >
-          <Search className="size-4 mr-2" />
-          Tìm trọ ngay
-        </Button>
-      </div>
+      <EmptyState
+        icon={Heart}
+        title="Trống danh sách yêu thích"
+        description="Bắt đầu khám phá và lưu lại những căn trọ mơ ước của bạn ngay hôm nay để không bỏ lỡ."
+        action={
+          <Button
+            onClick={() => navigate("/map")}
+            className="px-8 h-14 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-2xl font-black shadow-xl shadow-green-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
+          >
+            <Search className="size-5 group-hover:rotate-12 transition-transform" />
+            Tìm trọ ngay
+          </Button>
+        }
+      />
     );
   }
 
@@ -360,22 +362,37 @@ function FavoritesView({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <motion.div 
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1
+            }
+          }
+        }}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-4"
+      >
         {favorites.map((property) => (
-          <div
+          <motion.div
             key={property._id}
+            variants={{
+              hidden: { opacity: 0, x: -20 },
+              show: { opacity: 1, x: 0 }
+            }}
+            whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
             className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
           >
             <div className="flex items-start gap-6">
               {/* Image */}
               <div className="w-32 h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
                 <img 
-                  src={property.image?.startsWith("http") ? property.image : `${API_BASE}${property.image || ""}`} 
+                  src={getImageUrl(property.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
                   alt={property.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as any).src = "";
-                  }}
                 />
               </div>
 
@@ -471,14 +488,14 @@ function FavoritesView({
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-// Search View Component
+// Modern Search View Component with premium UI
 function SearchView() {
   const [searchParams, setSearchParams] = useState({
     keyword: "",
@@ -491,52 +508,23 @@ function SearchView() {
     verified: false,
   });
 
-  const amenitiesList = [
-    "Wifi",
-    "Điều hòa",
-    "Máy giặt",
-    "Bếp",
-    "WC riêng",
-    "Ban công",
-    "Gác lửng",
-    "Chỗ để xe",
-  ];
-
   const districts = [
-    "Quận 1",
-    "Quận 2",
-    "Quận 3",
-    "Quận 4",
-    "Quận 5",
-    "Quận 6",
-    "Quận 7",
-    "Quận 8",
-    "Quận 9",
-    "Quận 10",
-    "Quận 11",
-    "Quận 12",
-    "Thủ Đức",
-    "Bình Thạnh",
-    "Tân Bình",
-    "Phú Nhuận",
-    "Gò Vấp",
+    "Quận 1", "Quận 2", "Quận 3", "Quận 4", "Quận 5", "Quận 6",
+    "Quận 7", "Quận 8", "Quận 9", "Quận 10", "Quận 11", "Quận 12",
+    "Thủ Đức", "Bình Thạnh", "Tân Bình", "Phú Nhuận", "Gò Vấp"
   ];
 
-  const toggleAmenity = (amenity: string) => {
-    setSearchParams({
-      ...searchParams,
-      amenities: searchParams.amenities.includes(amenity)
-        ? searchParams.amenities.filter((a) => a !== amenity)
-        : [...searchParams.amenities, amenity],
-    });
+  const toggleAmenity = (key: string) => {
+    setSearchParams(prev => ({
+      ...prev,
+      amenities: prev.amenities.includes(key)
+        ? prev.amenities.filter(a => a !== key)
+        : [...prev.amenities, key]
+    }));
   };
 
   const navigate = useNavigate();
-
-  const handleSearch = () => {
-    navigate("/map");
-  };
-
+  const handleSearch = () => navigate("/map");
   const handleReset = () => {
     setSearchParams({
       keyword: "",
@@ -548,158 +536,205 @@ function SearchView() {
       amenities: [],
       verified: false,
     });
+    toast.success("Đã đặt lại bộ lọc! ✨");
   };
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-900">Tìm kiếm nâng cao</h3>
-        <Button variant="outline" onClick={handleReset} size="sm">
-          <X className="size-4 mr-2" />
+    <div className="bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+      {/* Header Section */}
+      <div className="bg-white/80 p-8 sm:p-10 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+           <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-green-500/20">
+              <Sparkles className="size-8" />
+           </div>
+           <div>
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight">Tìm kiếm thông minh</h3>
+              <p className="text-sm text-gray-500 font-medium">Sử dụng bộ lọc nâng cao để tìm căn trọ hoàn hảo</p>
+           </div>
+        </div>
+        <Button 
+          variant="ghost" 
+          onClick={handleReset} 
+          className="rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold px-6 h-12 transition-all border border-gray-100"
+        >
+          <RefreshCcw className="size-4 mr-2" />
           Đặt lại
         </Button>
       </div>
 
-      <div className="space-y-6">
-        {/* Keyword Search */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Từ khóa
-          </label>
-          <Input
-            type="text"
-            value={searchParams.keyword}
-            onChange={(e) =>
-              setSearchParams({ ...searchParams, keyword: e.target.value })
-            }
-            placeholder="Tên phòng trọ, địa chỉ..."
-            className="w-full"
-          />
-        </div>
+      <div className="p-8 sm:p-10 space-y-12">
+        {/* Section 1: Basic Info */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+             <div className="w-1.5 h-6 bg-green-500 rounded-full" />
+             <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Thông tin cơ bản</h4>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-2">
+              <label className="text-xs font-bold text-indigo-500/60 ml-1">Từ khóa tìm kiếm</label>
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-indigo-300 group-focus-within:text-green-600 transition-colors" />
+                <Input
+                  type="text"
+                  value={searchParams.keyword}
+                  onChange={(e) => setSearchParams({ ...searchParams, keyword: e.target.value })}
+                  placeholder="Tên phòng trọ, khu phố, địa chỉ..."
+                  className="pl-12 h-14 rounded-2xl border-indigo-50 bg-white/50 focus:bg-white transition-all text-base border-2 focus:border-green-500 focus:ring-0 shadow-sm"
+                />
+              </div>
+            </div>
 
-        {/* Location */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Khu vực
-          </label>
-          <select
-            value={searchParams.district}
-            onChange={(e) =>
-              setSearchParams({ ...searchParams, district: e.target.value })
-            }
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:border-green-600 focus:outline-none"
-          >
-            <option value="">Tất cả quận/huyện</option>
-            {districts.map((district) => (
-              <option key={district} value={district}>
-                {district}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Price Range */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Khoảng giá (triệu đồng/tháng)
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              type="number"
-              value={searchParams.priceMin}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, priceMin: e.target.value })
-              }
-              placeholder="Từ"
-            />
-            <Input
-              type="number"
-              value={searchParams.priceMax}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, priceMax: e.target.value })
-              }
-              placeholder="Đến"
-            />
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-indigo-500/60 ml-1">Khu vực</label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-indigo-300" />
+                <select
+                  value={searchParams.district}
+                  onChange={(e) => setSearchParams({ ...searchParams, district: e.target.value })}
+                  className="w-full h-14 pl-12 pr-4 border-2 border-indigo-50 rounded-2xl text-base font-medium focus:border-green-500 focus:outline-none appearance-none bg-white transition-all shadow-sm"
+                >
+                  <option value="">Tất cả quận/huyện</option>
+                  {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-indigo-300 rotate-90 pointer-events-none" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Area Range */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Diện tích (m²)
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              type="number"
-              value={searchParams.areaMin}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, areaMin: e.target.value })
-              }
-              placeholder="Từ"
-            />
-            <Input
-              type="number"
-              value={searchParams.areaMax}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, areaMax: e.target.value })
-              }
-              placeholder="Đến"
-            />
+        {/* Section 2: Range Filters */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+             <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Khoảng giá & Diện tích</h4>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-gray-500 ml-1 flex items-center gap-2">
+                <DollarSign className="size-4 text-green-600" /> Giá thuê hàng tháng (VNĐ)
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    value={searchParams.priceMin}
+                    onChange={(e) => setSearchParams({ ...searchParams, priceMin: e.target.value })}
+                    placeholder="Tối thiểu"
+                    className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-green-500 transition-all shadow-sm"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Đ</span>
+                </div>
+                <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    value={searchParams.priceMax}
+                    onChange={(e) => setSearchParams({ ...searchParams, priceMax: e.target.value })}
+                    placeholder="Tối đa"
+                    className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-green-500 transition-all shadow-sm"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Đ</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-gray-500 ml-1 flex items-center gap-2">
+                <Maximize className="size-4 text-blue-600" /> Diện tích sử dụng (m²)
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    value={searchParams.areaMin}
+                    onChange={(e) => setSearchParams({ ...searchParams, areaMin: e.target.value })}
+                    placeholder="Từ"
+                    className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-blue-500 transition-all shadow-sm"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">m²</span>
+                </div>
+                <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    value={searchParams.areaMax}
+                    onChange={(e) => setSearchParams({ ...searchParams, areaMax: e.target.value })}
+                    placeholder="Đến"
+                    className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-blue-500 transition-all shadow-sm"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">m²</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Amenities */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tiện ích
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {amenitiesList.map((amenity) => (
-              <button
-                key={amenity}
-                onClick={() => toggleAmenity(amenity)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-                  searchParams.amenities.includes(amenity)
-                    ? "bg-green-100 border-green-500 text-green-700"
-                    : "bg-white border-gray-300 text-gray-700 hover:border-green-300"
-                }`}
-              >
-                {amenity}
-              </button>
-            ))}
+        {/* Section 3: Amenities & Verification */}
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+               <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
+               <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Tiện ích mong muốn</h4>
+            </div>
+            <div className="flex items-center gap-3 bg-purple-50 px-4 py-2 rounded-xl border border-purple-100">
+               <ShieldCheck className="size-4 text-purple-600" />
+               <span className="text-xs font-bold text-purple-700">Xác thực bởi MapHome</span>
+               <input
+                 type="checkbox"
+                 id="verified"
+                 checked={searchParams.verified}
+                 onChange={(e) => setSearchParams({ ...searchParams, verified: e.target.checked })}
+                 className="w-5 h-5 accent-purple-600 cursor-pointer"
+               />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+            {Object.entries(amenityMeta).map(([key, meta]) => {
+              const Icon = meta.icon;
+              const isActive = searchParams.amenities.includes(key);
+              return (
+                <motion.button
+                  key={key}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => toggleAmenity(key)}
+                  className={`flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 transition-all gap-3 ${
+                    isActive
+                      ? "bg-gradient-to-br from-green-500 to-green-600 border-green-500 text-white shadow-xl shadow-green-500/30"
+                      : "bg-white border-gray-100 text-gray-500 hover:border-green-200 hover:bg-green-50/30"
+                  }`}
+                >
+                  <div className={`p-3 rounded-2xl ${isActive ? "bg-white/20" : "bg-gray-50"}`}>
+                    <Icon className="size-6" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
+                    {meta.label.split(" ").slice(0, 2).join(" ")}
+                  </span>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Verified Only */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="verified"
-            checked={searchParams.verified}
-            onChange={(e) =>
-              setSearchParams({ ...searchParams, verified: e.target.checked })
-            }
-            className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-          />
-          <label
-            htmlFor="verified"
-            className="text-sm font-medium text-gray-700"
-          >
-            Chỉ hiển thị trọ đã xác thực
-          </label>
-        </div>
-
-        {/* Search Button */}
-        <div className="flex items-center gap-3 pt-4 border-t">
+        {/* Action Row */}
+        <div className="pt-10 flex flex-col sm:flex-row items-center gap-4">
           <Button
             onClick={handleSearch}
-            className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+            className="w-full sm:flex-[2] h-16 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-3xl text-lg font-black shadow-2xl shadow-green-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
           >
-            <Search className="size-4 mr-2" />
-            Tìm kiếm
+            <Search className="size-6 mr-3 group-hover:rotate-12 transition-transform" />
+            Bắt đầu tìm kiếm ngay
+            <ArrowRight className="size-5 ml-4 opacity-70 group-hover:translate-x-1 transition-transform" />
           </Button>
-          <Button variant="outline" className="border-gray-300">
-            <Navigation className="size-4 mr-2" />
+          <Button 
+            variant="outline" 
+            className="w-full sm:flex-1 h-16 border-2 border-gray-100 rounded-3xl text-gray-600 font-bold hover:bg-gray-50 hover:border-gray-200 transition-all"
+            onClick={() => navigate("/map")}
+          >
+            <Navigation className="size-5 mr-3 text-blue-500" />
             Xem trên bản đồ
           </Button>
         </div>
@@ -716,7 +751,6 @@ function AppointmentsView({
   appointments: any[];
   setAppointments: (appointments: any[]) => void;
 }) {
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   const [filter, setFilter] = useState<
     "all" | "pending" | "confirmed" | "completed" | "cancelled"
@@ -730,13 +764,9 @@ function AppointmentsView({
   const handleCancelAppointment = async (id: string) => {
     if (confirm("Bạn có chắc muốn hủy lịch hẹn này?")) {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/bookings/${id}/cancel`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.put(`/api/bookings/${id}/cancel`);
         
-        if (res.ok) {
+        if (res.status === 200) {
           setAppointments(
             appointments.map((a) =>
               a._id === id ? { ...a, status: "cancelled" } : a,
@@ -829,42 +859,47 @@ function AppointmentsView({
 
       {/* Appointments List */}
       {filteredAppointments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow p-12 text-center">
-          <Calendar className="size-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Chưa có lịch hẹn nào
-          </h3>
-          <p className="text-gray-600">
-            {filter === "all"
-              ? "Bạn chưa đặt lịch hẹn xem trọ nào"
-              : `Không có lịch hẹn ${
-                  filter === "pending"
-                    ? "chờ xác nhận"
-                    : filter === "confirmed"
-                      ? "đã xác nhận"
-                      : filter === "completed"
-                        ? "đã hoàn thành"
-                        : "đã hủy"
-                }`}
-          </p>
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title="Chưa có lịch hẹn nào"
+          description={
+            filter === "all"
+              ? "Bạn chưa đặt lịch hẹn xem trọ nào. Hãy tìm căn trọ ưng ý và đặt lịch với chủ trọ ngay!"
+              : `Hiện tại bạn không có lịch hẹn nào ở trạng thái này.`
+          }
+        />
       ) : (
-        <div className="space-y-4">
+        <motion.div 
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
           {filteredAppointments.map((appointment) => (
-            <div
+            <motion.div
               key={appointment._id}
+              variants={{
+                hidden: { opacity: 0, x: -20 },
+                show: { opacity: 1, x: 0 }
+              }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
               className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
             >
               <div className="flex items-start gap-6">
                 {/* Property Image */}
                 <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
                   <img 
-                    src={appointment.propertyId?.image?.startsWith("http") ? appointment.propertyId?.image : `${API_BASE}${appointment.propertyId?.image || ""}`}
-                    alt={appointment.propertyId?.name}
+                    src={getImageUrl(appointment.propertyId?.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
+                    alt={appointment.propertyId?.name} 
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as any).src = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400";
-                    }}
                   />
                 </div>
 
@@ -938,9 +973,9 @@ function AppointmentsView({
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -957,16 +992,80 @@ function FilterButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <motion.button
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+      className={`relative px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all z-10 flex items-center justify-center min-w-[100px] ${
         active
-          ? "bg-gradient-to-r from-green-600 to-blue-600 text-white"
-          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          ? "text-white"
+          : "bg-gray-50/50 text-gray-400 hover:text-gray-600 border border-gray-100 hover:border-gray-200"
       }`}
     >
-      {children}
-    </button>
+      {active && (
+        <motion.div
+          layoutId="activeFilterIndicator"
+          className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl z-[-1] shadow-lg shadow-green-500/20"
+          transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+        />
+      )}
+      <span className="relative z-10">{children}</span>
+    </motion.button>
+  );
+}
+
+// Premium Empty State Component
+function EmptyState({ 
+  icon: Icon, 
+  title, 
+  description, 
+  action 
+}: { 
+  icon: any; 
+  title: string; 
+  description: string; 
+  action?: React.ReactNode;
+}) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-2xl p-20 text-center relative overflow-hidden"
+    >
+      {/* Aura Background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-green-400/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] bg-blue-400/5 blur-[80px] rounded-full pointer-events-none" />
+      
+      <div className="relative z-10">
+        <motion.div
+          animate={{ 
+            y: [0, -15, 0],
+            rotate: [0, 5, -5, 0]
+          }}
+          transition={{ 
+            duration: 6, 
+            repeat: Infinity, 
+            ease: "easeInOut" 
+          }}
+          className="w-28 h-28 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center mx-auto mb-10 border border-white shrink-0"
+        >
+          <Icon className="size-12 text-green-600/80" />
+        </motion.div>
+        
+        <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">
+          {title}
+        </h3>
+        <p className="text-gray-500 font-medium max-w-md mx-auto mb-10 leading-relaxed">
+          {description}
+        </p>
+        
+        {action && (
+          <div className="flex justify-center">
+            {action}
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -978,7 +1077,6 @@ function InspectionsView({
   inspections: any[];
   setInspections: (inspections: any[]) => void;
 }) {
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   const [filter, setFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
 
@@ -990,13 +1088,9 @@ function InspectionsView({
   const handleCancelInspection = async (id: string) => {
     if (confirm("Bạn có chắc muốn hủy yêu cầu kiểm tra này?")) {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/inspections/${id}/cancel`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.put(`/api/inspections/${id}/cancel`);
 
-        if (res.ok) {
+        if (res.status === 200) {
           setInspections(
             inspections.map((i) =>
               i._id === id ? { ...i, status: "cancelled" } : i,
@@ -1072,18 +1166,36 @@ function InspectionsView({
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <motion.div 
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
           {filteredInspections.map((insp) => (
-            <div
+            <motion.div
               key={insp._id}
+              variants={{
+                hidden: { opacity: 0, x: -20 },
+                show: { opacity: 1, x: 0 }
+              }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
               className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
             >
               <div className="flex items-start gap-6">
                 <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
-                  <img
-                    src={insp.propertyId?.image?.startsWith("http") ? insp.propertyId?.image : `${API_BASE}${insp.propertyId?.image || ""}`}
-                    alt={insp.propertyId?.name}
-                    className="w-full h-full object-cover"
+                  <img 
+                    src={getImageUrl(insp.propertyId?.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
+                    alt={insp.propertyId?.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                   />
                 </div>
 
@@ -1137,9 +1249,9 @@ function InspectionsView({
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -1152,7 +1264,6 @@ function InspectionsView({
 function SettingsView() {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1181,29 +1292,19 @@ function SettingsView() {
               const target = e.target as any;
               const fullName = target.fullName.value;
               const phone = target.phone.value;
-              const token = localStorage.getItem("token");
-              
               try {
-                // Update user profile information via backend API
-                const res = await fetch(`${API_BASE}/api/user/${user?.id}`, {
-                  method: "PUT",
-                  headers: { 
-                    "Content-Type": "application/json", 
-                    Authorization: `Bearer ${token}` 
-                  },
-                  body: JSON.stringify({ fullName, phone })
-                });
+                // Update user profile information via backend API using axios
+                const res = await api.put(`/api/user/${user?.id}`, { fullName, phone });
 
-                if (res.ok) {
+                if (res.status === 200) {
                   toast.success("Cập nhật thông tin thành công! ✨");
                   setTimeout(() => window.location.reload(), 1000);
                 } else {
-                  const data = await res.json();
-                  toast.error(data.message || "Cập nhật thất bại. ❌");
+                  toast.error(res.data.message || "Cập nhật thất bại. ❌");
                 }
-              } catch (err) {
+              } catch (err: any) {
                 console.error("Profile update error:", err);
-                toast.error("Lỗi cập nhật thông tin. ❌");
+                toast.error(err.response?.data?.message || "Lỗi cập nhật thông tin. ❌");
               }
             }} 
             className="space-y-5"
@@ -1235,38 +1336,27 @@ function SettingsView() {
                       
                       const formData = new FormData();
                       formData.append("image", file);
-                      const token = localStorage.getItem("token");
-                      
                       try {
                         // 1. Upload image to get URL
-                        const uploadRes = await fetch(`${API_BASE}/api/upload/single`, {
-                          method: "POST",
-                          headers: { Authorization: `Bearer ${token}` },
-                          body: formData
+                        const uploadRes = await api.post("/api/upload/single", formData, {
+                          headers: { "Content-Type": "multipart/form-data" }
                         });
                         
-                        if (uploadRes.ok) {
-                          const { url } = await uploadRes.json();
+                        if (uploadRes.status === 200 || uploadRes.status === 201) {
+                          const { url } = uploadRes.data;
                           // 2. Update user profile with new avatar URL
-                          const updateRes = await fetch(`${API_BASE}/api/user/${user?.id}`, {
-                            method: "PUT",
-                            headers: { 
-                              "Content-Type": "application/json", 
-                              Authorization: `Bearer ${token}` 
-                            },
-                            body: JSON.stringify({ avatar: url })
-                          });
+                          const updateRes = await api.put(`/api/user/${user?.id}`, { avatar: url });
                           
-                          if (updateRes.ok) {
-                            const updatedUser = await updateRes.json();
+                          if (updateRes.status === 200) {
+                            const updatedUser = updateRes.data;
                             updateUser(updatedUser);
                             toast.success("Đổi ảnh đại diện thành công! ✨");
                             setTimeout(() => window.location.reload(), 1000);
                           }
                         }
-                      } catch (err) {
+                      } catch (err: any) {
                         console.error("Avatar upload error:", err);
-                        toast.error("Lỗi khi tải ảnh lên. ❌");
+                        toast.error(err.response?.data?.message || "Lỗi khi tải ảnh lên. ❌");
                       }
                     }}
                   />
@@ -1331,32 +1421,22 @@ function SettingsView() {
               const target = e.target as any;
               const currentPassword = target.currentPassword.value;
               const newPassword = target.newPassword.value;
-              const token = localStorage.getItem("token");
-              
               try {
-                // Change user password via authentication API
-                const res = await fetch(`${API_BASE}/api/auth/change-password`, {
-                  method: "PUT",
-                  headers: { 
-                    "Content-Type": "application/json", 
-                    Authorization: `Bearer ${token}` 
-                  },
-                  body: JSON.stringify({ currentPassword, newPassword })
-                });
+                // Change user password via authentication API using axios
+                const res = await api.put("/api/auth/change-password", { currentPassword, newPassword });
 
-                if (res.ok) {
+                if (res.status === 200) {
                   toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại. 🔐");
                   setTimeout(() => {
                     logout();
                     navigate("/login");
                   }, 2000);
                 } else {
-                  const data = await res.json();
-                  toast.error(data.message || "Mật khẩu hiện tại không chính xác. ❌");
+                  toast.error(res.data.message || "Mật khẩu hiện tại không chính xác. ❌");
                 }
-              } catch (err) {
+              } catch (err: any) {
                 console.error("Password change error:", err);
-                toast.error("Lỗi đổi mật khẩu. ❌");
+                toast.error(err.response?.data?.message || "Lỗi đổi mật khẩu. ❌");
               }
             }} 
             className="space-y-5"

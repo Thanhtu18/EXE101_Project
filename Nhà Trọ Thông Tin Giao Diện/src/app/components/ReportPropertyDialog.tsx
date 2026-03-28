@@ -10,6 +10,7 @@ import {
 } from "@/app/components/ui/dialog";
 import { Button } from "@/app/components/ui/button";
 import { Textarea } from "@/app/components/ui/textarea";
+import api from "@/app/utils/api";
 import { AlertCircle, Flag, CheckCircle2 } from "lucide-react";
 import {
   Select,
@@ -32,8 +33,6 @@ export function ReportPropertyDialog({ propertyId, propertyName }: ReportPropert
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-
   const handleSubmit = async () => {
     if (!reason) {
       setError("Vui lòng chọn lý do báo cáo.");
@@ -44,21 +43,13 @@ export function ReportPropertyDialog({ propertyId, propertyName }: ReportPropert
     setError(null);
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/reports`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          propertyId,
-          reason,
-          description,
-        }),
+      const res = await api.post("/api/reports", {
+        propertyId,
+        reason,
+        description,
       });
 
-      if (res.ok) {
+      if (res.status === 200 || res.status === 201) {
         setIsSubmitted(true);
         setTimeout(() => {
           setOpen(false);
@@ -67,12 +58,11 @@ export function ReportPropertyDialog({ propertyId, propertyName }: ReportPropert
           setDescription("");
         }, 3000);
       } else {
-        const data = await res.json();
-        setError(data.message || "Có lỗi xảy ra khi gửi báo cáo.");
+        setError(res.data.message || "Có lỗi xảy ra khi gửi báo cáo.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Report error:", err);
-      setError("Không thể kết nối tới máy chủ.");
+      setError(err.response?.data?.message || "Không thể kết nối tới máy chủ.");
     } finally {
       setIsSubmitting(false);
     }
