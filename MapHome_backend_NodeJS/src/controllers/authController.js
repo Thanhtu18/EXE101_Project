@@ -101,6 +101,7 @@ const register = async (req, res) => {
       role: user.role,
       fullName: user.fullName,
       phone: user.phone,
+      avatar: user.avatar,
       verificationLevel: user.verificationLevel,
     };
 
@@ -148,6 +149,7 @@ const login = async (req, res) => {
       role: user.role,
       fullName: user.fullName,
       phone: user.phone,
+      avatar: user.avatar,
       verificationLevel: user.verificationLevel,
     };
 
@@ -300,6 +302,7 @@ const googleLogin = async (req, res) => {
         googleId,
         fullName: name,
         role: normalizedRole,
+        avatar: picture || "",
         status: "active",
       });
 
@@ -334,6 +337,7 @@ const googleLogin = async (req, res) => {
       role: user.role,
       fullName: user.fullName,
       phone: user.phone,
+      avatar: user.avatar,
       verificationLevel: user.verificationLevel,
       picture
     };
@@ -346,4 +350,3 @@ const googleLogin = async (req, res) => {
 };
 
 module.exports = { register, login, changePassword, forgotPassword, resetPassword, googleLogin };
-

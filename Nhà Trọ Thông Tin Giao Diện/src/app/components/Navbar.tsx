@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
 import { Button } from "@/app/components/ui/button";
 import {
   Home,
@@ -156,9 +157,24 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <div className="hidden sm:flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-3">
+                  <div 
+                    className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-sm font-bold shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all" 
+                    onClick={handleUserAction}
+                  >
+                    {user?.avatar ? (
+                      <img 
+                        src={getAvatarUrl(user.avatar) || ""} 
+                        alt="Avatar" 
+                        className="w-full h-full object-cover rendering-pixelated" 
+                        style={{ imageRendering: "-webkit-optimize-contrast" }}
+                      />
+                    ) : (
+                      getInitials(user?.fullName, user?.username)
+                    )}
+                  </div>
                   <span className="text-xs text-gray-600">
-                    <strong className="text-sm text-gray-900">
+                    <strong className="text-sm text-gray-900 block leading-tight">
                       {user?.fullName || user?.username}
                     </strong>
                   </span>

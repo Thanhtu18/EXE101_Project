@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
 import { useVerification } from "@/app/contexts/VerificationContext";
 import { useProperties } from "@/app/contexts/PropertiesContext";
 import { Button } from "@/app/components/ui/button";
@@ -503,11 +504,16 @@ export function AdminPage() {
           </Button>
 
           <div className="flex items-center gap-3 px-1">
-            <div className="w-[34px] h-[34px] rounded-full border border-white/50 shadow-sm overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-[38px] h-[38px] rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-[10px] font-bold">
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                <img 
+                  src={getAvatarUrl(user.avatar) || ""} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover" 
+                  style={{ imageRendering: "-webkit-optimize-contrast" }}
+                />
               ) : (
-                (user?.fullName || user?.username || "A").charAt(0).toUpperCase()
+                getInitials(user?.fullName, user?.username)
               )}
             </div>
             <div className="flex-1 min-w-0">

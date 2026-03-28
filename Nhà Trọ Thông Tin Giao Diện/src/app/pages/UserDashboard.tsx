@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -137,11 +138,16 @@ export function UserDashboard() {
                     Standard Member
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white font-bold shrink-0">
                   {user?.avatar ? (
-                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    <img 
+                      src={getAvatarUrl(user.avatar) || ""} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover" 
+                      style={{ imageRendering: "-webkit-optimize-contrast" }}
+                    />
                   ) : (
-                    (user?.fullName || user?.username || "U").charAt(0).toUpperCase()
+                    getInitials(user?.fullName, user?.username)
                   )}
                 </div>
               </div>
@@ -1207,9 +1213,14 @@ function SettingsView() {
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
                   {user?.avatar ? (
-                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    <img 
+                      src={getAvatarUrl(user.avatar) || ""} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover" 
+                      style={{ imageRendering: "-webkit-optimize-contrast" }}
+                    />
                   ) : (
-                    (user?.fullName || user?.username || "U").charAt(0).toUpperCase()
+                    getInitials(user?.fullName, user?.username)
                   )}
                 </div>
                 <label className="absolute bottom-0 right-0 p-2 bg-green-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-green-700 transition-all transform hover:scale-110">

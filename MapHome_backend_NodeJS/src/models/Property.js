@@ -2,17 +2,14 @@ const mongoose = require('mongoose');
 
 const PropertySchema = new mongoose.Schema({
   name: { type: String, required: true },
+  description: { type: String },
   address: { type: String, required: true },
   price: { type: Number, required: true },
   location: { type: [Number], required: true }, // [latitude, longitude]
   amenities: {
-    wifi: { type: Boolean, default: false },
-    furniture: { type: Boolean, default: false },
-    tv: { type: Boolean, default: false },
-    washingMachine: { type: Boolean, default: false },
-    kitchen: { type: Boolean, default: false },
-    refrigerator: { type: Boolean, default: false },
-    airConditioner: { type: Boolean, default: false }
+    type: Map,
+    of: Boolean,
+    default: {}
   },
   image: { type: String },
   area: { type: Number, required: true },

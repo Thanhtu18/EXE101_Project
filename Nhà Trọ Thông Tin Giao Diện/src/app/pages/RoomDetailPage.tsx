@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { getAvatarUrl } from "@/app/utils/avatarUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import L from "leaflet";
@@ -712,9 +713,10 @@ export function RoomDetailPage() {
                             <div key={review.id} className="flex gap-4">
                               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                                 <img
-                                  src={review.userAvatar}
+                                  src={getAvatarUrl(review.userAvatar) || "/avatars/default.png"}
                                   alt={review.userName}
                                   className="w-full h-full object-cover"
+                                  style={{ imageRendering: "-webkit-optimize-contrast" }}
                                 />
                               </div>
                               <div className="flex-1">
