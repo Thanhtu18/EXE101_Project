@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useNavigate } from "react-router-dom";
+import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -238,16 +239,13 @@ export function BlogPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/api/blogs`);
-        if (res.ok) {
-          const data = await res.json();
+        const res = await api.get("/api/blogs");
+        if (res.status === 200) {
+          const data = res.data;
           if (data.length > 0) {
             setBlogs(data.map((b: any) => ({ ...b, id: b._id })));
           } else {
@@ -264,7 +262,7 @@ export function BlogPage() {
       }
     };
     fetchBlogs();
-  }, [API_BASE]);
+  }, []);
 
   const toggleBookmark = (id: number | string) => {
 

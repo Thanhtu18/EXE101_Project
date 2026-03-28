@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, X, Bot, Loader2, Minus } from "lucide-react";
+import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -56,28 +57,17 @@ export const AIChatAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const API_BASE = (import.meta as any).env.VITE_API_URL || "http://localhost:5000";
-      const response = await fetch(`${API_BASE}/api/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          history: messages
-            .filter((_, idx) => idx > 0)
-            .map(m => ({
-              role: m.role === "user" ? "user" : "assistant",
-              content: m.text
-            })),
-        }),
+      const response = await api.post("/api/ai/chat", {
+        message: userMessage,
+        history: messages
+          .filter((_, idx) => idx > 0)
+          .map(m => ({
+            role: m.role === "user" ? "user" : "assistant",
+            content: m.text
+          })),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to get AI response");
-      }
-
-      const data = await response.json();
-      const answerText = data.answer || "Xin lỗi, tôi không thể trả lời lúc này.";
+      const answerText = response.data.answer || "Xin lỗi, tôi không thể trả lời lúc này.";
 
       setMessages((prev) => [
         ...prev,

@@ -6,6 +6,15 @@ const Booking = require("../models/Booking");
 
 const getDashboardStats = async (req, res) => {
   try {
+    const { month, year } = req.query;
+    const query = {};
+
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
     const [
       totalProperties,
       totalUsers,
@@ -16,14 +25,14 @@ const getDashboardStats = async (req, res) => {
       completedVerifications,
       pendingBookings,
     ] = await Promise.all([
-      Property.countDocuments(),
-      User.countDocuments(),
-      Landlord.countDocuments(),
-      VerificationRequest.countDocuments(),
-      Booking.countDocuments(),
-      VerificationRequest.countDocuments({ status: "pending" }),
-      VerificationRequest.countDocuments({ status: "completed" }),
-      Booking.countDocuments({ status: "pending" }),
+      Property.countDocuments(query),
+      User.countDocuments(query),
+      Landlord.countDocuments(query),
+      VerificationRequest.countDocuments(query),
+      Booking.countDocuments(query),
+      VerificationRequest.countDocuments({ ...query, status: "pending" }),
+      VerificationRequest.countDocuments({ ...query, status: "completed" }),
+      Booking.countDocuments({ ...query, status: "pending" }),
     ]);
 
     res.status(200).json({
@@ -320,7 +329,16 @@ const deleteReview = async (req, res) => {
 // @route   GET /api/admin/revenue-stats
 const getRevenueStats = async (req, res) => {
   try {
-    const completedVerifications = await VerificationRequest.find({ status: "completed" });
+    const { month, year } = req.query;
+    const matchQuery = { status: "completed" };
+
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+      matchQuery.completedAt = { $gte: startDate, $lte: endDate };
+    }
+
+    const completedVerifications = await VerificationRequest.find(matchQuery);
     
     const totalRevenue = completedVerifications.reduce((sum, v) => sum + (v.amount || 0), 0);
     
@@ -334,7 +352,7 @@ const getRevenueStats = async (req, res) => {
     }, {});
 
     // Last 10 transactions
-    const latestTransactions = await VerificationRequest.find({ status: "completed" })
+    const latestTransactions = await VerificationRequest.find(matchQuery)
       .sort({ completedAt: -1 })
       .limit(10)
       .populate("landlordId", "name");
@@ -368,7 +386,6 @@ const getRevenueStats = async (req, res) => {
       revenueByPackage,
       latestTransactions,
       monthlyTrends,
-      // Aggregation for regions could be added here if needed
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -460,6 +477,63 @@ const broadcastNotification = async (req, res) => {
   }
 };
 
+const getAdminNotifications = async (req, res) => {
+  try {
+    // Get latest system events across models
+    const [
+      newUsers,
+      newProperties,
+      newVerifications,
+      newBookings
+    ] = await Promise.all([
+      User.find().sort({ createdAt: -1 }).limit(5),
+      Property.find().sort({ createdAt: -1 }).limit(5).populate("landlordId", "name"),
+      VerificationRequest.find().sort({ createdAt: -1 }).limit(5).populate("landlordId", "name"),
+      Booking.find().sort({ createdAt: -1 }).limit(5).populate("userId", "fullName")
+    ]);
+
+    // Format all events into a unified notification structure
+    const notifications = [
+      ...newUsers.map(u => ({
+        id: `user-${u._id}`,
+        title: "Người dùng mới",
+        message: `Tài khoản '${u.username}' vừa mới đăng ký.`,
+        time: u.createdAt,
+        type: "user",
+        icon: "👤"
+      })),
+      ...newProperties.map(p => ({
+        id: `property-${p._id}`,
+        title: "Tin đăng mới",
+        message: `Căn hộ '${p.name}' vừa được đăng bởi ${p.landlordId?.name || "Ẩn danh"}.`,
+        time: p.createdAt,
+        type: "property",
+        icon: "🏠"
+      })),
+      ...newVerifications.map(v => ({
+        id: v._id,
+        title: "Yêu cầu Tích Xanh",
+        message: `${v.landlordId?.name || "Chủ trọ"} yêu cầu kiểm tra cho '${v.propertyName}'.`,
+        time: v.createdAt,
+        type: "verification",
+        icon: "✅"
+      })),
+      ...newBookings.map(b => ({
+        id: b._id,
+        title: "Lịch hẹn mới",
+        message: `${b.userId?.fullName || "Khách"} vừa đặt lịch xem phòng.`,
+        time: b.createdAt,
+        type: "booking",
+        icon: "📅"
+      }))
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
+
+    res.status(200).json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getVerificationRequests,
@@ -482,4 +556,5 @@ module.exports = {
   getTopRooms,
   getWeeklySearchStats,
   broadcastNotification,
+  getAdminNotifications,
 };

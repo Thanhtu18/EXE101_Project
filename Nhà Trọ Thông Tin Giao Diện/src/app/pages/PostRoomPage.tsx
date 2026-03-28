@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -42,6 +43,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LandlordPinMap } from "@/app/components/LandlordPinMap";
 import { useProperties } from "@/app/contexts/PropertiesContext";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getImageUrl } from "@/app/utils/avatarUtils";
 import { toast } from "sonner";
 import { RentalProperty, GreenBadgeLevel } from "@/app/components/types";
 import { vietnamLocations, Province, District, Ward } from "@/app/data/vietnamLocations";
@@ -185,8 +187,6 @@ export function PostRoomPage() {
     if (files) {
       const fileArray = Array.from(files).slice(0, 5 - uploadedImages.length);
       setIsUploading(true);
-      const token = localStorage.getItem("token");
-      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
       const uploadedUrls: string[] = [];
 
@@ -194,16 +194,9 @@ export function PostRoomPage() {
         const formDataUpload = new FormData();
         formDataUpload.append("image", file);
         try {
-          const res = await fetch(`${API_BASE}/api/uploads/single`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formDataUpload,
-          });
-          if (res.ok) {
-            const data = await res.json();
-            uploadedUrls.push(data.url);
+          const res = await api.post("/api/upload/single", formDataUpload);
+          if (res.status === 200 || res.status === 201) {
+            uploadedUrls.push(res.data.url);
           } else {
             toast.error("Lỗi khi tải ảnh lên " + file.name);
           }
@@ -285,7 +278,7 @@ export function PostRoomPage() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/landlord/dashboard")}
               className="rounded-lg hover:bg-slate-100 transition-colors"
             >
               <ArrowLeft className="size-5 text-slate-600" />
@@ -1045,7 +1038,7 @@ export function PostRoomPage() {
                  <div className="bg-white rounded-lg border-4 border-white shadow-lg overflow-hidden relative group">
                     <div className="aspect-[16/10] relative">
                         <img 
-                          src={uploadedImages.length > 0 ? (uploadedImages[0].startsWith("http") ? uploadedImages[0] : (import.meta as any).env?.VITE_API_BASE + uploadedImages[0]) : "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=2070&auto=format&fit=crop"} 
+                          src={getImageUrl(uploadedImages[0]) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=2070&auto=format&fit=crop"} 
                           className="w-full h-full object-cover transition-transform duration-500" 
                           alt="Preview"
                         />

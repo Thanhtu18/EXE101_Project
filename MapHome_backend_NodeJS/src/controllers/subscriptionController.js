@@ -241,13 +241,16 @@ const updateSubscriptionPlan = async (req, res) => {
     await oldPlan.save();
 
     // Create new version
-    const newPlanData = {
-      ...req.body,
-      _id: undefined, // Let MongoDB generate new ID
-      createdAt: undefined,
-      updatedAt: undefined,
-    };
+    const newPlanData = { ...req.body };
+    delete newPlanData._id;
+    delete newPlanData.__v;
+    delete newPlanData.createdAt;
+    delete newPlanData.updatedAt;
     
+    if (!newPlanData.planId) {
+       newPlanData.planId = newPlanData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    }
+
     const newPlan = await SubscriptionPlan.create(newPlanData);
     res.status(200).json(newPlan);
   } catch (error) {
@@ -259,7 +262,12 @@ const updateSubscriptionPlan = async (req, res) => {
 // @route   POST /api/admin/subscriptions/plans
 const createSubscriptionPlan = async (req, res) => {
   try {
-    const plan = await SubscriptionPlan.create(req.body);
+    const planData = { ...req.body };
+    if (!planData.planId) {
+      // Auto-generate a planId slug if missing
+      planData.planId = planData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    }
+    const plan = await SubscriptionPlan.create(planData);
     res.status(201).json(plan);
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
+import api from "@/app/utils/api";
 import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
 import { RentalProperty, VerificationRequest } from "@/app/components/types";
 import { Button } from "@/app/components/ui/button";
@@ -92,42 +93,31 @@ export function LandlordDashboardV2() {
 
     const fetchData = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem("token");
-      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-      const headers = { Authorization: `Bearer ${token}` };
 
       try {
         if (activeTab === "overview") {
-          const statsRes = await fetch(`${API_BASE}/api/landlord/analytics`, { headers });
-          if (statsRes.ok) {
-            const data = await statsRes.json();
-            setStats({
-              totalPosts: data.totalProperties || 0,
-              approvedPosts: data.totalProperties || 0, // Can be improved
-              pendingPosts: 0,
-              totalViews: data.totalViews || 0,
-              totalFavorites: 0, // Need backend support or local calculation
-            });
-          }
+          const response = await api.get("/api/landlord/analytics");
+          const data = response.data;
+          setStats({
+            totalPosts: data.totalProperties || 0,
+            approvedPosts: data.approvedProperties || 0,
+            pendingPosts: data.pendingProperties || 0,
+            totalViews: data.totalViews || 0,
+            totalFavorites: data.totalFavorites || 0,
+          });
         } else if (activeTab === "posts") {
-          const propsRes = await fetch(`${API_BASE}/api/landlord/properties`, { headers });
-          if (propsRes.ok) {
-            setLandlordPosts(await propsRes.json());
-          }
+          const response = await api.get("/api/landlord/properties");
+          setLandlordPosts(response.data);
         } else if (activeTab === "bookings") {
-          const bookingsRes = await fetch(`${API_BASE}/api/landlord/bookings`, { headers });
-          if (bookingsRes.ok) {
-            setBookings(await bookingsRes.json());
-          }
+          const response = await api.get("/api/landlord/bookings");
+          setBookings(response.data);
         } else if (activeTab === "verification") {
-          const reqsRes = await fetch(`${API_BASE}/api/landlord/verification-requests`, { headers });
-          if (reqsRes.ok) {
-            setVerificationRequests(await reqsRes.json());
-          }
-          const pricingRes = await fetch(`${API_BASE}/api/verifications/pricing`, { headers });
-          if (pricingRes.ok) {
-            setVerificationPricing(await pricingRes.json());
-          }
+          const [reqsRes, pricingRes] = await Promise.all([
+            api.get("/api/landlord/verification-requests"),
+            api.get("/api/verifications/pricing")
+          ]);
+          setVerificationRequests(reqsRes.data);
+          setVerificationPricing(pricingRes.data);
         }
       } catch (err) {
         console.error("Failed to fetch landlord data", err);
@@ -226,8 +216,8 @@ export function LandlordDashboardV2() {
             className="space-y-10"
           >
             <div>
-              <h2 className="text-4xl font-black text-gray-900 tracking-tight">Xác thực tin đăng</h2>
-              <p className="text-gray-500 font-medium">Nâng tầm uy tín cho phòng trọ của bạn với "Tích xanh MapHome"</p>
+              <h2 className="text-4xl font-black bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-700 bg-clip-text text-transparent tracking-tight">Xác thực tin đăng</h2>
+              <p className="text-indigo-400/90 text-lg font-black mt-1 drop-shadow-sm">Nâng tầm uy tín cho phòng trọ của bạn với "Tích xanh MapHome"</p>
             </div>
 
             {/* Premium Verification Banner */}
@@ -260,8 +250,8 @@ export function LandlordDashboardV2() {
             {/* Verification Requests List */}
             {verificationRequests.length > 0 ? (
               <div className="space-y-6">
-                <h4 className="font-black text-2xl text-gray-900 flex items-center gap-3 ml-2">
-                  <div className="p-2 bg-orange-100 rounded-xl">
+                <h4 className="font-black text-2xl bg-gradient-to-r from-slate-800 to-indigo-900 bg-clip-text text-transparent flex items-center gap-3 ml-2">
+                  <div className="p-2 bg-orange-100/50 rounded-xl">
                     <Clock className="size-6 text-orange-600" />
                   </div>
                   Lịch sử yêu cầu
@@ -327,10 +317,10 @@ export function LandlordDashboardV2() {
                 <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner rotate-3">
                   <ShieldCheck className="size-12 text-gray-400" />
                 </div>
-                <h3 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">
+                <h3 className="text-4xl font-black bg-gradient-to-r from-slate-800 via-emerald-600 to-blue-700 bg-clip-text text-transparent mb-3 tracking-tight">
                   Chưa có yêu cầu nào
                 </h3>
-                <p className="text-gray-500 text-lg font-medium mb-10 max-w-sm mx-auto">
+                <p className="text-emerald-500 text-lg font-black mb-10 max-w-sm mx-auto drop-shadow-sm">
                   Hãy đăng ký kiểm tra thực tế để nâng cấp phòng trọ của bạn lên tiêu chuẩn 5 sao.
                 </p>
                 <Button
@@ -356,8 +346,8 @@ export function LandlordDashboardV2() {
             className="space-y-10"
           >
             <div>
-              <h2 className="text-4xl font-black text-gray-900 tracking-tight">Lịch hẹn xem phòng</h2>
-              <p className="text-gray-500 font-medium">Quản lý và điều phối các yêu cầu gặp mặt từ khách hàng</p>
+              <h2 className="text-4xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent tracking-tight">Lịch hẹn xem phòng</h2>
+              <p className="text-indigo-400/90 text-lg font-black mt-1 drop-shadow-sm">Quản lý và điều phối các yêu cầu gặp mặt từ khách hàng</p>
             </div>
             
             { bookings.length > 0 ? (
@@ -422,17 +412,13 @@ export function LandlordDashboardV2() {
                             variant="ghost" 
                             className="flex-1 py-7 rounded-2xl font-black text-rose-500 hover:bg-rose-50 border-2 border-transparent hover:border-rose-100 transition-all" 
                             onClick={async () => {
-                              const token = localStorage.getItem("token");
-                              const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                              const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                                method: "PUT",
-                                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                                body: JSON.stringify({ status: "cancelled" })
-                              });
-                              if (res.ok) {
-                                toast.success("Đã từ chối lịch hẹn. ❌");
-                                setTimeout(() => window.location.reload(), 1000);
-                              } else {
+                              try {
+                                const res = await api.put(`/api/bookings/${booking._id}/status`, { status: "cancelled" });
+                                if (res.status === 200) {
+                                  toast.success("Đã từ chối lịch hẹn. ❌");
+                                  setTimeout(() => window.location.reload(), 1000);
+                                }
+                              } catch (err) {
                                 toast.error("Không thể cập nhật trạng thái.");
                               }
                             }}
@@ -443,17 +429,13 @@ export function LandlordDashboardV2() {
                           <Button 
                             className="flex-1 py-7 bg-gray-900 hover:bg-black text-white rounded-2xl font-black shadow-xl transition-all hover:scale-[1.02] active:scale-95" 
                             onClick={async () => {
-                              const token = localStorage.getItem("token");
-                              const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                              const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                                method: "PUT",
-                                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                                body: JSON.stringify({ status: "confirmed" })
-                              });
-                              if (res.ok) {
-                                toast.success("Đã xác nhận lịch hẹn! 📅");
-                                setTimeout(() => window.location.reload(), 1000);
-                              } else {
+                              try {
+                                const res = await api.put(`/api/bookings/${booking._id}/status`, { status: "confirmed" });
+                                if (res.status === 200) {
+                                  toast.success("Đã xác nhận lịch hẹn! 📅");
+                                  setTimeout(() => window.location.reload(), 1000);
+                                }
+                              } catch (err) {
                                 toast.error("Không thể xác nhận lịch hẹn.");
                               }
                             }}
@@ -468,16 +450,14 @@ export function LandlordDashboardV2() {
                         <Button 
                           className="w-full py-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl shadow-emerald-100 transition-all hover:scale-[1.02] active:scale-95" 
                           onClick={async () => {
-                            const token = localStorage.getItem("token");
-                            const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                            const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify({ status: "completed" })
-                            });
-                            if (res.ok) {
-                              toast.success("Đã hoàn thành lượt xem phòng! ✨");
-                              setTimeout(() => window.location.reload(), 1000);
+                            try {
+                              const res = await api.put(`/api/bookings/${booking._id}/status`, { status: "completed" });
+                              if (res.status === 200) {
+                                toast.success("Đã hoàn thành lượt xem phòng! ✨");
+                                setTimeout(() => window.location.reload(), 1000);
+                              }
+                            } catch (err) {
+                              toast.error("Không thể cập nhật trạng thái.");
                             }
                           }}
                         >
@@ -517,8 +497,8 @@ export function LandlordDashboardV2() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
             >
-              <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Cài đặt tài khoản</h2>
-              <p className="text-gray-500 font-medium">Quản lý bảo mật và thông ẩn danh tính cá nhân</p>
+              <h2 className="text-4xl font-black bg-gradient-to-r from-slate-800 via-blue-600 to-indigo-700 bg-clip-text text-transparent tracking-tight mb-2">Cài đặt tài khoản</h2>
+              <p className="text-indigo-400 font-black drop-shadow-sm text-lg">Quản lý bảo mật và thông ẩn danh tính cá nhân</p>
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -526,8 +506,8 @@ export function LandlordDashboardV2() {
               <div 
                 className="lg:col-span-2 bg-white border border-gray-100 rounded-3xl shadow-sm p-8"
               >
-                <h3 className="font-black text-xl text-gray-900 mb-8 flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-xl">
+                <h3 className="font-black text-2xl bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-8 flex items-center gap-3">
+                  <div className="p-2 bg-blue-100/50 rounded-xl shadow-inner">
                     <Settings className="size-6 text-blue-600" /> 
                   </div>
                   Thông tin cá nhân
@@ -563,31 +543,17 @@ export function LandlordDashboardV2() {
                             
                             const formData = new FormData();
                             formData.append("image", file);
-                            const token = localStorage.getItem("token");
-                            const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
                             
                             const loadingToast = toast.loading("Đang tải ảnh lên...");
                             try {
-                              const uploadRes = await fetch(`${API_BASE}/api/upload/single`, {
-                                method: "POST",
-                                headers: { Authorization: `Bearer ${token}` },
-                                body: formData
-                              });
+                              const uploadRes = await api.post("/api/upload/single", formData);
                               
-                              if (uploadRes.ok) {
-                                const { url } = await uploadRes.json();
-                                const updateRes = await fetch(`${API_BASE}/api/user/${user?.id}`, {
-                                  method: "PUT",
-                                  headers: { 
-                                    "Content-Type": "application/json", 
-                                    Authorization: `Bearer ${token}` 
-                                  },
-                                  body: JSON.stringify({ avatar: url })
-                                });
+                              if (uploadRes.status === 200 || uploadRes.status === 201) {
+                                const { url } = uploadRes.data;
+                                const updateRes = await api.put(`/api/user/${user?.id}`, { avatar: url });
                                 
-                                 if (updateRes.ok) {
-                                  const updatedUser = await updateRes.json();
-                                  updateUser(updatedUser);
+                                 if (updateRes.status === 200) {
+                                  updateUser(updateRes.data);
                                   toast.success("Thay đổi ảnh đại diện thành công! ✨", { id: loadingToast });
                                   setTimeout(() => window.location.reload(), 800);
                                 }
@@ -613,66 +579,56 @@ export function LandlordDashboardV2() {
                       const target = e.target as any;
                       const fullName = target.fullName.value;
                       const phone = target.phone.value;
-                      const token = localStorage.getItem("token");
-                      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
                       
                       const updateToast = toast.loading("Đang cập nhật...");
                       try {
-                        const res = await fetch(`${API_BASE}/api/user/${user?.id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                          body: JSON.stringify({ fullName, phone })
-                        });
-                        if (res.ok) {
-                          const updatedUser = await res.json();
-                          updateUser(updatedUser);
+                        const res = await api.put(`/api/user/${user?.id}`, { fullName, phone });
+                        if (res.status === 200) {
+                          updateUser(res.data);
                           toast.success("Hồ sơ đã được lưu! ✨", { id: updateToast });
                           setTimeout(() => window.location.reload(), 800);
-                        } else {
-                          const data = await res.json();
-                          toast.error(data.message || "Không thể lưu hồ sơ.", { id: updateToast });
                         }
-                      } catch (err) {
-                        toast.error("Đã xảy ra lỗi kết nối.", { id: updateToast });
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || "Không thể lưu hồ sơ.", { id: updateToast });
                       }
                     }} 
                     className="flex-1 space-y-6 w-full"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-700 ml-1">Họ và tên</label>
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Họ và tên</label>
                         <input 
                           name="fullName" 
                           defaultValue={user?.fullName || user?.username} 
-                          className="w-full px-5 py-4 bg-white/60 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none transition-all shadow-inner font-medium text-gray-900" 
+                          className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 focus:bg-white rounded-[24px] outline-none transition-all shadow-inner font-bold text-slate-800 placeholder:text-slate-300" 
                           placeholder="Nguyễn Văn A"
                           required 
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-700 ml-1">Số điện thoại</label>
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Số điện thoại</label>
                         <input 
                           name="phone" 
                           defaultValue={user?.phone || ""} 
-                          className="w-full px-5 py-4 bg-white/60 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none transition-all shadow-inner font-medium text-gray-900" 
+                          className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 focus:bg-white rounded-[24px] outline-none transition-all shadow-inner font-bold text-slate-800 placeholder:text-slate-300" 
                           placeholder="09xx xxx xxx"
                           required 
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-gray-700 ml-1 flex items-center gap-2">
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                         Email 
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Cố định</span>
+                        <span className="text-[9px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Cố định</span>
                       </label>
                       <input 
                         disabled 
                         value={user?.email || ""} 
-                        className="w-full px-5 py-4 bg-gray-100/50 border-2 border-transparent text-gray-400 rounded-2xl cursor-not-allowed font-medium" 
+                        className="w-full px-6 py-5 bg-slate-100 border-2 border-transparent text-slate-400 rounded-[24px] cursor-not-allowed font-bold" 
                       />
                     </div>
-                    <Button type="submit" className="w-full md:w-auto px-10 py-7 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-200 hover:translate-y-[-2px]">
-                      Lưu thay đổi
+                    <Button type="submit" className="w-full md:w-auto px-12 py-8 bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-600 hover:opacity-90 text-white font-black rounded-[24px] transition-all shadow-[0_15px_40px_rgba(59,130,246,0.3)] hover:scale-[1.03] active:scale-95 border-none">
+                      Lưu thay đổi hồ sơ
                     </Button>
                   </form>
                 </div>
@@ -682,8 +638,8 @@ export function LandlordDashboardV2() {
               <div 
                 className="bg-white border border-gray-100 rounded-3xl shadow-sm p-8"
               >
-                <h3 className="font-black text-xl text-gray-900 mb-8 flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 rounded-xl">
+                <h3 className="font-black text-2xl bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent mb-8 flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100/50 rounded-xl shadow-inner">
                     <ShieldCheck className="size-6 text-emerald-600" />
                   </div>
                   Bảo mật
@@ -694,28 +650,19 @@ export function LandlordDashboardV2() {
                     const target = e.target as any;
                     const currentPassword = target.currentPassword.value;
                     const newPassword = target.newPassword.value;
-                    const token = localStorage.getItem("token");
-                    const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
                     
                     const changeToast = toast.loading("Đang xác thực bảo mật...");
                     try {
-                      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ currentPassword, newPassword })
-                      });
-                      if (res.ok) {
+                      const res = await api.put("/api/auth/change-password", { currentPassword, newPassword });
+                      if (res.status === 200) {
                         toast.success("Đổi mật khẩu thành công! 🔐", { id: changeToast });
                         setTimeout(() => {
                           logout();
                           navigate("/login");
                         }, 1500);
-                      } else {
-                        const data = await res.json();
-                        toast.error(data.message || "Xác thực không chính xác.", { id: changeToast });
                       }
-                    } catch (err) {
-                      toast.error("Lỗi xác thực hệ thống.", { id: changeToast });
+                    } catch (err: any) {
+                      toast.error(err.response?.data?.message || "Xác thực không chính xác.", { id: changeToast });
                     }
                   }} 
                   className="space-y-6"
@@ -772,19 +719,29 @@ export function LandlordDashboardV2() {
             {activeTab === "overview" && (
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                  <h2 className="text-5xl font-black text-gray-900 tracking-tight leading-tight mb-3">
+                  <motion.h2 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    className="text-5xl font-black text-slate-900 tracking-tight leading-tight mb-3"
+                  >
                     Chào buổi sáng, <br />
-                    <span className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-700 bg-clip-text text-transparent">
                       {user?.fullName || user?.username}!
                     </span>
-                  </h2>
-                  <p className="text-gray-500 text-lg font-medium">
+                  </motion.h2>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-indigo-600/60 text-xl font-bold"
+                  >
                     Dưới đây là thống kê hiệu suất bài đăng của bạn hôm nay.
-                  </p>
+                  </motion.p>
                 </div>
-                <div className="flex bg-gray-50 rounded-2xl p-1 border border-gray-200 shadow-sm overflow-hidden self-start">
-                  <div className="px-4 py-2 bg-white rounded-xl shadow-sm font-bold text-gray-900 text-sm">Hôm nay</div>
-                  <div className="px-4 py-2 font-bold text-gray-500 text-sm hover:text-gray-700 cursor-pointer transition-colors">7 ngày qua</div>
+                <div className="flex bg-white/50 backdrop-blur-md rounded-2xl p-1 border border-slate-200 shadow-sm overflow-hidden self-start">
+                  <div className="px-4 py-2 bg-white rounded-xl shadow-lg shadow-slate-200/50 font-black text-indigo-600 text-sm">Hôm nay</div>
+                  <div className="px-4 py-2 font-bold text-indigo-400 text-sm hover:text-indigo-600 cursor-pointer transition-colors">7 ngày qua</div>
                 </div>
               </div>
             )}
@@ -794,7 +751,7 @@ export function LandlordDashboardV2() {
                 initial="hidden"
                 animate="visible"
                 variants={{
-                  visible: { transition: { staggerChildren: 0.05 } }
+                  visible: { transition: { staggerChildren: 0.1 } }
                 }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6"
               >
@@ -808,43 +765,70 @@ export function LandlordDashboardV2() {
                   <motion.div
                     key={stat.label}
                     variants={{
-                      hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 }
+                      hidden: { opacity: 0, y: 30, scale: 0.95 },
+                      visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", bounce: 0.4 } }
                     }}
-                    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                    className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 group transition-all hover:shadow-xl hover:shadow-gray-200/50"
+                    whileHover={{ 
+                      y: -12, 
+                      scale: 1.05, 
+                      transition: { type: "spring", stiffness: 400, damping: 10 } 
+                    }}
+                    className={`relative overflow-hidden rounded-[40px] p-8 shadow-xl shadow-slate-200/40 group transition-all duration-500 bg-white/80 backdrop-blur-3xl border border-white/50`}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`p-3 rounded-2xl bg-${stat.color}-50 flex items-center justify-center`}>
-                        <stat.icon className={`size-6 text-${stat.color}-600`} />
+                    {/* Background Aura Effect (Subtle) */}
+                    <div className={`absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-700 bg-gradient-to-br ${
+                      stat.color === 'blue' ? 'from-blue-600 to-indigo-700' :
+                      stat.color === 'emerald' ? 'from-emerald-500 to-teal-600' :
+                      stat.color === 'orange' ? 'from-orange-500 to-amber-600' :
+                      stat.color === 'purple' ? 'from-purple-600 to-indigo-800' :
+                      'from-amber-500 to-rose-600'
+                    }`} />
+                    
+                    {/* Inner Glow */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity blur-3xl bg-white" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 border border-white bg-gradient-to-br ${
+                          stat.color === 'blue' ? 'from-blue-600 to-indigo-700' :
+                          stat.color === 'emerald' ? 'from-emerald-500 to-teal-600' :
+                          stat.color === 'orange' ? 'from-orange-500 to-amber-600' :
+                          stat.color === 'purple' ? 'from-purple-600 to-indigo-800' :
+                          'from-amber-500 to-rose-600'
+                        }`}>
+                          <stat.icon className="size-7 text-white" />
+                        </div>
+                        <span className="px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase bg-slate-50 text-slate-500 border border-slate-100">
+                          {stat.trend}
+                        </span>
                       </div>
-                      <span className={`text-xs font-black ${stat.trend.startsWith('+') ? 'text-green-600' : stat.trend.startsWith('-') ? 'text-red-500' : 'text-gray-400'}`}>
-                        {stat.trend}
-                      </span>
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+                      <p className="text-5xl font-black text-slate-900 tracking-tighter drop-shadow-sm">
+                        {stat.value}
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-500 mb-1">{stat.label}</p>
-                    <p className="text-3xl font-black text-gray-900 tracking-tight">
-                      {stat.value}
-                    </p>
                   </motion.div>
                 ))}
               </motion.div>
             )}
 
             {/* Action Bar & Post List Section */}
-            <div className="space-y-6 mt-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900 tracking-tight">
+            <div className="space-y-6 mt-14">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <h3 className="text-4xl font-black bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-700 bg-clip-text text-transparent tracking-tighter leading-tight">
                     {activeTab === "posts"
                       ? "Kho tin đăng của bạn"
                       : "Tin đăng gần nhất"}
                   </h3>
-                  <p className="text-sm text-gray-500 font-medium mt-1">Quản lý và cập nhật trạng thái các phòng trọ</p>
-                </div>
+                  <p className="text-lg text-indigo-500/80 font-black mt-1">Quản lý và cập nhật trạng thái các phòng trọ</p>
+                </motion.div>
                 <Button
                   onClick={() => navigate("/post-room")}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-6 py-6 rounded-2xl shadow-xl shadow-green-100 transition-all hover:scale-105 active:scale-95 text-base font-bold"
+                  className="bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-600 hover:opacity-90 px-8 py-7 rounded-[22px] shadow-2xl shadow-blue-100 transition-all hover:scale-[1.05] active:scale-95 text-base font-black border-none"
                 >
                   <PlusCircle className="size-5 mr-3" />
                   Đăng tin mới
@@ -858,101 +842,87 @@ export function LandlordDashboardV2() {
                 variants={{
                   visible: { transition: { staggerChildren: 0.1 } }
                 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10"
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10"
               >
-                {landlordPosts.slice(0, activeTab === "overview" ? 4 : 20).map((post, idx) => {
-                  const greenBadgeLevel =
-                    post.verificationLevel === "verified" ? 3 : 0;
-                  const status = post.available
-                    ? ("approved" as const)
-                    : ("pending" as const);
-                  const createdAt = post.pinInfo?.pinnedAt
-                    ? new Date(post.pinInfo.pinnedAt).toLocaleDateString("vi-VN")
-                    : new Date().toLocaleDateString("vi-VN");
-
+                {landlordPosts.slice(0, activeTab === "overview" ? 4 : 20).map((post) => {
+                  const greenBadgeLevel = post.verificationLevel === "verified" ? 3 : 0;
+                  const status = post.available ? "approved" : "pending";
+                  
                   return (
                     <motion.div
                       key={post.id || post._id}
                       variants={{
-                        hidden: { opacity: 0, filter: "blur(10px)", y: 20 },
-                        visible: { opacity: 1, filter: "blur(0px)", y: 0 }
+                        hidden: { opacity: 0, scale: 0.9, y: 20 },
+                        visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", bounce: 0.4 } }
                       }}
-                      whileHover={{ y: -8, transition: { duration: 0.3 } }}
-                      className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-blue-900/5 transition-all group border-b-4 border-b-transparent hover:border-b-blue-500"
+                      whileHover={{ y: -10, transition: { type: "spring", stiffness: 300, damping: 15 } }}
+                      className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-[40px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all group"
                     >
-                      <div className="p-7">
-                        <div className="flex items-start justify-between mb-5">
+                      <div className="p-8">
+                        <div className="flex items-start justify-between mb-6">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-3 flex-wrap">
-                              {getStatusBadge(status)}
-                              {getVerificationBadge(greenBadgeLevel)}
+                            <div className="flex items-center gap-2 mb-4 flex-wrap">
+                               <div className="scale-90 origin-left">{getStatusBadge(status)}</div>
+                               <div className="scale-90 origin-left">{getVerificationBadge(greenBadgeLevel)}</div>
                             </div>
-                            <h4 className="font-black text-2xl text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
-                              {post.name}
+                            <h4 className="font-black text-2xl bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-indigo-700 transition-all duration-300 leading-tight tracking-tight">
+                               {post.name}
                             </h4>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                           <div className="flex items-center gap-3 text-sm font-semibold text-gray-700 bg-white/50 p-3 rounded-2xl">
-                              <div className="p-2 bg-green-100 rounded-xl"><DollarSign className="size-4 text-green-600" /></div>
-                              <span className="text-lg text-green-600">{(post.price || 0).toLocaleString("vi-VN")}đ</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                           <div className="flex items-center gap-3 bg-slate-50/50 p-4 rounded-3xl border border-white/40 shadow-inner group-hover:bg-emerald-50/50 transition-colors">
+                              <div className="p-2.5 bg-white rounded-2xl shadow-sm"><DollarSign className="size-4 text-emerald-500" /></div>
+                              <span className="text-[17px] font-black text-emerald-600">{(post.price || 0).toLocaleString("vi-VN")}đ</span>
                            </div>
-                           <div className="flex items-center gap-3 text-sm font-semibold text-gray-700 bg-white/50 p-3 rounded-2xl">
-                              <div className="p-2 bg-blue-100 rounded-xl"><Maximize className="size-4 text-blue-600" /></div>
-                              <span>{post.area} m²</span>
+                           <div className="flex items-center gap-3 bg-slate-50/50 p-4 rounded-3xl border border-white/40 shadow-inner group-hover:bg-blue-50/50 transition-colors">
+                              <div className="p-2.5 bg-white rounded-2xl shadow-sm"><Maximize className="size-4 text-blue-500" /></div>
+                              <span className="text-[15px] font-black text-blue-600">{post.area} m²</span>
                            </div>
-                           <div className="col-span-full flex items-center gap-3 text-sm font-medium text-gray-500 bg-white/30 p-3 rounded-2xl">
-                              <div className="p-2 bg-gray-100 rounded-xl"><MapPin className="size-4 text-gray-500" /></div>
-                              <span className="truncate">{post.address}</span>
+                           <div className="col-span-full flex items-center gap-3 bg-slate-50/50 p-4 rounded-3xl border border-white/40 shadow-inner group-hover:bg-indigo-50/50 transition-colors">
+                              <div className="p-2.5 bg-white rounded-2xl shadow-sm"><MapPin className="size-4 text-indigo-500" /></div>
+                              <span className="text-xs font-bold text-slate-500 truncate">{post.address}</span>
                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-6 border-t border-white/20">
-                          <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
-                            <span className="flex items-center gap-1.5"><Eye className="size-3.5" /> {post.views || 0}</span>
-                            <span className="flex items-center gap-1.5"><Star className="size-3.5" /> {post.favorites || 0}</span>
+                        <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+                          <div className="flex items-center gap-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                            <span className="flex items-center gap-2 bg-slate-50/50 px-3 py-1.5 rounded-full"><Eye className="size-3.5 text-slate-300" /> {post.views || 0}</span>
+                            <span className="flex items-center gap-2 bg-slate-50/50 px-3 py-1.5 rounded-full"><Star className="size-3.5 text-amber-300" /> {post.favorites || 0}</span>
                           </div>
                           
                           <div className="flex items-center gap-2">
                              <Button
                               variant="ghost"
-                              className="rounded-xl font-bold text-blue-600 hover:bg-blue-50"
+                              className="rounded-2xl font-black text-blue-600 hover:bg-blue-50 px-5"
                               onClick={() => navigate(`/room/${post.id}`)}
                             >
                               <Eye className="size-4 mr-2" />
-                              Chi tiết
+                              Xem
                             </Button>
-                            <Button variant="ghost" className="rounded-xl font-bold text-amber-600 hover:bg-amber-50" onClick={() => setEditingProperty(post)}>
+                            <Button variant="ghost" className="rounded-2xl font-black text-amber-600 hover:bg-amber-50" onClick={() => setEditingProperty(post)}>
                               <Edit className="size-4 mr-2" />
                               Sửa
                             </Button>
                              <Button
                               variant="ghost"
-                              className="rounded-xl font-bold text-rose-600 hover:bg-rose-50"
+                              className="rounded-2xl font-black text-rose-600 hover:bg-rose-50"
                               onClick={async () => {
                                 if (window.confirm(`Bạn có chắc muốn xóa tin đăng "${post.name}"?`)) {
-                                  const token = localStorage.getItem("token");
-                                  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
                                   try {
-                                    const res = await fetch(`${API_BASE}/api/properties/${post._id || post.id}`, {
-                                      method: "DELETE",
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    if (res.ok) {
+                                    const res = await api.delete(`/api/properties/${post._id || post.id}`);
+                                    if (res.status === 200) {
                                       toast.success("Đã xóa tin đăng thành công! 🗑️");
                                       setLandlordPosts(prev => prev.filter(p => (p._id || p.id) !== (post._id || post.id)));
-                                    } else {
-                                      toast.error("Xóa thất bại! ❌");
                                     }
                                   } catch (err) {
-                                    console.error(err);
+                                    toast.error("Xóa thất bại! ❌");
                                   }
                                 }
                               }}
                             >
-                              <Trash2 className="size-4 mr-2" />
-                              Xóa
+                              <Trash2 className="size-4" />
                             </Button>
                           </div>
                         </div>
@@ -964,26 +934,29 @@ export function LandlordDashboardV2() {
 
               {/* Empty State */}
               {landlordPosts.length === 0 && (
-                <div 
-                  className="bg-white border border-gray-100 rounded-3xl shadow-sm p-12 text-center"
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white/60 backdrop-blur-xl border border-white/50 rounded-[40px] shadow-sm p-24 text-center"
                 >
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                    <FileText className="size-10 text-gray-400" />
+                  <div className="w-28 h-28 bg-white rounded-[32px] flex items-center justify-center mx-auto mb-10 shadow-xl shadow-slate-200/50 rotate-3 group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-slate-100 opacity-50" />
+                    <FileText className="size-12 text-slate-300 relative z-10" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  <h3 className="text-4xl font-black bg-gradient-to-r from-slate-800 via-indigo-600 to-blue-700 bg-clip-text text-transparent mb-4 tracking-tight">
                     Chưa có tin đăng nào
                   </h3>
-                  <p className="text-gray-600 mb-8 max-w-sm mx-auto">
+                  <p className="text-indigo-400 text-lg font-black mb-12 max-w-sm mx-auto leading-relaxed drop-shadow-sm">
                     Bắt đầu đăng tin cho thuê để tiếp cận hàng nghìn người tìm trọ trên hệ thống của chúng tôi.
                   </p>
                   <Button
                     onClick={() => navigate("/post-room")}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8 py-6 rounded-2xl shadow-lg shadow-green-100 transition-all hover:scale-105 active:scale-95 font-bold"
+                    className="bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-600 hover:opacity-90 px-12 py-8 rounded-[24px] shadow-2xl shadow-blue-100 transition-all hover:scale-105 active:scale-95 text-xl font-black border-none"
                   >
-                    <PlusCircle className="size-5 mr-3" />
+                    <PlusCircle className="size-6 mr-3" />
                     Đăng tin đầu tiên
                   </Button>
-                </div>
+                </motion.div>
               )}
             </div>
           </motion.div>
@@ -998,18 +971,18 @@ export function LandlordDashboardV2() {
       <div className="fixed inset-0 z-0 bg-gradient-to-tr from-[#f0f9f5] via-white to-[#f0f2f9]" />
 
       {/* Left Sidebar Navigation - Solid & Lean */}
-      <aside className="w-72 bg-white border-r border-gray-100 flex-shrink-0 sticky top-0 h-screen overflow-hidden flex flex-col z-20 shadow-sm">
+      <aside className="w-80 bg-white/70 backdrop-blur-3xl border-r border-white/40 flex-shrink-0 sticky top-0 h-screen overflow-hidden flex flex-col z-20 shadow-[4px_0_30px_rgba(0,0,0,0.02)]">
         {/* Logo Section */}
-        <div className="p-8">
+        <div className="p-10">
           <div 
-            className="flex items-center gap-3 px-2 hover:scale-105 transition-transform"
+            className="flex items-center gap-4 px-2 hover:scale-105 transition-transform"
           >
-            <div className="bg-gradient-to-br from-green-500 to-blue-600 p-2.5 rounded-2xl shadow-lg shadow-green-100">
+            <div className="bg-gradient-to-br from-emerald-500 via-blue-500 to-indigo-600 p-3 rounded-[20px] shadow-2xl shadow-blue-100">
               <Home className="size-8 text-white" />
             </div>
             <div>
-              <h1 className="font-black text-2xl text-gray-900 tracking-tighter leading-none">MapHome</h1>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 inline-block">Landlord Portal</span>
+              <h1 className="font-black text-3xl bg-gradient-to-r from-slate-900 via-blue-600 to-indigo-700 bg-clip-text text-transparent tracking-tighter leading-none">MapHome</h1>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white bg-gradient-to-r from-emerald-500 to-blue-600 px-4 py-1.5 rounded-full mt-2 inline-block shadow-lg shadow-blue-100/50">Landlord Portal</span>
             </div>
           </div>
         </div>
@@ -1049,20 +1022,20 @@ export function LandlordDashboardV2() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-bold tracking-tight transition-all relative group ${
+                  className={`w-full flex items-center gap-5 px-6 py-5 rounded-[28px] text-sm font-black tracking-tight transition-all relative group ${
                     isActive
-                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl shadow-green-200 scale-[1.02]"
-                      : "text-gray-500 hover:text-green-600 hover:bg-green-50/50"
+                      ? "bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-600 text-white shadow-[0_15px_35px_rgba(59,130,246,0.25)] scale-[1.03]"
+                      : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50"
                   }`}
                 >
-                  <div className={`transition-transform group-hover:scale-110 ${isActive ? "text-white" : ""}`}>
+                  <div className={`transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : ""}`}>
                     <Icon className="size-5 flex-shrink-0" />
                   </div>
-                  <span>{item.label}</span>
+                  <span className="relative z-10">{item.label}</span>
                   {isActive && (
                     <motion.div 
                       layoutId="activeTabIndicator"
-                      className="absolute right-4 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
+                      className="absolute right-6 w-2 h-2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" 
                     />
                   )}
                 </button>
@@ -1123,13 +1096,8 @@ export function LandlordDashboardV2() {
         onClose={() => setEditingProperty(null)}
         property={editingProperty}
         onSuccess={() => {
-          const token = localStorage.getItem("token");
-          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-          fetch(`${API_BASE}/api/landlord/properties`, { 
-            headers: { Authorization: `Bearer ${token}` } 
-          })
-            .then(res => res.json())
-            .then(data => setLandlordPosts(data))
+          api.get("/api/landlord/properties")
+            .then(res => setLandlordPosts(res.data))
             .catch(console.error);
         }}
       />
