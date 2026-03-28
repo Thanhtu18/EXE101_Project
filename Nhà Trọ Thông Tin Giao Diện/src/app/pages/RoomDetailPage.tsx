@@ -58,7 +58,8 @@ import { UserRequestInspectionDialog } from "@/app/components/UserRequestInspect
 import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import { CompareFloatingBar } from "@/app/components/CompareFloatingBar";
 import { useProperties } from "@/app/contexts/PropertiesContext";
-import { RentalProperty, LandlordProfile, Review, Landlord } from "@/app/components/types";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { RentalProperty, LandlordProfile, Review } from "@/app/components/types";
 
 // === SUB-COMPONENTS ===
 
@@ -143,21 +144,9 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
         ref={mapRef}
         className="h-[400px] w-full rounded-2xl border-2 border-white shadow-xl overflow-hidden z-0"
       />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-        {[
-          { label: "Bệnh viện", dist: "0.8km", status: "Gần" },
-          { label: "Trường học", dist: "0.4km", status: "Rất gần" },
-          { label: "Siêu thị", dist: "1.2km", status: "Bình thường" },
-          { label: "Bến xe", dist: "2.5km", status: "Hơi xa" },
-        ].map((item, idx) => (
-          <div key={idx} className="p-3 bg-white rounded-xl border shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">{item.label}</p>
-            <p className="font-bold text-gray-900">{item.dist}</p>
-            <p className="text-[10px] text-green-600 font-medium">
-              {item.status}
-            </p>
-          </div>
-        ))}
+      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+        <p className="text-sm text-blue-900 font-medium">Dữ liệu tiện ích lân cận đang được đồng bộ từ backend.</p>
+        <p className="text-xs text-blue-700 mt-1">Hiện chỉ hiển thị bản đồ vị trí chính xác của phòng trọ.</p>
       </div>
     </div>
   );
@@ -282,9 +271,10 @@ export function RoomDetailPage() {
   const [newRating, setNewRating] = useState(5);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  const { user } = useAuth();
   const { properties, loading: loadingProps } = useProperties();
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
   
-  // In a real app, this would be fetched from an API
   const property = useMemo(
     () => properties.find((p) => p.id === routeId || p._id === routeId),
     [routeId, properties],
@@ -297,8 +287,38 @@ export function RoomDetailPage() {
   }, [property]);
 
   useEffect(() => {
-    // In a real app, fetch reviews for this property
-  }, [property]);
+    const fetchReviews = async () => {
+      if (!property) return;
+
+      try {
+        const propertyKey = property._id || property.id;
+        const res = await fetch(`${API_BASE}/api/reviews/property/${propertyKey}`);
+        if (!res.ok) {
+          setReviews([]);
+          return;
+        }
+
+        const data = await res.json();
+        const mapped: Review[] = (Array.isArray(data) ? data : []).map((item: any) => ({
+          id: item._id || item.id,
+          propertyId:
+            typeof item.propertyId === "object"
+              ? item.propertyId?._id || item.propertyId?.id || propertyKey
+              : item.propertyId || propertyKey,
+          userName: item.userId?.fullName || item.userId?.username || "Người dùng MapHome",
+          userAvatar: item.userId?.avatar || "/avatars/default.png",
+          rating: Number(item.rating) || 0,
+          content: item.comment || "",
+          createdAt: item.createdAt || new Date().toISOString(),
+        }));
+        setReviews(mapped);
+      } catch {
+        setReviews([]);
+      }
+    };
+
+    fetchReviews();
+  }, [property, API_BASE]);
 
   if (loadingProps) {
     return (
@@ -336,25 +356,54 @@ export function RoomDetailPage() {
     // Logic to save to storage/API
   };
 
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
     if (!newReview.trim()) return;
+    if (!user) return;
+
     setIsSubmittingReview(true);
-    // Mock API call
-    setTimeout(() => {
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setIsSubmittingReview(false);
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          propertyId: property._id || property.id,
+          rating: newRating,
+          comment: newReview,
+        }),
+      });
+
+      if (!res.ok) {
+        setIsSubmittingReview(false);
+        return;
+      }
+
+      const created = await res.json();
       const review: Review = {
-        id: `r${Date.now()}`,
-        propertyId: property._id || property.id,
-        userName: "Người dùng MapHome",
-        userAvatar: "/avatars/default.png",
-        rating: newRating,
-        content: newReview,
-        createdAt: new Date().toISOString(),
+        id: created._id || created.id,
+        propertyId: created.propertyId || (property._id || property.id),
+        userName: user.fullName || user.username || "Người dùng MapHome",
+        userAvatar: user.avatar || "/avatars/default.png",
+        rating: Number(created.rating) || newRating,
+        content: created.comment || newReview,
+        createdAt: created.createdAt || new Date().toISOString(),
       };
-      setReviews([review, ...reviews]);
+
+      setReviews((prev) => [review, ...prev]);
       setNewReview("");
       setNewRating(5);
+    } finally {
       setIsSubmittingReview(false);
-    }, 1000);
+    }
   };
 
   const propertyId = property._id || property.id;
@@ -362,15 +411,8 @@ export function RoomDetailPage() {
     .filter((p) => (p._id || p.id) !== propertyId)
     .slice(0, 4);
 
-  // Authenticated user (mock)
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-
   const activeAmenities = Object.entries(property.amenities)
     .filter(([_, v]) => v)
-    .map(([key]) => key);
-
-  const inactiveAmenities = Object.entries(property.amenities)
-    .filter(([_, v]) => v === false)
     .map(([key]) => key);
 
   return (
