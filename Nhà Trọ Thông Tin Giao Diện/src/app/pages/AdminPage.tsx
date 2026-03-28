@@ -6,6 +6,7 @@ import { useProperties } from "@/app/contexts/PropertiesContext";
 import { Button } from "@/app/components/ui/button";
 import { InspectionDialog } from "@/app/components/InspectionDialog";
 import { VerificationRequest } from "@/app/components/types";
+import { UserDetailDialog } from "@/app/components/UserDetailDialog";
 import {
   LayoutDashboard,
   FileText,
@@ -32,6 +33,8 @@ import {
 } from "lucide-react";
 import { RevenueView } from "./RevenueView";
 import { InspectionsView } from "@/app/components/InspectionsView";
+import { SettingsView } from "./SettingsView";
+import { toast } from "sonner";
 
 type AdminView =
   | "dashboard"
@@ -41,7 +44,8 @@ type AdminView =
   | "bookings"
   | "reviews"
   | "revenue"
-  | "inspections";
+  | "inspections"
+  | "settings";
 
 // Note: Mock data constants removed. Data is now fetched from the backend.
 
@@ -61,6 +65,8 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<any>(null);
   const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
 
   const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
@@ -163,7 +169,7 @@ export function AdminPage() {
       });
       if (res.ok) {
         setPosts(posts.map((p) => (p._id === id ? { ...p, status } : p)));
-        alert("Cập nhật trạng thái tin đăng thành công! ✅");
+        toast.success("Cập nhật trạng thái tin đăng thành công! ✅");
       }
     } catch (error) {
       console.error(error);
@@ -185,7 +191,7 @@ export function AdminPage() {
               : u
           )
         );
-        alert("Cập nhật trạng thái người dùng thành công! ✅");
+        toast.success("Cập nhật trạng thái người dùng thành công! ✅");
       }
     } catch (error) {
       console.error(error);
@@ -254,7 +260,7 @@ export function AdminPage() {
       });
       if (res.ok) {
         setBookings(bookings.filter((b) => b._id !== id));
-        alert("Đã xóa lịch hẹn thành công! ✅");
+        toast.success("Đã xóa lịch hẹn thành công! ✅");
       }
     } catch (error) {
       console.error(error);
@@ -271,7 +277,7 @@ export function AdminPage() {
       });
       if (res.ok) {
         setReviews(reviews.filter((r) => r._id !== id));
-        alert("Đã xóa đánh giá thành công! ✅");
+        toast.success("Đã xóa đánh giá thành công! ✅");
       }
     } catch (error) {
       console.error(error);
@@ -288,11 +294,16 @@ export function AdminPage() {
       });
       if (res.ok) {
         setUsers(users.filter((u) => u._id !== id));
-        alert("Đã xóa người dùng thành công! ✅");
+        toast.success("Đã xóa người dùng thành công! ✅");
       }
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleOpenUserDetail = (userId: string) => {
+    setSelectedUserId(userId);
+    setIsUserDetailOpen(true);
   };
 
   if (!isAuthenticated || user?.role !== "admin") {
@@ -460,7 +471,17 @@ export function AdminPage() {
             <div className="px-2 mb-1.5 text-[10px] font-bold uppercase text-[#94a3b8] tracking-wider">
               HỆ THỐNG
             </div>
-            <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a] transition-all">
+            <button 
+              onClick={() => setActiveView("settings")}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all relative ${
+                activeView === "settings"
+                  ? "bg-[#dcfce7] text-[#16a34a] font-semibold"
+                  : "text-[#475569] hover:bg-[#f0fdf4] hover:text-[#16a34a]"
+              }`}
+            >
+              {activeView === "settings" && (
+                <div className="absolute left-0 w-[3px] h-5 bg-[#16a34a] rounded-r-sm" />
+              )}
               <Settings className="size-4" />
               Cài đặt
             </button>
@@ -468,10 +489,26 @@ export function AdminPage() {
         </nav>
 
         {/* User Area */}
-        <div className="border-t border-[#e2e8f0] p-3">
-          <div className="flex items-center gap-3">
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-xs font-bold">
-              LT
+        <div className="border-t border-[#e2e8f0] p-4 space-y-4">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/")}
+            className="w-full justify-start gap-3 h-11 bg-gradient-to-r from-[#16a34a] to-[#22c55e] text-white hover:from-[#15803d] hover:to-[#16a34a] hover:shadow-md transition-all group rounded-xl border-none shadow-sm"
+          >
+            <div className="size-8 rounded-lg bg-white/20 flex items-center justify-center transition-all group-hover:scale-110">
+              <Home className="size-[18px] text-white" />
+            </div>
+            <span className="font-bold text-[14px]">Trang chủ</span>
+          </Button>
+
+          <div className="flex items-center gap-3 px-1">
+            <div className="w-[34px] h-[34px] rounded-full border border-white/50 shadow-sm overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-xs font-bold">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                (user?.fullName || user?.username || "A").charAt(0).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-gray-900 truncate">
@@ -532,7 +569,7 @@ export function AdminPage() {
             <>
               {activeView === "dashboard" && <DashboardView stats={stats} weeklySearchData={weeklySearchData} recentActivities={recentActivities} topRooms={topRooms} posts={posts} />}
               {activeView === "posts" && <PostsView posts={posts} onUpdateStatus={handleUpdatePropertyStatus} />}
-              {activeView === "users" && <UsersView users={users} onToggleStatus={handleToggleUserStatus} onDeleteUser={handleDeleteUser} />}
+              {activeView === "users" && <UsersView users={users} onToggleStatus={handleToggleUserStatus} onDeleteUser={handleDeleteUser} onViewDetail={handleOpenUserDetail} />}
               {activeView === "verification" && (
                 <VerificationView 
                   verifications={verifications} 
@@ -545,6 +582,7 @@ export function AdminPage() {
               {activeView === "reviews" && <ReviewsView reviews={reviews} onDeleteReview={handleDeleteReview} />}
               {activeView === "revenue" && <RevenueView />}
               {activeView === "inspections" && <InspectionsView />}
+              {activeView === "settings" && <SettingsView />}
             </>
           )}
         </div>
@@ -562,6 +600,17 @@ export function AdminPage() {
           request={selectedVerification}
         />
       )}
+
+      {/* User Detail Dialog */}
+      <UserDetailDialog
+        isOpen={isUserDetailOpen}
+        onClose={() => {
+          setIsUserDetailOpen(false);
+          setSelectedUserId(null);
+          fetchData(); // Refresh if status changed
+        }}
+        userId={selectedUserId}
+      />
     </div>
   );
 }
@@ -1045,7 +1094,17 @@ function PostsView({ posts, onUpdateStatus }: { posts: any[], onUpdateStatus: (i
 }
 
 // Users View Component
-function UsersView({ users, onToggleStatus, onDeleteUser }: { users: any[], onToggleStatus: (id: string) => void, onDeleteUser: (id: string) => void }) {
+function UsersView({ 
+  users, 
+  onToggleStatus, 
+  onDeleteUser,
+  onViewDetail
+}: { 
+  users: any[], 
+  onToggleStatus: (id: string) => void, 
+  onDeleteUser: (id: string) => void,
+  onViewDetail: (id: string) => void
+}) {
   const totalLandlords = users.filter(u => u.role === "landlord").length;
   const totalUsers = users.filter(u => u.role === "user").length;
   const totalBlocked = users.filter(u => u.status === "blocked").length;
@@ -1164,7 +1223,10 @@ function UsersView({ users, onToggleStatus, onDeleteUser }: { users: any[], onTo
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
-                    <button className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]">
+                    <button 
+                      onClick={() => onViewDetail(user._id)}
+                      className="px-2.5 py-1 bg-[#f8fafc] border border-[#e2e8f0] text-[#475569] rounded-lg text-[11px] font-semibold hover:bg-[#e2e8f0]"
+                    >
                       Chi tiết
                     </button>
                     {user.status === "blocked" ? (
@@ -1296,8 +1358,11 @@ function VerificationView({
               {item.status === "pending" && (
                 <button
                   onClick={() => {
-                    const scheduledDate = prompt("Nhập ngày kiểm tra (YYYY-MM-DD):");
-                    if (scheduledDate) onApprove(item._id, scheduledDate);
+                    const scheduledDate = window.prompt("Nhập ngày kiểm tra (YYYY-MM-DD):");
+                    if (scheduledDate) {
+                      onApprove(item._id, scheduledDate);
+                      toast.success(`Đã xếp lịch kiểm tra mới! 📅`);
+                    }
                   }}
                   className="px-4 py-2 bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white rounded-lg text-xs font-bold hover:opacity-90"
                 >

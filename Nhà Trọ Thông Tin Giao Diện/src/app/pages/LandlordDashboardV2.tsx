@@ -30,7 +30,10 @@ import {
   LayoutDashboard,
   Settings,
   X,
+  Camera,
+  Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Active tab type
 type DashboardTab =
@@ -58,7 +61,7 @@ const menuItems: Array<{
 export function LandlordDashboardV2() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, updateUser } = useAuth();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<RentalProperty | null>(null);
 
@@ -73,6 +76,7 @@ export function LandlordDashboardV2() {
     totalViews: 0,
     totalFavorites: 0,
   });
+  const [verificationPricing, setVerificationPricing] = useState({ basicVerification: 0, premiumVerification: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   // Get active tab from URL params, default to 'overview'
@@ -117,6 +121,10 @@ export function LandlordDashboardV2() {
           const reqsRes = await fetch(`${API_BASE}/api/landlord/verification-requests`, { headers });
           if (reqsRes.ok) {
             setVerificationRequests(await reqsRes.json());
+          }
+          const pricingRes = await fetch(`${API_BASE}/api/verifications/pricing`, { headers });
+          if (pricingRes.ok) {
+            setVerificationPricing(await pricingRes.json());
           }
         }
       } catch (err) {
@@ -219,8 +227,7 @@ export function LandlordDashboardV2() {
                       Yêu cầu kiểm tra & Cấp Tích Xanh
                     </h3>
                     <p className="text-green-100 text-sm">
-                      Admin đến kiểm tra thực tế • Tăng 50% lượt xem • Ưu tiên
-                      hiển thị
+                      Admin đến kiểm tra thực tế • Chỉ với {verificationPricing.basicVerification.toLocaleString()}đ • Tăng 50% lượt xem
                     </p>
                   </div>
                 </div>
@@ -366,41 +373,70 @@ export function LandlordDashboardV2() {
                     
                     {booking.status === 'pending' && (
                       <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
-                        <Button variant="outline" className="text-red-600 hover:text-red-700" onClick={async () => {
-                          const token = localStorage.getItem("token");
-                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ status: "cancelled" })
-                          });
-                          window.location.reload();
-                        }}>Từ chối</Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={async () => {
-                          const token = localStorage.getItem("token");
-                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ status: "confirmed" })
-                          });
-                          window.location.reload();
-                        }}>Xác nhận lịch hẹn</Button>
+                        <Button 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700" 
+                          onClick={async () => {
+                            const token = localStorage.getItem("token");
+                            const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                            const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ status: "cancelled" })
+                            });
+                            if (res.ok) {
+                              toast.success("Đã từ chối lịch hẹn. ❌");
+                              setTimeout(() => window.location.reload(), 1000);
+                            } else {
+                              toast.error("Không thể cập nhật trạng thái.");
+                            }
+                          }}
+                        >
+                          Từ chối
+                        </Button>
+                        <Button 
+                          className="bg-blue-600 hover:bg-blue-700 text-white" 
+                          onClick={async () => {
+                            const token = localStorage.getItem("token");
+                            const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                            const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ status: "confirmed" })
+                            });
+                            if (res.ok) {
+                              toast.success("Đã xác nhận lịch hẹn! 📅");
+                              setTimeout(() => window.location.reload(), 1000);
+                            } else {
+                              toast.error("Không thể xác nhận lịch hẹn.");
+                            }
+                          }}
+                        >
+                          Xác nhận lịch hẹn
+                        </Button>
                       </div>
                     )}
                     
                     {booking.status === 'confirmed' && (
                       <div className="flex gap-2 justify-end pt-4 border-t border-gray-100">
-                        <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
-                          const token = localStorage.getItem("token");
-                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-                          await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ status: "completed" })
-                          });
-                          window.location.reload();
-                        }}>Đã hoàn thành xem phòng</Button>
+                        <Button 
+                          className="bg-green-600 hover:bg-green-700 text-white" 
+                          onClick={async () => {
+                            const token = localStorage.getItem("token");
+                            const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                            const res = await fetch(`${API_BASE}/api/bookings/${booking._id}/status`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ status: "completed" })
+                            });
+                            if (res.ok) {
+                              toast.success("Đã hoàn thành lượt xem phòng! ✨");
+                              setTimeout(() => window.location.reload(), 1000);
+                            }
+                          }}
+                        >
+                          Đã hoàn thành xem phòng
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -430,6 +466,68 @@ export function LandlordDashboardV2() {
                 <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
                   <Settings className="size-5 text-gray-500" /> Thông tin cá nhân
                 </h3>
+
+                {/* Avatar Upload */}
+                <div className="flex flex-col items-center gap-4 py-4 border-b border-gray-100 mb-6">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        (user?.fullName || user?.username || "L").charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <label className="absolute bottom-0 right-0 p-2 bg-green-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-green-700 transition-all transform hover:scale-110">
+                      <Camera className="size-4" />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          const formData = new FormData();
+                          formData.append("image", file);
+                          const token = localStorage.getItem("token");
+                          const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+                          
+                          try {
+                            const uploadRes = await fetch(`${API_BASE}/api/upload/single`, {
+                              method: "POST",
+                              headers: { Authorization: `Bearer ${token}` },
+                              body: formData
+                            });
+                            
+                            if (uploadRes.ok) {
+                              const { url } = await uploadRes.json();
+                              const updateRes = await fetch(`${API_BASE}/api/user/${user?.id}`, {
+                                method: "PUT",
+                                headers: { 
+                                  "Content-Type": "application/json", 
+                                  Authorization: `Bearer ${token}` 
+                                },
+                                body: JSON.stringify({ avatar: url })
+                              });
+                              
+                               if (updateRes.ok) {
+                                const updatedUser = await updateRes.json();
+                                updateUser(updatedUser);
+                                toast.success("Đổi ảnh đại diện thành công! ✨");
+                                setTimeout(() => window.location.reload(), 1000);
+                              }
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            toast.error("Lỗi tải ảnh lên. ❌");
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Nhấp vào icon để đổi ảnh</p>
+                </div>
+
                 <form 
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -440,22 +538,24 @@ export function LandlordDashboardV2() {
                     const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
                     
                     try {
-                      // Note: /api/users/:id endpoint needs to exist on backend
-                      const res = await fetch(`${API_BASE}/api/users/${user?.id}`, {
+                      // Update landlord profile via backend API
+                      const res = await fetch(`${API_BASE}/api/user/${user?.id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                         body: JSON.stringify({ fullName, phone })
                       });
                       if (res.ok) {
-                        alert("✅ Cập nhật thông tin thành công!");
-                        window.location.reload();
+                        const updatedUser = await res.json();
+                        updateUser(updatedUser);
+                        toast.success("Cập nhật thông tin thành công! ✨");
+                        setTimeout(() => window.location.reload(), 1000);
                       } else {
                         const data = await res.json();
-                        alert("❌ " + (data.message || "Cập nhật thất bại."));
+                        toast.error(data.message || "Cập nhật thất bại. ❌");
                       }
                     } catch (err) {
                       console.error(err);
-                      alert("❌ Cập nhật thất bại.");
+                      toast.error("Cập nhật thất bại. ❌");
                     }
                   }} 
                   className="space-y-4"
@@ -499,16 +599,18 @@ export function LandlordDashboardV2() {
                         body: JSON.stringify({ currentPassword, newPassword })
                       });
                       if (res.ok) {
-                        alert("✅ Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
-                        logout();
-                        navigate("/login");
+                        toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại. 🔐");
+                        setTimeout(() => {
+                          logout();
+                          navigate("/login");
+                        }, 2000);
                       } else {
                         const data = await res.json();
-                        alert("❌ " + (data.message || "Đổi mật khẩu thất bại."));
+                        toast.error(data.message || "Đổi mật khẩu thất bại. ❌");
                       }
                     } catch (err) {
                       console.error(err);
-                      alert("❌ Lỗi đổi mật khẩu.");
+                      toast.error("Lỗi đổi mật khẩu. ❌");
                     }
                   }} 
                   className="space-y-4"
@@ -702,10 +804,10 @@ export function LandlordDashboardV2() {
                                   headers: { Authorization: `Bearer ${token}` }
                                 });
                                 if (res.ok) {
-                                  // Update state directly or reload
+                                  toast.success("Đã xóa tin đăng thành công! 🗑️");
                                   setLandlordPosts(prev => prev.filter(p => (p._id || p.id) !== (post._id || post.id)));
                                 } else {
-                                  window.alert("Xóa thất bại!");
+                                  toast.error("Xóa thất bại! ❌");
                                 }
                               } catch (err) {
                                 console.error(err);
@@ -765,10 +867,12 @@ export function LandlordDashboardV2() {
         {/* User Info */}
         <div className="p-4 border-b bg-gray-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-bold">
-              {(user?.fullName || user?.username || "L")
-                .charAt(0)
-                .toUpperCase()}
+            <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-bold">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                (user?.fullName || user?.username || "L").charAt(0).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">

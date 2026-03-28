@@ -26,6 +26,7 @@ import {
 import { LandlordPinMap } from "@/app/components/LandlordPinMap";
 import { useProperties } from "@/app/contexts/PropertiesContext";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { toast } from "sonner";
 import { RentalProperty, GreenBadgeLevel } from "@/app/components/types";
 import { vietnamLocations, Province, District, Ward } from "@/app/data/vietnamLocations";
 
@@ -189,7 +190,7 @@ export function PostRoomPage() {
 
   const handleFinalSubmit = async () => {
     if (!pinnedLocation) {
-      alert("Vui lòng ghim vị trí trên bản đồ trước khi đăng tin!");
+      toast.error("Vui lòng ghim vị trí trên bản đồ trước khi đăng tin! 📍");
       return;
     }
 
@@ -226,19 +227,14 @@ export function PostRoomPage() {
     const success = await addProperty(newProperty);
 
     if (success) {
-      const message =
-        `✅ Tin đăng đã được gửi thành công!\n\n` +
-        `📌 Vị trí ghim: ${pinnedLocation.lat.toFixed(6)}, ${pinnedLocation.lng.toFixed(6)}\n` +
-        `🛰️ GPS xác thực: ${locationData ? `${locationData.lat.toFixed(6)}, ${locationData.lng.toFixed(6)} (±${locationData.accuracy}m)` : "Chưa xác thực"}\n` +
-        `📷 Số ảnh: ${uploadedImages.length}\n` +
-        `✅ Mức xác thực: ${verificationLevel === "verified" ? "Đã xác thực GPS" : "Chưa xác thực"}\n\n` +
-        `Tin đăng đã được thêm vào bản đồ!\n\n` +
-        `Nhấn OK để xem tin đăng trong Dashboard chủ trọ.`;
-
-      alert(message);
+      toast.success("Đăng tin thành công! ✨", {
+        description: `Tin đăng đã được thêm vào bản đồ${locationData ? " và xác thực GPS" : ""}.`,
+      });
       navigate("/landlord/dashboard");
     } else {
-      alert("❌ Có lỗi xảy ra khi đăng tin. Vui lòng thử lại!");
+      toast.error("Đăng tin thất bại! ❌", {
+        description: "Vui lòng kiểm tra lại thông tin và thử lại.",
+      });
     }
   };
 

@@ -8,6 +8,7 @@ export interface User {
   role: "admin" | "landlord" | "user";
   phone?: string;
   fullName?: string;
+  avatar?: string; // user profile picture URL
   verificationLevel?: number;
   createdAt?: string;
 }
@@ -26,6 +27,7 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; message?: string }>;
 
   logout: () => void;
+  updateUser: (userData: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -168,6 +170,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast.success("Đăng xuất thành công!");
   };
 
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem("auth", JSON.stringify(userData));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -176,8 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         googleLogin,
         register,
         logout,
+        updateUser,
         isAuthenticated: !!user,
-
       }}
     >
       {children}

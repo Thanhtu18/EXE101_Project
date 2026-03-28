@@ -22,6 +22,7 @@ import {
   Phone,
 } from "lucide-react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { toast } from "sonner";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
@@ -65,7 +66,7 @@ export function SubscriptionManagement() {
   const handleUpgrade = () => navigate("/pricing");
 
   const handleDownloadInvoice = (invoiceId: string) => {
-    alert(`📥 Đang tải hóa đơn ${invoiceId}...\n\nDemo: File PDF sẽ được tải xuống.`);
+    toast.info(`📥 Đang tải hóa đơn ${invoiceId}...\n\nDemo: File PDF sẽ được tải xuống.`);
   };
 
   if (loading) {
@@ -73,11 +74,11 @@ export function SubscriptionManagement() {
   }
 
   const currentSub = subscription || {
-    planName: "Free",
+    planName: "Gói Cơ bản (Miễn phí)",
     status: "active",
     startDate: user?.createdAt || new Date().toISOString(),
     expiryDate: null,
-    features: ["5 tin đăng miễn phí"],
+    features: ["Đăng tin thường", "Hiển thị bảng lọc cơ bản"],
   };
 
   const daysRemaining = currentSub.expiryDate 
@@ -87,10 +88,19 @@ export function SubscriptionManagement() {
   const totalDays = 30; // Assuming monthly plans
   const progressPercent = currentSub.expiryDate ? (daysRemaining / totalDays) * 100 : 0;
 
-  const usageStats = [
-    { label: "Tin đã đăng", value: "2/5", icon: TrendingUp, color: "text-blue-600", subtitle: "Gói hiện tại" },
-    { label: "Lượt xem", value: "128", icon: TrendingUp, color: "text-green-600", subtitle: "+12% tuần này" },
-    { label: "Xác thực", value: "3", icon: Star, color: "text-amber-600", subtitle: "Đã hoàn tất" },
+  // Usage stats helper
+  const getIcon = (iconName: string) => {
+    switch(iconName) {
+      case "TrendingUp": return TrendingUp;
+      case "Star": return Star;
+      default: return Star;
+    }
+  };
+
+  const usageStats = subscription?.usageStats || [
+    { label: "Tin đã đăng", value: "0/1", icon: TrendingUp, color: "text-blue-600", subtitle: "Gói hiện tại" },
+    { label: "Lượt xem", value: "0", icon: TrendingUp, color: "text-green-600", subtitle: "Tổng lượt xem" },
+    { label: "Xác thực", value: "0", icon: Star, color: "text-amber-600", subtitle: "Đã hoàn tất" },
   ];
 
   const comparisonFeatures = [
@@ -217,8 +227,8 @@ export function SubscriptionManagement() {
 
       {/* Usage Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {usageStats.map((stat, idx) => {
-          const Icon = stat.icon;
+        {usageStats.map((stat: any, idx) => {
+          const StatIcon = typeof stat.icon === 'string' ? getIcon(stat.icon) : stat.icon;
           return (
             <Card key={idx} className="border-2">
               <CardContent className="p-6">
@@ -226,9 +236,9 @@ export function SubscriptionManagement() {
                   <div
                     className={`w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center ${stat.color}`}
                   >
-                    <Icon className="size-6" />
+                    <StatIcon className="size-6" />
                   </div>
-                  <TrendingUp className="size-5 text-green-500" />
+                  <TrendingUp className="size-5 text-green-500 opacity-50" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900 mb-1">
                   {stat.value}

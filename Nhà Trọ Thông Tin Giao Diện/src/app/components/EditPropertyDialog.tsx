@@ -3,6 +3,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { X, Home, MapPin, DollarSign, Maximize } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface EditPropertyDialogProps {
   isOpen: boolean;
@@ -58,11 +59,11 @@ export function EditPropertyDialog({
         throw new Error("Lỗi khi cập nhật phòng");
       }
 
-      alert("✅ Cập nhật thông tin phòng thành công!");
+      toast.success("Cập nhật thông tin phòng thành công! ✨");
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert("❌ Cập nhật thất bại: " + err.message);
+      toast.error(err.message || "Cập nhật thất bại. ❌");
     } finally {
       setIsSubmitting(false);
     }

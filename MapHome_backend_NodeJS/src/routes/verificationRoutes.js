@@ -9,11 +9,15 @@ const {
   notifyUserAboutPhotos,
   submitUserPhotos,
   completeInspection,
+  getVerificationPricing,
 } = require("../controllers/verificationController");
 const {
   authMiddleware,
   requireAnyRole,
 } = require("../middleware/authMiddleware");
+
+// Public routes
+router.get("/pricing", getVerificationPricing);
 
 router
   .route("/")

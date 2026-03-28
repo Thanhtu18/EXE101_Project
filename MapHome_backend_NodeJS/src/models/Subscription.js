@@ -7,9 +7,13 @@ const SubscriptionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+      required: true,
+    },
     planName: {
       type: String,
-      enum: ["Free", "Standard", "Pro"],
       default: "Free",
     },
     status: {

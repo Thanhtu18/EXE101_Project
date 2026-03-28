@@ -194,6 +194,37 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// @desc    Get user detail for admin
+// @route   GET /api/admin/users/:id
+const getUserDetail = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let properties = [];
+    if (user.role === "landlord") {
+      properties = await Property.find({ landlordId: user._id });
+    }
+
+    // Fetch bookings related to this user (either as tenant or landlord)
+    const bookings = await Booking.find({
+      $or: [{ userId: user._id }, { landlordId: user._id }],
+    })
+      .populate("propertyId", "name address")
+      .populate("userId", "username fullName email")
+      .populate("landlordId", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      user,
+      properties,
+      bookings,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get all landlords
 // @route   GET /api/admin/landlords
 const getAllLandlords = async (req, res) => {
@@ -436,6 +467,7 @@ module.exports = {
   rejectVerification,
   completeVerification,
   getAllUsers,
+  getUserDetail,
   toggleUserStatus,
   deleteUser,
   getAllLandlords,

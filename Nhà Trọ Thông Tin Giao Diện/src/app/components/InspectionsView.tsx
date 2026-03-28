@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useVerification } from '@/app/contexts/VerificationContext';
 import { useProperties } from '@/app/contexts/PropertiesContext';
 import { InspectionDialog } from '@/app/components/InspectionDialog';
@@ -28,17 +29,17 @@ export function InspectionsView() {
   };
 
   const handleApprove = (requestId: string) => {
-    if (confirm('Xác nhận duyệt lịch hẹn kiểm tra?')) {
+    if (window.confirm('Xác nhận duyệt lịch hẹn kiểm tra?')) {
       updateRequestStatus(requestId, 'approved');
-      alert('✅ Đã duyệt lịch hẹn!');
+      toast.success('Đã duyệt lịch hẹn! ✅');
     }
   };
 
   const handleReject = (requestId: string) => {
-    const reason = prompt('Lý do từ chối:');
+    const reason = window.prompt('Lý do từ chối:');
     if (reason) {
       updateRequestStatus(requestId, 'rejected');
-      alert('❌ Đã từ chối yêu cầu!');
+      toast.error('Đã từ chối yêu cầu! ❌');
     }
   };
 

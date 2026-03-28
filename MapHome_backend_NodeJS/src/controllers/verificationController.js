@@ -1,4 +1,5 @@
 const VerificationRequest = require("../models/VerificationRequest");
+const SystemSetting = require("../models/SystemSetting");
 
 // @desc    Get all verification requests
 // @route   GET /api/verifications
@@ -165,6 +166,18 @@ const submitUserPhotos = async (req, res) => {
   }
 };
 
+// @desc    Get verification pricing
+// @route   GET /api/public/verifications/pricing
+const getVerificationPricing = async (req, res) => {
+  try {
+    const settings = await SystemSetting.findOne();
+    const pricing = settings ? settings.pricing : { basicVerification: 0, premiumVerification: 0 };
+    res.status(200).json(pricing);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getVerifications,
   getVerificationById,
@@ -174,4 +187,5 @@ module.exports = {
   notifyUserAboutPhotos,
   submitUserPhotos,
   completeInspection,
+  getVerificationPricing,
 };

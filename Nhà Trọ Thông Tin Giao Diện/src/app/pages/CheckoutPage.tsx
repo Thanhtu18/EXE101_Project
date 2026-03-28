@@ -31,6 +31,7 @@ import {
   Clock,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface PricingTier {
   id: string;
@@ -168,7 +169,7 @@ export function CheckoutPage() {
 
   const handlePayment = () => {
     if (!agreedToTerms) {
-      alert(
+      toast.warning(
         "Vui lòng đồng ý với điều khoản sử dụng để tiếp tục",
       );
       return;

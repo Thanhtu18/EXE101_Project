@@ -28,9 +28,11 @@ app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/user", require("./routes/userRoutes")); // alias for singular
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/uploads", require("./routes/uploadRoutes"));
+app.use("/api/upload", require("./routes/uploadRoutes")); // alias for singular
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
 app.use("/api/transactions", require("./routes/transactionRoutes"));

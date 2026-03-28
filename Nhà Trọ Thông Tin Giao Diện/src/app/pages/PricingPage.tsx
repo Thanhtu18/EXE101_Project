@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/app/components/Navbar";
@@ -68,91 +68,17 @@ interface PricingTier {
   highlighted?: boolean;
 }
 
-const pricingTiers: PricingTier[] = [
-  {
-    id: "free",
-    name: "Gói Cơ Bản",
-    price: 0,
-    yearlyPrice: 0,
-    badge: "Dùng thử",
-    badgeColor: "bg-gray-100 text-gray-700",
-    icon: Home,
-    description: "Bắt đầu miễn phí, khám phá nền tảng",
-    features: [
-      { text: "Hiển thị trên bản đồ", included: true },
-      { text: "Đăng tối đa 1 tin", included: true },
-      { text: "Hết hạn sau 7 ngày", included: true },
-      { text: "GPS xác thực", included: false },
-      { text: "Huy hiệu xanh tin cậy", included: false },
-      { text: "Video 360° phòng trọ", included: false },
-      { text: "Thống kê lượt xem", included: false },
-    ],
-    cta: "Bắt đầu miễn phí",
-    ctaVariant: "outline",
-  },
-  {
-    id: "basic",
-    name: "Gói Basic",
-    price: 50000,
-    yearlyPrice: 480000, // 50k * 12 * 0.8 = 480k (save 20%)
-    icon: MapPin,
-    description: "Tin cậy hơn với GPS xác thực",
-    features: [
-      { text: "GPS xác thực độ chính xác 50m", included: true },
-      { text: "Huy hiệu xanh tin cậy", included: true },
-      { text: "Highlight nhẹ trên bản đồ", included: true },
-      { text: "Yêu cầu quản trị viên kiểm tra", included: true },
-      { text: "Tin đăng hiển thị 30 ngày", included: true },
-      { text: "Video 360° phòng trọ", included: false },
-      { text: "Thống kê lượt xem", included: false },
-    ],
-    cta: "Chọn Basic",
-    ctaVariant: "secondary",
-  },
-  {
-    id: "standard",
-    name: "Gói Standard",
-    price: 100000,
-    yearlyPrice: 960000, // 100k * 12 * 0.8
-    badge: "Phổ biến nhất",
-    badgeColor: "bg-gradient-to-r from-amber-400 to-orange-500 text-white",
-    icon: Star,
-    description: "Lựa chọn tốt nhất cho chủ trọ nghiêm túc",
-    features: [
-      { text: "Tất cả tính năng Basic +", included: true },
-      { text: "Video 360° phòng trọ", included: true },
-      { text: "Thống kê lượt xem chi tiết", included: true },
-      { text: "Ưu tiên top tìm kiếm", included: true },
-      { text: "Tin đăng vĩnh viễn", included: true },
-      { text: 'Badge "Tin nổi bật"', included: true },
-      { text: "Hỗ trợ ưu tiên", included: true },
-    ],
-    cta: "Chọn Standard",
-    ctaVariant: "default",
-    highlighted: true,
-  },
-  {
-    id: "pro",
-    name: "Gói Pro",
-    price: 200000,
-    yearlyPrice: 1920000, // 200k * 12 * 0.8
-    badge: "Chuyên nghiệp",
-    badgeColor: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white",
-    icon: Rocket,
-    description: "Tối đa hiệu quả cho chủ nhà chuyên nghiệp",
-    features: [
-      { text: "Tất cả tính năng Standard +", included: true },
-      { text: "Boost vị trí 7 ngày/tháng", included: true },
-      { text: "Hỗ trợ đăng tin Concierge", included: true },
-      { text: "Ưu tiên hiển thị cao nhất", included: true },
-      { text: "Tin đăng vĩnh viễn", included: true },
-      { text: "Phân tích nâng cao", included: true },
-      { text: "Hỗ trợ VIP 24/7", included: true },
-    ],
-    cta: "Chọn Pro",
-    ctaVariant: "default",
-  },
-];
+// Icon mapping utility
+const iconMap: Record<string, any> = {
+  Home,
+  MapPin,
+  Star,
+  Rocket,
+  Shield,
+  Zap,
+};
+
+const getIcon = (iconName: string) => iconMap[iconName] || Home;
 
 const faqs = [
   {
@@ -177,7 +103,7 @@ function PricingCard({
   billingCycle: BillingCycle;
 }) {
   const navigate = useNavigate();
-  const Icon = tier.icon;
+  const Icon = typeof tier.icon === 'string' ? getIcon(tier.icon) : tier.icon;
   const displayPrice =
     billingCycle === "monthly" ? tier.price : tier.yearlyPrice;
   const monthlyEquivalent =
@@ -345,6 +271,27 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/api/subscriptions/plans`);
+        if (res.ok) {
+          setPricingTiers(await res.json());
+        }
+      } catch (error) {
+        console.error("Failed to fetch plans:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, [API_BASE]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
@@ -439,13 +386,20 @@ export function PricingPage() {
             viewport={{ once: true, margin: "-100px" }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch"
           >
-            {pricingTiers.map((tier) => (
-              <PricingCard
-                key={tier.id}
-                tier={tier}
-                billingCycle={billingCycle}
-              />
-            ))}
+            {loading ? (
+              <div className="col-span-full py-20 flex flex-col items-center justify-center gap-4 text-gray-400">
+                <div className="size-10 border-4 border-gray-100 border-t-blue-600 rounded-full animate-spin" />
+                <p className="font-bold text-sm">Đang tải bảng giá...</p>
+              </div>
+            ) : (
+              pricingTiers.map((tier) => (
+                <PricingCard
+                  key={tier.id}
+                  tier={tier}
+                  billingCycle={billingCycle}
+                />
+              ))
+            )}
           </motion.div>
         </div>
 
