@@ -12,7 +12,6 @@ import { PolicyPage } from "@/app/pages/PolicyPage";
 import { ContactPage } from "@/app/pages/ContactPage";
 import { LoginPage } from "@/app/pages/LoginPage";
 import { AdminPage } from "@/app/pages/AdminPage";
-import { LandlordDashboard } from "@/app/pages/LandlordDashboard";
 import { LandlordDashboardV2 } from "@/app/pages/LandlordDashboardV2";
 import { UserDashboard } from "@/app/pages/UserDashboard";
 import { RoomDetailPage } from "@/app/pages/RoomDetailPage";
