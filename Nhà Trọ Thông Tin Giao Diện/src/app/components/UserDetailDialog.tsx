@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import api from "@/app/utils/api";
 import { toast } from "sonner";
 
 interface UserDetailDialogProps {
@@ -32,7 +33,6 @@ export function UserDetailDialog({
   const [data, setData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "properties" | "bookings">("profile");
 
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -46,13 +46,9 @@ export function UserDetailDialog({
   const fetchUserDetail = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const detail = await res.json();
-        setData(detail);
+      const res = await api.get(`/api/admin/users/${userId}`);
+      if (res.status === 200) {
+        setData(res.data);
       }
     } catch (error) {
       console.error("Failed to fetch user detail:", error);

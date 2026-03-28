@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import api from '@/app/utils/api';
 import { X, Home, MapPin, DollarSign, Maximize } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,24 +39,14 @@ export function EditPropertyDialog({
     setIsSubmitting(true);
     
     try {
-      const token = localStorage.getItem("token");
-      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-      
-      const res = await fetch(`${API_BASE}/api/properties/${property._id || property.id}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({
-          name,
-          address,
-          price: Number(price),
-          area: Number(area)
-        })
+      const res = await api.put(`/api/properties/${property._id || property.id}`, {
+        name,
+        address,
+        price: Number(price),
+        area: Number(area)
       });
 
-      if (!res.ok) {
+      if (res.status !== 200) {
         throw new Error("Lỗi khi cập nhật phòng");
       }
 

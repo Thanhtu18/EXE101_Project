@@ -12,6 +12,7 @@ import { Button } from '@/app/components/ui/button';
 import { Calendar } from '@/app/components/ui/calendar';
 import { Input } from '@/app/components/ui/input';
 import { RentalProperty } from './types';
+import api from '@/app/utils/api';
 import { Calendar as CalendarIcon, Clock, User, Phone, MessageSquare, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,7 +42,6 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:5000';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,33 +52,16 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Vui lòng đăng nhập để đặt lịch!');
-        return;
-      }
-
-      // Format date manually or simply pass date + time strings to backend
-      const res = await fetch(`${API_BASE}/api/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          propertyId: property.id || property._id,
-          // The backend controller automatically sets userId and landlordId
-          date: selectedDate.toISOString(),
-          time: selectedTime,
-          message: note || `Tên: ${customerName}\nSĐT: ${customerPhone}`
-        })
+      const res = await api.post("/api/bookings", {
+        propertyId: property.id || property._id,
+        date: selectedDate.toISOString(),
+        time: selectedTime,
+        message: note || `Tên: ${customerName}\nSĐT: ${customerPhone}`
       });
 
-      if (!res.ok) {
-        throw new Error('Không thể đặt lịch. Vui lòng thử lại.');
+      if (res.status === 200 || res.status === 201) {
+        setIsSubmitted(true);
       }
-
-      setIsSubmitted(true);
       
       // Reset after 1.5 seconds and close
       setTimeout(() => {
@@ -94,7 +77,7 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
       }, 1500);
 
     } catch (err: any) {
-      toast.error(err.message || 'Lỗi đặt lịch. ❌');
+      toast.error(err.response?.data?.message || 'Lỗi đặt lịch. ❌');
     }
   };
 

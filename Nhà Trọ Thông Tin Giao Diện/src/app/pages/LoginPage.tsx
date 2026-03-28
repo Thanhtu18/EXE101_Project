@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -147,13 +147,35 @@ export function LoginPage() {
     onError: () => setError("Đăng nhập Google thất bại"),
   });
 
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.1,
+      },
+    },
+  };
 
-
-
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
+  };
 
   return (
-    <div className="min-h-screen w-screen bg-gray-50 flex">
-      {/* Left Side - Image with Overlay */}
+    <div className="min-h-screen w-screen bg-slate-50 flex font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden relative">
+      {/* Decorative Background Glows for Right Side */}
+      <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none opacity-60">
+        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-emerald-100/60 blur-[130px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] bg-blue-100/60 blur-[110px] rounded-full" />
+      </div>
+
+      {/* Left Side - Image with Overlay (Unchanged) */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-[#0a0a0a] overflow-hidden">
         <motion.div
           initial={{ scale: 1.1, opacity: 0 }}
@@ -205,430 +227,301 @@ export function LoginPage() {
         </motion.div>
       </div>
 
-      {/* Right Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8">
+      {/* Right Side - Premium Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 bg-white/10 lg:bg-transparent">
         <motion.div 
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="w-full max-w-[500px]"
         >
-          {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-6">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
-                <Home className="size-6 text-white" />
-              </div>
-              <div className="text-left">
-                <h1 className="text-2xl font-bold text-gray-900">MapHome</h1>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 md:p-10 border border-white/50 relative overflow-hidden">
-            {/* Subtle light leak */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/5 blur-3xl rounded-full" />
+          {/* Glass Card Container */}
+          <div className="bg-white/95 backdrop-blur-3xl border border-white shadow-[0_40px_120px_-20px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-8 lg:p-12 space-y-8 overflow-hidden relative group">
             
-            {/* Title */}
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              {mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản"}
-            </h2>
+            {/* Subtle Inner Glow */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+
+            {/* Header */}
+            <header className="space-y-3 text-center lg:text-left">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="lg:hidden flex justify-center mb-6"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <Home className="size-8 text-white" />
+                </div>
+              </motion.div>
+              
+              <h2 className="text-3xl lg:text-4xl font-[900] bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent tracking-tight leading-tight">
+                {mode === "login" ? "Chào mừng trở lại!" : "Khởi tạo hành trình"}
+              </h2>
+              <p className="text-slate-400 font-semibold text-lg leading-relaxed">
+                {mode === "login" 
+                  ? "Cùng MapHome tìm kiếm không gian sống lý tưởng của bạn." 
+                  : "Tham gia cùng cộng đồng tìm trọ hiện đại nhất hiện nay."}
+              </p>
+            </header>
 
             <AnimatePresence mode="wait">
-              {mode === "login" ? (
-                <motion.div
-                  key="login"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tài khoản
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+              <motion.div
+                key={mode}
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                exit="hidden"
+                className="space-y-6"
+              >
+                {mode === "login" ? (
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <motion.div variants={itemVariants} className="space-y-2.5">
+                      <div className="flex items-center justify-between ml-1">
+                        <label className="text-[14px] font-black text-emerald-600/80 uppercase tracking-wide">Tài khoản</label>
+                      </div>
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 size-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-focus-within:bg-emerald-50 group-focus-within:text-emerald-500 transition-all duration-300">
+                          <User className="size-5" />
+                        </div>
                         <Input
                           type="text"
                           value={loginUsername}
                           onChange={(e) => setLoginUsername(e.target.value)}
-                          placeholder="Nhập tên đăng nhập"
-                          className="pl-10 h-11"
+                          placeholder="username hoặc email"
+                          className="pl-16 h-14 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 rounded-2xl transition-all shadow-sm font-medium"
                           required
                         />
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Mật khẩu
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <motion.div variants={itemVariants} className="space-y-2.5">
+                      <div className="flex items-center justify-between ml-1">
+                        <label className="text-[14px] font-black text-blue-600/80 uppercase tracking-wide">Mật khẩu</label>
+                        <button type="button" className="text-[13px] font-bold text-emerald-500 hover:text-emerald-600 hover:underline decoration-2 underline-offset-4 transition-colors">
+                          Quên mật khẩu?
+                        </button>
+                      </div>
+                      <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 size-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-focus-within:bg-blue-50 group-focus-within:text-blue-500 transition-all duration-300">
+                          <Lock className="size-5" />
+                        </div>
                         <Input
                           type="password"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
-                          placeholder="Nhập mật khẩu"
-                          className="pl-10 h-11"
+                          placeholder="••••••••"
+                          className="pl-16 h-14 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 rounded-2xl transition-all shadow-sm"
                           required
                         />
                       </div>
-                    </div>
+                    </motion.div>
 
                     {error && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                        <AlertCircle className="size-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-800">{error}</p>
-                      </div>
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }} 
+                        animate={{ opacity: 1, scale: 1 }} 
+                        className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3 text-rose-700 shadow-sm"
+                      >
+                        <AlertCircle className="size-6 text-rose-500 flex-shrink-0" />
+                        <span className="text-[14px] font-bold">{error}</span>
+                      </motion.div>
                     )}
 
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Button
+                    <motion.div variants={itemVariants} className="pt-2">
+                        <Button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 h-12 text-base font-bold shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
+                        className="w-full h-15 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all rounded-[1.25rem] group"
                       >
-                        Đăng nhập
+                        Đăng nhập ngay
+                        <motion.span
+                          animate={{ x: [0, 4, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                          className="ml-2"
+                        >
+                          →
+                        </motion.span>
                       </Button>
                     </motion.div>
                   </form>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="register"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Họ và tên
-                        </label>
+                ) : (
+                  <form onSubmit={handleRegister} className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <motion.div variants={itemVariants} className="space-y-2">
+                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">Họ và tên</label>
                         <Input
-                          type="text"
                           value={registerData.fullName}
-                          onChange={(e) =>
-                            setRegisterData({
-                              ...registerData,
-                              fullName: e.target.value,
-                            })
-                          }
+                          onChange={(e) => setRegisterData({...registerData, fullName: e.target.value})}
                           placeholder="Nguyễn Văn A"
-                          className="h-11"
+                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
                           required
                         />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Số điện thoại
-                        </label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                          <Input
-                            type="tel"
-                            value={registerData.phone}
-                            onChange={(e) =>
-                              setRegisterData({
-                                ...registerData,
-                                phone: e.target.value,
-                              })
-                            }
-                            placeholder="0912345678"
-                            className="pl-10 h-11"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email
-                      </label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                      </motion.div>
+                      <motion.div variants={itemVariants} className="space-y-2">
+                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">Số điện thoại</label>
                         <Input
-                          type="email"
-                          value={registerData.email}
-                          onChange={(e) =>
-                            setRegisterData({
-                              ...registerData,
-                              email: e.target.value,
-                            })
-                          }
-                          placeholder="example@email.com"
-                          className="pl-10 h-11"
+                          value={registerData.phone}
+                          onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
+                          placeholder="091..."
+                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
                           required
                         />
-                      </div>
+                      </motion.div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tên đăng nhập
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <motion.div variants={itemVariants} className="space-y-2">
+                      <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest ml-1">Email liên lạc</label>
+                      <Input
+                        type="email"
+                        value={registerData.email}
+                        onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                        placeholder="email@example.com"
+                        className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                        required
+                      />
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">Tên đăng nhập</label>
                         <Input
-                          type="text"
                           value={registerData.username}
-                          onChange={(e) =>
-                            setRegisterData({
-                              ...registerData,
-                              username: e.target.value,
-                            })
-                          }
-                          placeholder="chutro123"
-                          className="pl-10 h-11"
+                          onChange={(e) => setRegisterData({...registerData, username: e.target.value})}
+                          placeholder="username"
+                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
                           required
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Mật khẩu
-                        </label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                          <Input
-                            type="password"
-                            value={registerData.password}
-                            onChange={(e) =>
-                              setRegisterData({
-                                ...registerData,
-                                password: e.target.value,
-                              })
-                            }
-                            placeholder="Tối thiểu 6 ký tự"
-                            className="pl-10 h-11"
-                            required
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">Mật khẩu</label>
+                        <Input
+                          type="password"
+                          value={registerData.password}
+                          onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                          placeholder="••••••••"
+                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                          required
+                        />
                       </div>
+                    </motion.div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Xác nhận mật khẩu
-                        </label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                          <Input
-                            type="password"
-                            value={registerData.confirmPassword}
-                            onChange={(e) =>
-                              setRegisterData({
-                                ...registerData,
-                                confirmPassword: e.target.value,
-                              })
-                            }
-                            placeholder="Nhập lại mật khẩu"
-                            className="pl-10 h-11"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Bạn là
+                    <motion.div variants={itemVariants} className="space-y-4">
+                      <label className="text-[14px] font-[900] bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent ml-1 flex items-center gap-2 uppercase tracking-tight">
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                        Lựa chọn vai trò của bạn
                       </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRegisterData({ ...registerData, role: "landlord" })
-                          }
-                          className={`p-4 border-2 rounded-xl transition-all ${
-                            registerData.role === "landlord"
-                              ? "border-green-600 bg-green-50 shadow-md scale-105"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <Building2
-                            className={`size-6 mx-auto mb-2 ${
-                              registerData.role === "landlord"
-                                ? "text-green-600"
-                                : "text-gray-400"
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { id: "landlord", label: "Chủ trọ", icon: Building2, desc: "Đăng tin", color: "emerald" },
+                          { id: "user", label: "Người tìm", icon: User, desc: "Tìm thuê", color: "blue" },
+                          { id: "admin", label: "Quản trị", icon: Shield, desc: "Quản lý", color: "slate" }
+                        ].map((role) => (
+                          <button
+                            key={role.id}
+                            type="button"
+                            onClick={() => setRegisterData({...registerData, role: role.id as any})}
+                            className={`relative p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 group overflow-hidden ${
+                              registerData.role === role.id 
+                                ? `border-${role.color}-500 bg-${role.color}-50 shadow-lg shadow-${role.color}-500/10 scale-[1.02]` 
+                                : "bg-white/40 border-slate-100 hover:border-slate-300 hover:bg-white"
                             }`}
-                          />
-                          <div className="font-bold text-[13px]">Chủ trọ</div>
-                          <div className="text-[10px] text-gray-500">
-                            Đăng tin
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRegisterData({ ...registerData, role: "user" })
-                          }
-                          className={`p-4 border-2 rounded-xl transition-all ${
-                            registerData.role === "user"
-                              ? "border-blue-600 bg-blue-50 shadow-md scale-105"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <User
-                            className={`size-6 mx-auto mb-2 ${
-                              registerData.role === "user"
-                                ? "text-blue-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                          <div className="font-bold text-[13px]">Người tìm</div>
-                          <div className="text-[10px] text-gray-500">Tìm phòng</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRegisterData({ ...registerData, role: "admin" })
-                          }
-                          className={`p-4 border-2 rounded-xl transition-all ${
-                            registerData.role === "admin"
-                              ? "border-purple-600 bg-purple-50 shadow-md scale-105"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <Shield
-                            className={`size-6 mx-auto mb-2 ${
-                              registerData.role === "admin"
-                                ? "text-purple-600"
-                                : "text-gray-400"
-                            }`}
-                          />
-                          <div className="font-bold text-[13px]">Quản trị</div>
-                          <div className="text-[10px] text-gray-500">Quản lý</div>
-                        </button>
+                          >
+                            <role.icon className={`size-6 mb-1 transition-all ${
+                              registerData.role === role.id ? `text-${role.color}-600` : "text-slate-400 group-hover:text-slate-600"
+                            }`} />
+                            <span className={`text-[12px] font-extrabold ${
+                              registerData.role === role.id ? `text-${role.color}-900` : "text-slate-600"
+                            }`}>{role.label}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">{role.desc}</span>
+                          </button>
+                        ))}
                       </div>
-                    </div>
+                    </motion.div>
 
                     {error && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                        <AlertCircle className="size-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-800">{error}</p>
-                      </div>
+                      <motion.div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3 text-rose-700">
+                        <AlertCircle className="size-5 text-rose-500" />
+                        <span className="text-[13px] font-bold">{error}</span>
+                      </motion.div>
                     )}
 
                     {success && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                        <CheckCircle className="size-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-green-800">{success}</p>
-                      </div>
+                      <motion.div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3 text-emerald-700">
+                        <CheckCircle className="size-5 text-emerald-500" />
+                        <span className="text-[13px] font-bold">{success}</span>
+                      </motion.div>
                     )}
 
-                    <Button
-                      type="submit"
-                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 h-12 text-base font-semibold shadow-lg transition-all"
-                    >
-                      Đăng ký ngay
-                    </Button>
+                    <motion.div variants={itemVariants}>
+                      <Button
+                        type="submit"
+                        className="w-full h-15 bg-gradient-to-br from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-2xl shadow-emerald-500/20 rounded-[1.25rem]"
+                      >
+                        Đăng ký tài khoản
+                      </Button>
+                    </motion.div>
                   </form>
+                )}
+
+                {/* Unified Social/Toggle Footer */}
+                <motion.div variants={itemVariants} className="pt-4 space-y-6">
+                  <div className="relative flex items-center gap-4">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-[11px] font-[900] text-slate-400 uppercase tracking-widest whitespace-nowrap">Tiếp tục nhanh với</span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        type="button"
+                        onClick={() => loginWithGoogle()}
+                        variant="outline"
+                        className="w-full h-15 border-2 border-slate-100 bg-white hover:bg-slate-50 hover:border-slate-200 text-slate-700 rounded-2xl font-[800] transition-all flex items-center justify-center gap-4 shadow-sm group"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+                          <svg className="size-5" viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6.01c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z" />
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                          </svg>
+                        </div>
+                        Tài khoản Google
+                      </Button>
+                    </motion.div>
+
+                    <div className="text-center pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode(mode === "login" ? "register" : "login");
+                          setError("");
+                          setSuccess("");
+                        }}
+                        className="group py-2"
+                      >
+                        <span className="text-slate-400 font-bold text-sm">
+                          {mode === "login" ? "Khám phá lần đầu?" : "Bạn đã có tài khoản?"}
+                        </span>
+                        <span className="ml-2 text-emerald-600 group-hover:text-emerald-700 font-black text-sm underline-offset-8 decoration-2 underline">
+                          {mode === "login" ? "Tạo tài khoản ngay" : "Đăng nhập tại đây"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </motion.div>
-              )}
+              </motion.div>
             </AnimatePresence>
 
-            {/* Toggle between Login/Register */}
-            <div className="text-center mt-4">
-              {mode === "login" ? (
-                <p className="text-sm text-gray-600">
-                  Chưa có tài khoản?{" "}
-                  <button
-                    onClick={() => {
-                      setMode("register");
-                      setError("");
-                      setSuccess("");
-                    }}
-                    className="text-green-600 hover:text-green-700 font-semibold hover:underline"
-                  >
-                    Đăng ký ngay
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-gray-600">
-                  Đã có tài khoản?{" "}
-                  <button
-                    onClick={() => {
-                      setMode("login");
-                      setError("");
-                      setSuccess("");
-                    }}
-                    className="text-blue-600 hover:text-blue-700 font-semibold hover:underline"
-                  >
-                    Đăng nhập
-                  </button>
-                </p>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Hoặc</span>
-              </div>
-            </div>
-
-            {/* Social Login Buttons */}
-            <div className="space-y-3 mb-6">
-              <div className="w-full">
-                <Button
-                  type="button"
-                  onClick={() => loginWithGoogle()}
-                  variant="outline"
-                  className="w-full h-11 border-gray-300 hover:bg-gray-50 hover:border-gray-400 shadow-sm transition-all duration-200 flex items-center justify-center gap-3 rounded-xl bg-white"
-                >
-                  <svg className="size-5" viewBox="0 0 48 48">
-                    <path
-                      fill="#EA4335"
-                      d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6.01c4.51-4.18 7.09-10.36 7.09-17.65z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                    />
-                  </svg>
-                  <span className="text-gray-700 font-semibold">
-                    {mode === "login"
-                      ? "Đăng nhập bằng Google"
-                      : "Đăng ký bằng Google"}
-                  </span>
-                </Button>
-              </div>
-
-
-
-
-            </div>
-
-            <div className="mt-6 text-center">
-              <Button
-                variant="ghost"
+            {/* Footer Navigation */}
+            <div className="pt-4 flex justify-center border-t border-slate-100/50">
+              <button
                 onClick={() => navigate("/")}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-xs font-black text-slate-300 hover:text-slate-900 transition-all uppercase tracking-[0.2em] flex items-center gap-3 group"
               >
-                ← Quay về trang chủ
-              </Button>
+                <div className="w-10 h-px bg-slate-100 group-hover:w-16 group-hover:bg-slate-900 transition-all duration-500" />
+                Về trang chủ
+              </button>
             </div>
           </div>
         </motion.div>
@@ -636,3 +529,4 @@ export function LoginPage() {
     </div>
   );
 }
+

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -45,22 +46,15 @@ export function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/contacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const res = await api.post("/api/contacts", formData);
 
-      if (res.ok) {
+      if (res.status === 200 || res.status === 201) {
         setIsSubmitted(true);
         setFormData({
           name: "",
@@ -74,13 +68,10 @@ export function ContactPage() {
         setTimeout(() => {
           setIsSubmitted(false);
         }, 5000);
-      } else {
-        const data = await res.json();
-        setError(data.message || "Có lỗi xảy ra khi gửi tin nhắn.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Contact submission error:", err);
-      setError("Không thể kết nối tới máy chủ.");
+      setError(err.response?.data?.message || "Không thể kết nối tới máy chủ.");
     } finally {
       setIsSubmitting(false);
     }

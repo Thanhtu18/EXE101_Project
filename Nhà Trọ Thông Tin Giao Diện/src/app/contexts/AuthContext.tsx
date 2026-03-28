@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import api from "@/app/utils/api";
 import { toast } from "sonner";
 
 export interface User {
@@ -51,21 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-
   // Check for token on mount and fetch profile
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
       if (token && !user) {
         try {
-          const res = await fetch(`${API_BASE}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data);
-            localStorage.setItem("auth", JSON.stringify(data));
+          const res = await api.get("/api/auth/me");
+          if (res.status === 200) {
+            setUser(res.data);
+            localStorage.setItem("auth", JSON.stringify(res.data));
           } else {
             // Token expired or invalid
             localStorage.removeItem("token");
@@ -74,23 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (err) {
           console.error("Auth check failed:", err);
+          // If 401, interceptor already handles it, but we should clear local state too
+          localStorage.removeItem("token");
+          localStorage.removeItem("auth");
+          setUser(null);
         }
       }
     };
     checkAuth();
-  }, [API_BASE, user]);
+  }, [user]);
 
   const login = async (username: string, password: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernameOrEmail: username, password }),
-      });
-      const payload = await res.json();
-      if (!res.ok) {
-        return { success: false, message: payload?.message || "Đăng nhập thất bại" };
-      }
+      const res = await api.post("/api/auth/login", { usernameOrEmail: username, password });
+      const payload = res.data;
+      
       if (payload.user) {
         setUser(payload.user);
         localStorage.setItem("auth", JSON.stringify(payload.user));
@@ -99,8 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("token", payload.token);
       }
       return { success: true, role: payload.user?.role };
-    } catch (err) {
-      return { success: false, message: "Lỗi kết nối máy chủ" };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || "Lỗi kết nối máy chủ" };
     }
   };
 
@@ -110,15 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role?: string;
   }) => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tokens),
-      });
-      const payload = await res.json();
-      if (!res.ok) {
-        return { success: false, message: payload?.message || "Đăng nhập Google thất bại" };
-      }
+      const res = await api.post("/api/auth/google", tokens);
+      const payload = res.data;
+      
       if (payload.user) {
         setUser(payload.user);
         localStorage.setItem("auth", JSON.stringify(payload.user));
@@ -127,39 +115,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("token", payload.token);
       }
       return { success: true, role: payload.user?.role };
-    } catch (err) {
-      return { success: false, message: "Lỗi kết nối máy chủ" };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || "Lỗi kết nối máy chủ" };
     }
   };
 
   const register = async (data: RegisterData) => {
-
     try {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: data.username,
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword || data.password,
-          fullName: data.fullName,
-          phone: data.phone,
-          role: data.role,
-        }),
+      const res = await api.post("/api/auth/register", {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword || data.password,
+        fullName: data.fullName,
+        phone: data.phone,
+        role: data.role,
       });
-      const payload = await res.json();
-      if (!res.ok) {
-        return {
-          success: false,
-          message: payload?.message || "Đăng ký thất bại",
-        };
-      }
 
-      // No longer auto-login to follow user request
-      return { success: true };
+      if (res.status === 200 || res.status === 201) {
+        return { success: true };
+      }
+      return { success: false, message: "Đăng ký thất bại" };
     } catch (err: any) {
-      return { success: false, message: err?.message || "Lỗi kết nối máy chủ" };
+      return { success: false, message: err.response?.data?.message || "Lỗi kết nối máy chủ" };
     }
   };
 

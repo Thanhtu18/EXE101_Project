@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { RentalProperty } from '@/app/components/types';
 import { useProperties } from '@/app/contexts/PropertiesContext';
 import { X, Calendar, Clock, ShieldCheck, Award, CheckCircle } from 'lucide-react';
+import api from '@/app/utils/api';
 import { toast } from 'sonner';
 
 interface RequestVerificationDialogProps {
@@ -31,20 +32,19 @@ export function RequestVerificationDialog({
   const [pricing, setPricing] = useState({ basicVerification: 0, premiumVerification: 0 });
 
   // Fetch pricing on mount
-  useState(() => {
+  useEffect(() => {
     const fetchPricing = async () => {
       try {
-        const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-        const res = await fetch(`${API_BASE}/api/verifications/pricing`);
-        if (res.ok) {
-          setPricing(await res.json());
+        const res = await api.get("/api/verifications/pricing");
+        if (res.status === 200) {
+          setPricing(res.data);
         }
       } catch (err) {
         console.error("Failed to fetch verification pricing", err);
       }
     };
     fetchPricing();
-  });
+  }, []);
 
   // Filter properties belonging to this landlord
   const landlordProperties = properties.filter(
@@ -64,9 +64,6 @@ export function RequestVerificationDialog({
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
-      const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
-      
       const payload = {
         propertyId: property.id || property._id,
         propertyName: property.name,
@@ -79,26 +76,19 @@ export function RequestVerificationDialog({
         phone: landlordPhone,
       };
 
-      const res = await fetch(`${API_BASE}/api/verifications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      const res = await api.post("/api/verifications", payload);
 
-      if (!res.ok) {
+      if (res.status === 200 || res.status === 201) {
+        toast.success('Yêu cầu kiểm tra đã được gửi! ✅ Admin sẽ xem xét và liên hệ với bạn sớm.');
+        onClose();
+        // Reload is needed to show the new request in the dashboard
+        window.location.reload();
+      } else {
         throw new Error("Gửi yêu cầu thất bại");
       }
-
-      toast.success('Yêu cầu kiểm tra đã được gửi! ✅ Admin sẽ xem xét và liên hệ với bạn sớm.');
-      onClose();
-      // Reload is needed to show the new request in the dashboard
-      window.location.reload();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Có lỗi xảy ra. Không thể gửi yêu cầu. ❌');
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra. Không thể gửi yêu cầu. ❌');
     } finally {
       setIsSubmitting(false);
     }
