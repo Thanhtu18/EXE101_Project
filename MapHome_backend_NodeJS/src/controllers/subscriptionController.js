@@ -93,7 +93,7 @@ const getAvailablePlans = async (req, res) => {
     let plans = await SubscriptionPlan.find({ isActive: true });
     
     // Seed default plans if none exist (initial setup)
-    if (plans.length === 0) {
+    if (!plans || plans.length === 0) {
       const defaultPlans = [
         {
           planId: "free",
@@ -112,13 +112,14 @@ const getAvailablePlans = async (req, res) => {
           icon: "Home",
           cta: "Bắt đầu ngay",
           ctaVariant: "outline",
+          isActive: true
         },
         {
           planId: "basic",
           name: "Gói Basic",
           price: 50000,
           yearlyPrice: 480000,
-          description: "50.000đ/tháng GPS xác thực trong 50m.",
+          description: "GPS xác thực trong 50m.",
           features: [
             { text: "GPS xác thực trong 50m", included: true },
             { text: "Huy hiệu xanh (Tích xanh)", included: true },
@@ -131,6 +132,7 @@ const getAvailablePlans = async (req, res) => {
           badge: "Ổn định",
           badgeColor: "bg-blue-100 text-blue-700",
           ctaVariant: "secondary",
+          isActive: true
         },
         {
           planId: "standard",
@@ -151,6 +153,7 @@ const getAvailablePlans = async (req, res) => {
           cta: "Chọn Standard",
           ctaVariant: "default",
           highlighted: true,
+          isActive: true
         },
         {
           planId: "pro",
@@ -171,6 +174,7 @@ const getAvailablePlans = async (req, res) => {
           icon: "Rocket",
           cta: "Chọn Pro",
           ctaVariant: "default",
+          isActive: true
         },
       ];
       plans = await SubscriptionPlan.insertMany(defaultPlans);

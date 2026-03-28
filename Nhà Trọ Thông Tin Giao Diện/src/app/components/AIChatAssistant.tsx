@@ -76,43 +76,19 @@ export const AIChatAssistant: React.FC = () => {
         throw new Error(data.message || "Failed to get AI response");
       }
 
-      // Start processing the stream
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      
-      // Add a placeholder message for the assistant
+      const data = await response.json();
+      const answerText = data.answer || "Xin lỗi, tôi không thể trả lời lúc này.";
+
       setMessages((prev) => [
         ...prev,
         {
-          text: "",
+          text: answerText,
           role: "assistant",
           timestamp: new Date(),
         },
       ]);
 
-      setIsLoading(false); // Done thinking, now typing
-
-      let accumulatedText = "";
-      
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          accumulatedText += chunk;
-          
-          // Update the last message (the assistant's message) incrementally
-          setMessages((prev) => {
-            const newMsgs = [...prev];
-            const lastMsg = newMsgs[newMsgs.length - 1];
-            if (lastMsg && lastMsg.role === "assistant") {
-              lastMsg.text = accumulatedText;
-            }
-            return newMsgs;
-          });
-        }
-      }
+      setIsLoading(false);
 
     } catch (error) {
       console.error("AI Chat Error:", error);

@@ -301,17 +301,13 @@ const searchProperties = async (req, res) => {
     if (amenities) {
       const amenityList = Array.isArray(amenities) ? amenities : amenities.split(",");
       amenityList.forEach((a) => {
-        const key = a.toLowerCase().trim();
-        // Mapping common names to schema keys
-        if (key.includes("wifi")) query["amenities.wifi"] = true;
-        if (key.includes("điều hòa") || key.includes("air")) query["amenities.airConditioner"] = true;
-        if (key.includes("máy giặt") || key.includes("wash")) query["amenities.washingMachine"] = true;
-        if (key.includes("bếp") || key.includes("kitchen")) query["amenities.kitchen"] = true;
-        if (key.includes("tủ lạnh") || key.includes("refrigerator")) query["amenities.refrigerator"] = true;
-        if (key.includes("nội thất") || key.includes("furniture")) query["amenities.furniture"] = true;
-        if (key.includes("tv")) query["amenities.tv"] = true;
+        const key = a.split(":")[0]?.trim(); // Handle key or key:value format
+        if (key) {
+          query[`amenities.${key}`] = true;
+        }
       });
     }
+    
 
     const skip = (Number(page) - 1) * Number(limit);
     const properties = await Property.find(query)

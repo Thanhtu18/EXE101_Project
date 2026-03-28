@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
 import { useNavigate } from "react-router-dom";
 
 export function SettingsView() {
@@ -404,6 +405,7 @@ export function SettingsView() {
                         {!editingPlan && (
                             <div className="flex gap-2">
                                 <Button 
+                                    type="button"
                                     variant="outline"
                                     onClick={handleResetPlans}
                                     disabled={saving}
@@ -412,6 +414,7 @@ export function SettingsView() {
                                     <RotateCcw className="size-4 mr-2" /> Đặt lại gói mẫu
                                 </Button>
                                 <Button 
+                                    type="button"
                                     onClick={() => {
                                         setIsCreating(true);
                                         setEditingPlan({
@@ -443,7 +446,7 @@ export function SettingsView() {
                                     <Edit2 className="size-4 text-[#16a34a]" /> 
                                     {isCreating ? "Tạo gói dịch vụ mới" : `Đang chỉnh sửa: ${editingPlan.name}`}
                                 </h4>
-                                <Button variant="ghost" size="sm" onClick={() => { setEditingPlan(null); setIsCreating(false); }}>Hủy</Button>
+                                <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingPlan(null); setIsCreating(false); }}>Hủy</Button>
                             </div>
 
                             <div className="grid grid-cols-2 gap-6">
@@ -465,6 +468,7 @@ export function SettingsView() {
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="text-[11px] font-bold text-gray-400 uppercase">Danh sách Lợi ích</label>
                                         <Button 
+                                            type="button"
                                             variant="outline" 
                                             size="sm" 
                                             className="h-7 text-[10px] px-2"
@@ -517,8 +521,9 @@ export function SettingsView() {
                             </div>
                             
                             <div className="pt-4 flex justify-end gap-3">
-                                <Button variant="outline" onClick={() => { setEditingPlan(null); setIsCreating(false); }}>Bỏ qua</Button>
+                                <Button type="button" variant="outline" onClick={() => { setEditingPlan(null); setIsCreating(false); }}>Bỏ qua</Button>
                                 <Button 
+                                    type="button"
                                     onClick={isCreating ? handleCreatePlan : handleUpdatePlan} 
                                     disabled={saving} 
                                     className="bg-[#16a34a] text-white hover:bg-[#15803d] shadow-lg shadow-green-100"
@@ -576,9 +581,14 @@ export function SettingsView() {
                             <div className="relative group">
                                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-3xl font-bold">
                                     {user?.avatar ? (
-                                        <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                        <img 
+                                          src={getAvatarUrl(user.avatar) || ""} 
+                                          alt="Avatar" 
+                                          className="w-full h-full object-cover" 
+                                          style={{ imageRendering: "-webkit-optimize-contrast" }}
+                                        />
                                     ) : (
-                                        (user?.fullName || user?.username || "A").charAt(0).toUpperCase()
+                                        getInitials(user?.fullName, user?.username)
                                     )}
                                 </div>
                                 <label className="absolute bottom-0 right-0 p-2 bg-[#16a34a] text-white rounded-full shadow-lg cursor-pointer hover:bg-[#15803d] transition-all transform hover:scale-110">
