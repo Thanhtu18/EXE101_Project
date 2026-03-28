@@ -13,6 +13,7 @@ import { Calendar } from '@/app/components/ui/calendar';
 import { Input } from '@/app/components/ui/input';
 import { RentalProperty } from './types';
 import { Calendar as CalendarIcon, Clock, User, Phone, MessageSquare, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface BookingDialogProps {
   open: boolean;
@@ -46,14 +47,14 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
     e.preventDefault();
     
     if (!selectedDate || !selectedTime) {
-      alert('Vui lòng chọn ngày và giờ xem nhà');
+      toast.warning('Vui lòng chọn ngày và giờ xem nhà');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Vui lòng đăng nhập để đặt lịch!');
+        toast.error('Vui lòng đăng nhập để đặt lịch!');
         return;
       }
 
@@ -93,7 +94,7 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
       }, 1500);
 
     } catch (err: any) {
-      alert(err.message || 'Lỗi đặt lịch');
+      toast.error(err.message || 'Lỗi đặt lịch. ❌');
     }
   };
 

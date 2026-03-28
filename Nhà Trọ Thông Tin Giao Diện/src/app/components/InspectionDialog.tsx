@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/app/components/ui/button';
 import { Label } from '@/app/components/ui/label';
 import { VerificationRequest, GreenBadgeLevel } from '@/app/components/types';
@@ -23,7 +24,7 @@ export function InspectionDialog({ isOpen, onClose, request }: InspectionDialogP
     if (!isApproved) {
       // Reject
       completeInspection(requestId, 'none', notes || 'Không đạt yêu cầu kiểm tra');
-      alert('❌ Đã từ chối yêu cầu');
+      toast.error('Đã từ chối yêu cầu! ❌');
       onClose();
       return;
     }
@@ -40,12 +41,14 @@ export function InspectionDialog({ isOpen, onClose, request }: InspectionDialogP
     updateProperty(propId, { greenBadge });
     completeInspection(requestId, 'verified', notes);
 
-    alert(
-      `✅ Đã hoàn thành kiểm tra!\n\n` +
-      `🏆 Cấp Tích Xanh: ĐÃ XÁC THỰC\n` +
-      `📍 Căn trọ: ${request.propertyName}\n` +
-      `👤 Chủ trọ: ${request.landlordName}\n\n` +
-      `Tích xanh đã được cập nhật và hiển thị trên tin đăng & bản đồ!`
+    toast.success(
+      <div className="flex flex-col gap-1">
+        <p className="font-bold">Đã hoàn tất kiểm tra! ✅</p>
+        <p className="text-xs">🏆 Cấp Tích Xanh: ĐÃ XÁC THỰC</p>
+        <p className="text-xs">📍 Căn trọ: {request.propertyName}</p>
+        <p className="text-xs text-gray-500 mt-1 italic">Tích xanh đã được hiển thị trên tin đăng & bản đồ!</p>
+      </div>,
+      { duration: 5000 }
     );
     onClose();
   };

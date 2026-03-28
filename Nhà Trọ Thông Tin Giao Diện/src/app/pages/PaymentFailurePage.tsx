@@ -21,6 +21,7 @@ import {
   Phone,
   HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const failureReasons = [
   { id: "declined", label: "Thẻ bị từ chối", icon: CreditCard },
@@ -76,7 +77,7 @@ export function PaymentFailurePage() {
 
   const handleChangePaymentMethod = () => {
     // In real app, show payment method selector
-    alert(
+    toast.info(
       "🔄 Chuyển đến trang chọn phương thức thanh toán...\n\nDemo: Bạn có thể chọn VNPay, MoMo, ZaloPay, v.v.",
     );
     handleRetry();

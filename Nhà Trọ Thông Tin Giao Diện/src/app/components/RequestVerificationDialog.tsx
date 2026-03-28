@@ -5,6 +5,7 @@ import { Label } from '@/app/components/ui/label';
 import { RentalProperty } from '@/app/components/types';
 import { useProperties } from '@/app/contexts/PropertiesContext';
 import { X, Calendar, Clock, ShieldCheck, Award, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface RequestVerificationDialogProps {
   isOpen: boolean;
@@ -27,6 +28,23 @@ export function RequestVerificationDialog({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('09:00');
   const [notes, setNotes] = useState('');
+  const [pricing, setPricing] = useState({ basicVerification: 0, premiumVerification: 0 });
+
+  // Fetch pricing on mount
+  useState(() => {
+    const fetchPricing = async () => {
+      try {
+        const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+        const res = await fetch(`${API_BASE}/api/verifications/pricing`);
+        if (res.ok) {
+          setPricing(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to fetch verification pricing", err);
+      }
+    };
+    fetchPricing();
+  });
 
   // Filter properties belonging to this landlord
   const landlordProperties = properties.filter(
@@ -37,7 +55,7 @@ export function RequestVerificationDialog({
     e.preventDefault();
     
     if (!selectedPropertyId || !scheduledDate) {
-      alert('Vui lòng chọn căn trọ và ngày hẹn');
+      toast.warning('Vui lòng chọn căn trọ và ngày hẹn');
       return;
     }
 
@@ -74,13 +92,13 @@ export function RequestVerificationDialog({
         throw new Error("Gửi yêu cầu thất bại");
       }
 
-      alert('✅ Yêu cầu kiểm tra đã được gửi!\n\nAdmin sẽ xem xét và liên hệ với bạn sớm.');
+      toast.success('Yêu cầu kiểm tra đã được gửi! ✅ Admin sẽ xem xét và liên hệ với bạn sớm.');
       onClose();
       // Reload is needed to show the new request in the dashboard
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert('❌ Có lỗi xảy ra. Không thể gửi yêu cầu.');
+      toast.error('Có lỗi xảy ra. Không thể gửi yêu cầu. ❌');
     } finally {
       setIsSubmitting(false);
     }
@@ -240,6 +258,10 @@ export function RequestVerificationDialog({
               <li className="flex items-start gap-2">
                 <span className="flex-shrink-0 bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold">4</span>
                 <span>Cấp Tích Xanh (Basic/Premium/Platinum) nếu đạt</span>
+              </li>
+              <li className="flex items-start gap-2 pt-2 border-t border-blue-100 mt-2">
+                < Award className="size-4 text-blue-600 flex-shrink-0" />
+                <span className="font-bold">Chi phí: {pricing.basicVerification.toLocaleString()}đ / lần kiểm tra</span>
               </li>
             </ol>
           </div>

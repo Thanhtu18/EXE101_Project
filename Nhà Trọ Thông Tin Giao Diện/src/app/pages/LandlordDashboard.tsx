@@ -32,6 +32,7 @@ import {
   LayoutDashboard,
   Settings,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Active tab type
 type DashboardTab =
@@ -440,7 +441,7 @@ export function LandlordDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          alert(
+                          toast.info(
                             `Chức năng sửa tin #${post.id} sẽ có trong phiên bản sau`,
                           )
                         }
@@ -458,7 +459,7 @@ export function LandlordDashboard() {
                             `Bạn có chắc muốn xóa tin đăng "${post.name}"?`,
                           )
                         ) {
-                          alert(`Chức năng xóa tin sẽ có trong phiên bản sau`);
+                          toast.info(`Chức năng xóa tin sẽ có trong phiên bản sau`);
                         }
                       }}
                     >

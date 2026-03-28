@@ -7,6 +7,7 @@ const {
   rejectVerification,
   completeVerification,
   getAllUsers,
+  getUserDetail,
   toggleUserStatus,
   deleteUser,
   getAllLandlords,
@@ -22,6 +23,16 @@ const {
   getWeeklySearchStats,
   broadcastNotification,
 } = require("../controllers/adminController");
+const {
+  updateSubscriptionPlan,
+  createSubscriptionPlan,
+  deleteSubscriptionPlan,
+  resetSubscriptionPlans,
+} = require("../controllers/subscriptionController");
+const {
+  getSettings,
+  updateSettings,
+} = require("../controllers/settingController");
 const {
   authMiddleware,
   requireAnyRole,
@@ -50,6 +61,7 @@ router.get("/stats/weekly-search", getWeeklySearchStats);
 
 // User Management
 router.get("/users", getAllUsers);
+router.get("/users/:id", getUserDetail);
 router.put("/users/:id/status", toggleUserStatus);
 router.delete("/users/:id", deleteUser);
 
@@ -71,6 +83,16 @@ router.delete("/bookings/:id", deleteBooking);
 // Review Management
 router.get("/reviews", getAllReviews);
 router.delete("/reviews/:id", deleteReview);
+
+// System Settings Management
+router.get("/settings", getSettings);
+router.put("/settings", updateSettings);
+
+// Subscription Plan Management
+router.post("/subscriptions/plans", createSubscriptionPlan);
+router.put("/subscriptions/plans/:id", updateSubscriptionPlan);
+router.delete("/subscriptions/plans/:id", deleteSubscriptionPlan);
+router.post("/subscriptions/reset", resetSubscriptionPlans);
 
 /**
  * @swagger

@@ -168,10 +168,10 @@ export function Navbar() {
                     onClick={handleUserAction}
                   >
                     {user?.role === "admin"
-                      ? "Admin"
+                      ? "Quản trị"
                       : user?.role === "landlord"
-                        ? "Quản lý"
-                        : "Tài khoản"}
+                        ? "Kênh Chủ nhà"
+                        : "Người thuê"}
                   </Button>
                   <Button
                     variant="ghost"

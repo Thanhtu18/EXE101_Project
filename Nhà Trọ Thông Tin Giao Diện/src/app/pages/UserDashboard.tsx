@@ -28,10 +28,15 @@ import {
   MessageCircle,
   Navigation,
   ShieldCheck,
+  Settings,
+  Camera,
+  Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 
 
-type UserView = "favorites" | "search" | "appointments" | "inspections" | "book";
+// Define available views for the user dashboard
+type UserView = "favorites" | "search" | "appointments" | "inspections" | "book" | "settings";
 
 
 export function UserDashboard() {
@@ -122,22 +127,29 @@ export function UserDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="hidden md:block text-right">
-              <p className="text-sm font-bold text-gray-900 leading-none mb-1">
-                {user?.fullName || user?.username}
-              </p>
-              <p className="text-[10px] text-green-600 font-bold uppercase tracking-tighter bg-green-50 px-2 py-0.5 rounded-full inline-block">
-                Standard Member
-              </p>
-            </div>
-            <div className="h-8 w-[1px] bg-gray-200 hidden md:block" />
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={handleLogout} size="sm" className="text-gray-500 hover:text-red-600 transition-colors rounded-full">
-                <LogOut className="size-4 mr-2" />
-                Đăng xuất
-              </Button>
-            </div>
+              <div className="flex items-center gap-3">
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-bold text-gray-900 leading-none mb-1">
+                    {user?.fullName || user?.username}
+                  </p>
+                  <p className="text-[10px] text-green-600 font-bold uppercase tracking-tighter bg-green-50 px-2 py-0.5 rounded-full inline-block">
+                    Standard Member
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    (user?.fullName || user?.username || "U").charAt(0).toUpperCase()
+                  )}
+                </div>
+              </div>
+              <div className="h-8 w-[1px] bg-gray-200 hidden md:block mx-4" />
+              <Button variant="ghost" onClick={handleLogout} size="sm" className="text-gray-500 hover:text-red-600 transition-colors rounded-full px-4">
+              <LogOut className="size-4 mr-2" />
+              Đăng xuất
+            </Button>
           </div>
         </div>
       </header>
@@ -199,6 +211,7 @@ export function UserDashboard() {
             { id: "search", label: "Tìm kiếm thông minh", icon: Search },
             { id: "appointments", label: "Lịch hẹn của tôi", icon: Calendar },
             { id: "inspections", label: "Yêu cầu kiểm tra", icon: ShieldCheck },
+            { id: "settings", label: "Cài đặt", icon: Settings },
           ].map((tab) => (
             <motion.button
               key={tab.id}
@@ -235,6 +248,7 @@ export function UserDashboard() {
             setInspections={setInspections}
           />
         )}
+        {activeView === "settings" && <SettingsView />}
 
       </motion.main>
     </div>
@@ -293,6 +307,7 @@ function FavoritesView({
         
         if (res.ok) {
           setFavorites(favorites.filter((f) => f._id !== propertyId));
+          toast.success("Đã xóa khỏi danh sách yêu thích! ✨");
         }
       } catch (err) {
         console.error("Failed to untoggle favorite:", err);
@@ -721,6 +736,7 @@ function AppointmentsView({
               a._id === id ? { ...a, status: "cancelled" } : a,
             ),
           );
+          toast.success("Đã hủy lịch hẹn thành công! ✅");
         }
       } catch (err) {
         console.error("Failed to cancel booking:", err);
@@ -980,6 +996,7 @@ function InspectionsView({
               i._id === id ? { ...i, status: "cancelled" } : i,
             ),
           );
+          toast.success("Đã hủy yêu cầu kiểm tra! 🛡️");
         }
       } catch (err) {
         console.error("Failed to cancel inspection:", err);
@@ -1118,6 +1135,258 @@ function InspectionsView({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * SettingsView component for managing user profile and security
+ * Allows updating personal info and changing password
+ */
+function SettingsView() {
+  const { user, logout, updateUser } = useAuth();
+  const navigate = useNavigate();
+  const API_BASE = (import.meta as any).env?.VITE_API_BASE || "http://localhost:5000";
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center md:text-left mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Cài đặt tài khoản</h2>
+        <p className="text-gray-600">Quản lý thông tin cá nhân và bảo mật của bạn</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Profile Information Section */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white/60 backdrop-blur-md rounded-2xl p-8 border border-white/50 shadow-xl"
+        >
+          <h3 className="font-black text-xl text-gray-900 mb-6 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-50 text-green-600">
+              <User className="size-5" />
+            </div>
+            Thông tin cá nhân
+          </h3>
+          
+          <form 
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const target = e.target as any;
+              const fullName = target.fullName.value;
+              const phone = target.phone.value;
+              const token = localStorage.getItem("token");
+              
+              try {
+                // Update user profile information via backend API
+                const res = await fetch(`${API_BASE}/api/user/${user?.id}`, {
+                  method: "PUT",
+                  headers: { 
+                    "Content-Type": "application/json", 
+                    Authorization: `Bearer ${token}` 
+                  },
+                  body: JSON.stringify({ fullName, phone })
+                });
+
+                if (res.ok) {
+                  toast.success("Cập nhật thông tin thành công! ✨");
+                  setTimeout(() => window.location.reload(), 1000);
+                } else {
+                  const data = await res.json();
+                  toast.error(data.message || "Cập nhật thất bại. ❌");
+                }
+              } catch (err) {
+                console.error("Profile update error:", err);
+                toast.error("Lỗi cập nhật thông tin. ❌");
+              }
+            }} 
+            className="space-y-5"
+          >
+            {/* Avatar Upload Section */}
+            <div className="flex flex-col items-center gap-4 py-4 border-b border-gray-100 mb-6">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    (user?.fullName || user?.username || "U").charAt(0).toUpperCase()
+                  )}
+                </div>
+                <label className="absolute bottom-0 right-0 p-2 bg-green-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-green-700 transition-all transform hover:scale-110">
+                  <Camera className="size-4" />
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      const formData = new FormData();
+                      formData.append("image", file);
+                      const token = localStorage.getItem("token");
+                      
+                      try {
+                        // 1. Upload image to get URL
+                        const uploadRes = await fetch(`${API_BASE}/api/upload/single`, {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${token}` },
+                          body: formData
+                        });
+                        
+                        if (uploadRes.ok) {
+                          const { url } = await uploadRes.json();
+                          // 2. Update user profile with new avatar URL
+                          const updateRes = await fetch(`${API_BASE}/api/user/${user?.id}`, {
+                            method: "PUT",
+                            headers: { 
+                              "Content-Type": "application/json", 
+                              Authorization: `Bearer ${token}` 
+                            },
+                            body: JSON.stringify({ avatar: url })
+                          });
+                          
+                          if (updateRes.ok) {
+                            const updatedUser = await updateRes.json();
+                            updateUser(updatedUser);
+                            toast.success("Đổi ảnh đại diện thành công! ✨");
+                            setTimeout(() => window.location.reload(), 1000);
+                          }
+                        }
+                      } catch (err) {
+                        console.error("Avatar upload error:", err);
+                        toast.error("Lỗi khi tải ảnh lên. ❌");
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Nhấp vào icon để đổi ảnh</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Họ và tên</label>
+              <Input 
+                name="fullName" 
+                defaultValue={user?.fullName || user?.username} 
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
+                required 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Số điện thoại</label>
+              <Input 
+                name="phone" 
+                defaultValue={user?.phone || ""} 
+                placeholder="Nhập số điện thoại của bạn"
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
+                required 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Email (Read-only)</label>
+              <Input 
+                disabled 
+                value={user?.email || ""} 
+                className="rounded-xl border-gray-100 bg-gray-50 text-gray-400 h-12 cursor-not-allowed" 
+              />
+            </div>
+
+            <Button type="submit" className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:shadow-lg hover:shadow-green-500/20 text-white font-bold h-12 rounded-xl mt-4 transition-all">
+              Lưu thay đổi
+            </Button>
+          </form>
+        </motion.div>
+
+        {/* Security / Password Change Section */}
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/60 backdrop-blur-md rounded-2xl p-8 border border-white/50 shadow-xl"
+        >
+          <h3 className="font-black text-xl text-gray-900 mb-6 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
+              <ShieldCheck className="size-5" />
+            </div>
+            Bảo mật & Mật khẩu
+          </h3>
+          
+          <form 
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const target = e.target as any;
+              const currentPassword = target.currentPassword.value;
+              const newPassword = target.newPassword.value;
+              const token = localStorage.getItem("token");
+              
+              try {
+                // Change user password via authentication API
+                const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+                  method: "PUT",
+                  headers: { 
+                    "Content-Type": "application/json", 
+                    Authorization: `Bearer ${token}` 
+                  },
+                  body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                if (res.ok) {
+                  toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại. 🔐");
+                  setTimeout(() => {
+                    logout();
+                    navigate("/login");
+                  }, 2000);
+                } else {
+                  const data = await res.json();
+                  toast.error(data.message || "Mật khẩu hiện tại không chính xác. ❌");
+                }
+              } catch (err) {
+                console.error("Password change error:", err);
+                toast.error("Lỗi đổi mật khẩu. ❌");
+              }
+            }} 
+            className="space-y-5"
+          >
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Mật khẩu hiện tại</label>
+              <Input 
+                type="password" 
+                name="currentPassword" 
+                placeholder="••••••••" 
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
+                required 
+                minLength={6} 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Mật khẩu mới</label>
+              <Input 
+                type="password" 
+                name="newPassword" 
+                placeholder="••••••••" 
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
+                required 
+                minLength={6} 
+              />
+            </div>
+
+            <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
+              <p className="text-[10px] text-orange-800 leading-relaxed">
+                <AlertCircle className="size-3 inline mr-1 mb-0.5" />
+                <strong>Lưu ý:</strong> Sau khi đổi mật khẩu thành công, bạn sẽ bị đăng xuất khỏi hệ thống để đảm bảo an toàn bảo mật.
+              </p>
+            </div>
+
+            <Button type="submit" className="w-full bg-gray-900 hover:bg-black text-white font-bold h-12 rounded-xl mt-4 transition-all shadow-lg">
+              Đổi mật khẩu
+            </Button>
+          </form>
+        </motion.div>
+      </div>
     </div>
   );
 }
