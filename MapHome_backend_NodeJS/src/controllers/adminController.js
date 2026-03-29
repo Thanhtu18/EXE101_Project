@@ -381,11 +381,34 @@ const getRevenueStats = async (req, res) => {
       { $sort: { "_id.year": 1, "_id.month": 1 } }
     ]);
 
+    // Calculate revenue change percentage
+    let revenueChange = "+0.0%";
+    if (monthlyTrends.length >= 2) {
+      const currentMonth = monthlyTrends[monthlyTrends.length - 1].revenue;
+      const prevMonth = monthlyTrends[monthlyTrends.length - 2].revenue;
+      if (prevMonth > 0) {
+        const change = ((currentMonth - prevMonth) / prevMonth) * 100;
+        revenueChange = (change >= 0 ? "+" : "") + change.toFixed(1) + "%";
+      } else if (currentMonth > 0) {
+        revenueChange = "+100%";
+      }
+    }
+
+    // Pending transactions count
+    const pendingCount = await VerificationRequest.countDocuments({ status: "pending" });
+
+    // Simulate "Chi phí Maps API" based on total properties
+    const totalProperties = await Property.countDocuments();
+    const mapsApiCost = totalProperties * 5000; // 5k VND/property as a simulation factor
+
     res.status(200).json({
       totalRevenue,
       revenueByPackage,
       latestTransactions,
       monthlyTrends,
+      revenueChange,
+      pendingCount,
+      mapsApiCost,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

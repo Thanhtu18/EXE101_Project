@@ -106,28 +106,28 @@ export function RevenueView() {
           icon="💰"
           label="Tổng doanh thu"
           value={(stats?.totalRevenue || 0).toLocaleString() + "đ"}
-          change="+15.2%"
+          change={stats?.revenueChange || "+0.0%"}
           color="emerald"
         />
         <RevenueKPICard
           icon="📈"
           label="Lợi nhuận ròng"
           value={(stats?.totalRevenue || 0).toLocaleString() + "đ"}
-          change="+8.4%"
+          change={stats?.revenueChange || "+0.0%"}
           color="blue"
         />
         <RevenueKPICard
           icon="🗺️"
           label="Chi phí Maps API"
-          value="0đ"
-          change="Tốt"
+          value={(stats?.mapsApiCost || 0).toLocaleString() + "đ"}
+          change={stats?.mapsApiCost > 0 ? "Phí tích lũy" : "Tối ưu"}
           color="amber"
         />
         <RevenueKPICard
           icon="⏳"
           label="Chờ xử lý"
-          value="0 GD"
-          change="Nhanh"
+          value={(stats?.pendingCount || 0).toLocaleString() + " GD"}
+          change={stats?.pendingCount > 0 ? "Cần xử lý" : "Nhanh"}
           color="rose"
         />
       </div>
@@ -222,7 +222,7 @@ export function RevenueView() {
                 <div className="w-px h-8 bg-slate-100" />
                 <div>
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tăng trưởng</p>
-                   <p className="text-lg font-black text-emerald-600">+24.5%</p>
+                   <p className="text-lg font-black text-emerald-600">{stats?.revenueChange || "+0.0%"}</p>
                 </div>
              </div>
              <button className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl text-[11px] font-black hover:bg-emerald-100 transition-colors">

@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { getAvatarUrl, getInitials, getImageUrl } from "@/app/utils/avatarUtils";
+import {
+  getAvatarUrl,
+  getInitials,
+  getImageUrl,
+} from "@/app/utils/avatarUtils";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -40,11 +44,23 @@ import {
 import { toast } from "sonner";
 import { amenityMeta } from "@/app/constants/amenities";
 import api from "@/app/utils/api";
-
+import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 
 // Define available views for the user dashboard
-type UserView = "favorites" | "search" | "appointments" | "inspections" | "book" | "settings";
+type UserView =
+  | "favorites"
+  | "search"
+  | "appointments"
+  | "inspections"
+  | "book"
+  | "settings";
 
+interface ConfirmModalState {
+  open: boolean;
+  title?: string;
+  description?: string;
+  onConfirm?: () => Promise<void> | void;
+}
 
 export function UserDashboard() {
   const navigate = useNavigate();
@@ -54,11 +70,14 @@ export function UserDashboard() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+    open: false,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated) return;
-      
+
       try {
         const [favRes, bookRes, inspRes] = await Promise.all([
           api.get("/api/user/me/favorites"),
@@ -69,7 +88,6 @@ export function UserDashboard() {
         setFavorites(favRes.data);
         setAppointments(bookRes.data);
         setInspections(inspRes.data);
-
       } catch (err) {
         console.error("Failed to fetch user dashboard data:", err);
       } finally {
@@ -94,12 +112,16 @@ export function UserDashboard() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600 font-medium">Đang tải dữ liệu của bạn...</p>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">
+            Đang tải dữ liệu của bạn...
+          </p>
+        </div>
       </div>
-    </div>;
+    );
   }
 
   return (
@@ -116,37 +138,46 @@ export function UserDashboard() {
                 <Home className="size-6" />
               </div>
               <div>
-                <h1 className="font-bold text-xl text-gray-900 tracking-tight">MapHome</h1>
-                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">User Console</p>
+                <h1 className="font-bold text-xl text-gray-900 tracking-tight">
+                  MapHome
+                </h1>
+                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                  User Console
+                </p>
               </div>
             </div>
           </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-3">
-                <div className="hidden md:block text-right">
-                  <p className="text-sm font-bold text-gray-900 leading-none mb-1">
-                    {user?.fullName || user?.username}
-                  </p>
-                  <p className="text-[10px] text-green-600 font-bold uppercase tracking-tighter bg-green-50 px-2 py-0.5 rounded-full inline-block">
-                    Standard Member
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white font-bold shrink-0">
-                  {user?.avatar ? (
-                    <img 
-                      src={getAvatarUrl(user.avatar) || ""} 
-                      alt="Avatar" 
-                      className="w-full h-full object-cover" 
-                      style={{ imageRendering: "-webkit-optimize-contrast" }}
-                    />
-                  ) : (
-                    getInitials(user?.fullName, user?.username)
-                  )}
-                </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-bold text-gray-900 leading-none mb-1">
+                  {user?.fullName || user?.username}
+                </p>
+                <p className="text-[10px] text-green-600 font-bold uppercase tracking-tighter bg-green-50 px-2 py-0.5 rounded-full inline-block">
+                  Standard Member
+                </p>
               </div>
-              <div className="h-8 w-[1px] bg-gray-200 hidden md:block mx-4" />
-              <Button variant="ghost" onClick={handleLogout} size="sm" className="text-gray-500 hover:text-red-600 transition-colors rounded-full px-4">
+              <div className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white font-bold shrink-0">
+                {user?.avatar ? (
+                  <img
+                    src={getAvatarUrl(user.avatar) || ""}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                    style={{ imageRendering: "-webkit-optimize-contrast" }}
+                  />
+                ) : (
+                  getInitials(user?.fullName, user?.username)
+                )}
+              </div>
+            </div>
+            <div className="h-8 w-[1px] bg-gray-200 hidden md:block mx-4" />
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              size="sm"
+              className="text-gray-500 hover:text-red-600 transition-colors rounded-full px-4"
+            >
               <LogOut className="size-4 mr-2" />
               Đăng xuất
             </Button>
@@ -155,7 +186,7 @@ export function UserDashboard() {
       </header>
 
       {/* Main Content */}
-      <motion.main 
+      <motion.main
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -163,14 +194,14 @@ export function UserDashboard() {
       >
         {/* Welcome Section */}
         <div className="mb-10 text-center md:text-left">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight"
           >
             Xin chào, {user?.fullName || user?.username}! 👋
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
@@ -183,10 +214,35 @@ export function UserDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
           {[
-            { label: "Trọ yêu thích", value: favorites.length, icon: Heart, color: "text-red-500", bg: "bg-red-50" },
-            { label: "Lịch hẹn", value: appointments.length, icon: Calendar, color: "text-blue-500", bg: "bg-blue-50" },
-            { label: "Chờ xác nhận", value: appointments.filter((a) => a.status === "pending").length, icon: Clock, color: "text-orange-500", bg: "bg-orange-50" },
-            { label: "Đã hoàn thành", value: appointments.filter((a) => a.status === "completed").length, icon: CheckCircle, color: "text-green-500", bg: "bg-green-50" },
+            {
+              label: "Trọ yêu thích",
+              value: favorites.length,
+              icon: Heart,
+              color: "text-red-500",
+              bg: "bg-red-50",
+            },
+            {
+              label: "Lịch hẹn",
+              value: appointments.length,
+              icon: Calendar,
+              color: "text-blue-500",
+              bg: "bg-blue-50",
+            },
+            {
+              label: "Chờ xác nhận",
+              value: appointments.filter((a) => a.status === "pending").length,
+              icon: Clock,
+              color: "text-orange-500",
+              bg: "bg-orange-50",
+            },
+            {
+              label: "Đã hoàn thành",
+              value: appointments.filter((a) => a.status === "completed")
+                .length,
+              icon: CheckCircle,
+              color: "text-green-500",
+              bg: "bg-green-50",
+            },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -198,8 +254,12 @@ export function UserDashboard() {
                   <stat.icon className="size-5" />
                 </div>
               </div>
-              <p className="text-3xl font-black text-indigo-600 mb-1">{stat.value}</p>
-              <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-widest leading-none">{stat.label}</p>
+              <p className="text-3xl font-black text-indigo-600 mb-1">
+                {stat.value}
+              </p>
+              <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-widest leading-none">
+                {stat.label}
+              </p>
             </motion.div>
           ))}
         </div>
@@ -233,7 +293,9 @@ export function UserDashboard() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <tab.icon className={`size-4 ${isActive ? "text-white" : ""}`} />
+                <tab.icon
+                  className={`size-4 ${isActive ? "text-white" : ""}`}
+                />
                 {tab.label}
               </motion.button>
             );
@@ -250,26 +312,43 @@ export function UserDashboard() {
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
             {activeView === "favorites" && (
-              <FavoritesView favorites={favorites} setFavorites={setFavorites} />
+              <FavoritesView
+                favorites={favorites}
+                setFavorites={setFavorites}
+                setConfirmModal={setConfirmModal}
+              />
             )}
             {activeView === "search" && <SearchView />}
             {activeView === "appointments" && (
               <AppointmentsView
                 appointments={appointments}
                 setAppointments={setAppointments}
+                setConfirmModal={setConfirmModal}
               />
             )}
             {activeView === "inspections" && (
               <InspectionsView
                 inspections={inspections}
                 setInspections={setInspections}
+                setConfirmModal={setConfirmModal}
               />
             )}
             {activeView === "settings" && <SettingsView />}
           </motion.div>
         </AnimatePresence>
-
       </motion.main>
+      <ConfirmDialog
+        open={confirmModal.open}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText="Xác nhận"
+        cancelText="Huỷ"
+        onConfirm={async () => {
+          await confirmModal.onConfirm?.();
+          setConfirmModal({ open: false });
+        }}
+        onCancel={() => setConfirmModal({ open: false })}
+      />
     </div>
   );
 }
@@ -305,24 +384,32 @@ function TabButton({
 function FavoritesView({
   favorites,
   setFavorites,
+  setConfirmModal,
 }: {
   favorites: any[];
   setFavorites: (favorites: any[]) => void;
+  setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;
 }) {
-
   const handleRemoveFavorite = async (propertyId: string) => {
-    if (confirm("Bạn có chắc muốn xóa khỏi danh sách yêu thích?")) {
-      try {
-        const res = await api.post("/api/user/me/favorites/toggle", { propertyId });
-        
-        if (res.status === 200 || res.status === 201) {
-          setFavorites(favorites.filter((f) => f._id !== propertyId));
-          toast.success("Đã xóa khỏi danh sách yêu thích! ✨");
+    setConfirmModal({
+      open: true,
+      title: "Xoá khỏi yêu thích",
+      description: "Bạn có chắc muốn xóa khỏi danh sách yêu thích?",
+      onConfirm: async () => {
+        try {
+          const res = await api.post("/api/user/me/favorites/toggle", {
+            propertyId,
+          });
+
+          if (res.status === 200 || res.status === 201) {
+            setFavorites(favorites.filter((f) => f._id !== propertyId));
+            toast.success("Đã xóa khỏi danh sách yêu thích! ✨");
+          }
+        } catch (err) {
+          console.error("Failed to untoggle favorite:", err);
         }
-      } catch (err) {
-        console.error("Failed to untoggle favorite:", err);
-      }
-    }
+      },
+    });
   };
 
   const navigate = useNavigate();
@@ -362,15 +449,15 @@ function FavoritesView({
         </Button>
       </div>
 
-      <motion.div 
+      <motion.div
         variants={{
           hidden: { opacity: 0 },
           show: {
             opacity: 1,
             transition: {
-              staggerChildren: 0.1
-            }
-          }
+              staggerChildren: 0.1,
+            },
+          },
         }}
         initial="hidden"
         animate="show"
@@ -381,7 +468,7 @@ function FavoritesView({
             key={property._id}
             variants={{
               hidden: { opacity: 0, x: -20 },
-              show: { opacity: 1, x: 0 }
+              show: { opacity: 1, x: 0 },
             }}
             whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
             className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
@@ -389,8 +476,11 @@ function FavoritesView({
             <div className="flex items-start gap-6">
               {/* Image */}
               <div className="w-32 h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
-                <img 
-                  src={getImageUrl(property.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
+                <img
+                  src={
+                    getImageUrl(property.image) ||
+                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"
+                  }
                   alt={property.name}
                   className="w-full h-full object-cover"
                 />
@@ -403,7 +493,12 @@ function FavoritesView({
                     <h4 className="text-lg font-bold text-gray-900 mb-1">
                       {property.name}
                       {property.verificationLevel === "verified" && (
-                        <span className="ml-2 text-green-600" title="Đã xác thực">✓</span>
+                        <span
+                          className="ml-2 text-green-600"
+                          title="Đã xác thực"
+                        >
+                          ✓
+                        </span>
                       )}
                     </h4>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -433,16 +528,17 @@ function FavoritesView({
 
                 {/* Amenities */}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {Object.entries(property.amenities || {}).map(([key, value], idx) => (
-                    value && (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full capitalize"
-                      >
-                        {key}
-                      </span>
-                    )
-                  ))}
+                  {Object.entries(property.amenities || {}).map(
+                    ([key, value], idx) =>
+                      value && (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full capitalize"
+                        >
+                          {key}
+                        </span>
+                      ),
+                  )}
                 </div>
 
                 {/* Contact & Actions */}
@@ -509,17 +605,31 @@ function SearchView() {
   });
 
   const districts = [
-    "Quận 1", "Quận 2", "Quận 3", "Quận 4", "Quận 5", "Quận 6",
-    "Quận 7", "Quận 8", "Quận 9", "Quận 10", "Quận 11", "Quận 12",
-    "Thủ Đức", "Bình Thạnh", "Tân Bình", "Phú Nhuận", "Gò Vấp"
+    "Quận 1",
+    "Quận 2",
+    "Quận 3",
+    "Quận 4",
+    "Quận 5",
+    "Quận 6",
+    "Quận 7",
+    "Quận 8",
+    "Quận 9",
+    "Quận 10",
+    "Quận 11",
+    "Quận 12",
+    "Thủ Đức",
+    "Bình Thạnh",
+    "Tân Bình",
+    "Phú Nhuận",
+    "Gò Vấp",
   ];
 
   const toggleAmenity = (key: string) => {
-    setSearchParams(prev => ({
+    setSearchParams((prev) => ({
       ...prev,
       amenities: prev.amenities.includes(key)
-        ? prev.amenities.filter(a => a !== key)
-        : [...prev.amenities, key]
+        ? prev.amenities.filter((a) => a !== key)
+        : [...prev.amenities, key],
     }));
   };
 
@@ -544,17 +654,21 @@ function SearchView() {
       {/* Header Section */}
       <div className="bg-white/80 p-8 sm:p-10 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
-           <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-green-500/20">
-              <Sparkles className="size-8" />
-           </div>
-           <div>
-              <h3 className="text-2xl font-black text-gray-900 tracking-tight">Tìm kiếm thông minh</h3>
-              <p className="text-sm text-gray-500 font-medium">Sử dụng bộ lọc nâng cao để tìm căn trọ hoàn hảo</p>
-           </div>
+          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-green-500/20">
+            <Sparkles className="size-8" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-gray-900 tracking-tight">
+              Tìm kiếm thông minh
+            </h3>
+            <p className="text-sm text-gray-500 font-medium">
+              Sử dụng bộ lọc nâng cao để tìm căn trọ hoàn hảo
+            </p>
+          </div>
         </div>
-        <Button 
-          variant="ghost" 
-          onClick={handleReset} 
+        <Button
+          variant="ghost"
+          onClick={handleReset}
           className="rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold px-6 h-12 transition-all border border-gray-100"
         >
           <RefreshCcw className="size-4 mr-2" />
@@ -566,19 +680,28 @@ function SearchView() {
         {/* Section 1: Basic Info */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-             <div className="w-1.5 h-6 bg-green-500 rounded-full" />
-             <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Thông tin cơ bản</h4>
+            <div className="w-1.5 h-6 bg-green-500 rounded-full" />
+            <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">
+              Thông tin cơ bản
+            </h4>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-2">
-              <label className="text-xs font-bold text-indigo-500/60 ml-1">Từ khóa tìm kiếm</label>
+              <label className="text-xs font-bold text-indigo-500/60 ml-1">
+                Từ khóa tìm kiếm
+              </label>
               <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-indigo-300 group-focus-within:text-green-600 transition-colors" />
                 <Input
                   type="text"
                   value={searchParams.keyword}
-                  onChange={(e) => setSearchParams({ ...searchParams, keyword: e.target.value })}
+                  onChange={(e) =>
+                    setSearchParams({
+                      ...searchParams,
+                      keyword: e.target.value,
+                    })
+                  }
                   placeholder="Tên phòng trọ, khu phố, địa chỉ..."
                   className="pl-12 h-14 rounded-2xl border-indigo-50 bg-white/50 focus:bg-white transition-all text-base border-2 focus:border-green-500 focus:ring-0 shadow-sm"
                 />
@@ -586,16 +709,27 @@ function SearchView() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-indigo-500/60 ml-1">Khu vực</label>
+              <label className="text-xs font-bold text-indigo-500/60 ml-1">
+                Khu vực
+              </label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-indigo-300" />
                 <select
                   value={searchParams.district}
-                  onChange={(e) => setSearchParams({ ...searchParams, district: e.target.value })}
+                  onChange={(e) =>
+                    setSearchParams({
+                      ...searchParams,
+                      district: e.target.value,
+                    })
+                  }
                   className="w-full h-14 pl-12 pr-4 border-2 border-indigo-50 rounded-2xl text-base font-medium focus:border-green-500 focus:outline-none appearance-none bg-white transition-all shadow-sm"
                 >
                   <option value="">Tất cả quận/huyện</option>
-                  {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                  {districts.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-indigo-300 rotate-90 pointer-events-none" />
               </div>
@@ -606,65 +740,97 @@ function SearchView() {
         {/* Section 2: Range Filters */}
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-             <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-             <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Khoảng giá & Diện tích</h4>
+            <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+            <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">
+              Khoảng giá & Diện tích
+            </h4>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-4">
               <label className="text-xs font-bold text-gray-500 ml-1 flex items-center gap-2">
-                <DollarSign className="size-4 text-green-600" /> Giá thuê hàng tháng (VNĐ)
+                <DollarSign className="size-4 text-green-600" /> Giá thuê hàng
+                tháng (VNĐ)
               </label>
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
                   <Input
                     type="number"
                     value={searchParams.priceMin}
-                    onChange={(e) => setSearchParams({ ...searchParams, priceMin: e.target.value })}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        priceMin: e.target.value,
+                      })
+                    }
                     placeholder="Tối thiểu"
                     className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-green-500 transition-all shadow-sm"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Đ</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                    Đ
+                  </span>
                 </div>
                 <div className="w-8 h-1 bg-gray-200 rounded-full" />
                 <div className="relative flex-1">
                   <Input
                     type="number"
                     value={searchParams.priceMax}
-                    onChange={(e) => setSearchParams({ ...searchParams, priceMax: e.target.value })}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        priceMax: e.target.value,
+                      })
+                    }
                     placeholder="Tối đa"
                     className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-green-500 transition-all shadow-sm"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Đ</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                    Đ
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <label className="text-xs font-bold text-gray-500 ml-1 flex items-center gap-2">
-                <Maximize className="size-4 text-blue-600" /> Diện tích sử dụng (m²)
+                <Maximize className="size-4 text-blue-600" /> Diện tích sử dụng
+                (m²)
               </label>
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
                   <Input
                     type="number"
                     value={searchParams.areaMin}
-                    onChange={(e) => setSearchParams({ ...searchParams, areaMin: e.target.value })}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        areaMin: e.target.value,
+                      })
+                    }
                     placeholder="Từ"
                     className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-blue-500 transition-all shadow-sm"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">m²</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                    m²
+                  </span>
                 </div>
                 <div className="w-8 h-1 bg-gray-200 rounded-full" />
                 <div className="relative flex-1">
                   <Input
                     type="number"
                     value={searchParams.areaMax}
-                    onChange={(e) => setSearchParams({ ...searchParams, areaMax: e.target.value })}
+                    onChange={(e) =>
+                      setSearchParams({
+                        ...searchParams,
+                        areaMax: e.target.value,
+                      })
+                    }
                     placeholder="Đến"
                     className="h-14 rounded-2xl border-2 border-gray-100 px-6 font-bold text-gray-900 focus:border-blue-500 transition-all shadow-sm"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">m²</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+                    m²
+                  </span>
                 </div>
               </div>
             </div>
@@ -675,22 +841,31 @@ function SearchView() {
         <div className="space-y-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-               <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
-               <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Tiện ích mong muốn</h4>
+              <div className="w-1.5 h-6 bg-purple-500 rounded-full" />
+              <h4 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">
+                Tiện ích mong muốn
+              </h4>
             </div>
             <div className="flex items-center gap-3 bg-purple-50 px-4 py-2 rounded-xl border border-purple-100">
-               <ShieldCheck className="size-4 text-purple-600" />
-               <span className="text-xs font-bold text-purple-700">Xác thực bởi MapHome</span>
-               <input
-                 type="checkbox"
-                 id="verified"
-                 checked={searchParams.verified}
-                 onChange={(e) => setSearchParams({ ...searchParams, verified: e.target.checked })}
-                 className="w-5 h-5 accent-purple-600 cursor-pointer"
-               />
+              <ShieldCheck className="size-4 text-purple-600" />
+              <span className="text-xs font-bold text-purple-700">
+                Xác thực bởi MapHome
+              </span>
+              <input
+                type="checkbox"
+                id="verified"
+                checked={searchParams.verified}
+                onChange={(e) =>
+                  setSearchParams({
+                    ...searchParams,
+                    verified: e.target.checked,
+                  })
+                }
+                className="w-5 h-5 accent-purple-600 cursor-pointer"
+              />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
             {Object.entries(amenityMeta).map(([key, meta]) => {
               const Icon = meta.icon;
@@ -707,7 +882,9 @@ function SearchView() {
                       : "bg-white border-gray-100 text-gray-500 hover:border-green-200 hover:bg-green-50/30"
                   }`}
                 >
-                  <div className={`p-3 rounded-2xl ${isActive ? "bg-white/20" : "bg-gray-50"}`}>
+                  <div
+                    className={`p-3 rounded-2xl ${isActive ? "bg-white/20" : "bg-gray-50"}`}
+                  >
                     <Icon className="size-6" />
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">
@@ -729,8 +906,8 @@ function SearchView() {
             Bắt đầu tìm kiếm ngay
             <ArrowRight className="size-5 ml-4 opacity-70 group-hover:translate-x-1 transition-transform" />
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full sm:flex-1 h-16 border-2 border-gray-100 rounded-3xl text-gray-600 font-bold hover:bg-gray-50 hover:border-gray-200 transition-all"
             onClick={() => navigate("/map")}
           >
@@ -747,11 +924,12 @@ function SearchView() {
 function AppointmentsView({
   appointments,
   setAppointments,
+  setConfirmModal,
 }: {
   appointments: any[];
   setAppointments: (appointments: any[]) => void;
+  setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;
 }) {
-
   const [filter, setFilter] = useState<
     "all" | "pending" | "confirmed" | "completed" | "cancelled"
   >("all");
@@ -762,22 +940,27 @@ function AppointmentsView({
       : appointments.filter((a) => a.status === filter);
 
   const handleCancelAppointment = async (id: string) => {
-    if (confirm("Bạn có chắc muốn hủy lịch hẹn này?")) {
-      try {
-        const res = await api.put(`/api/bookings/${id}/cancel`);
-        
-        if (res.status === 200) {
-          setAppointments(
-            appointments.map((a) =>
-              a._id === id ? { ...a, status: "cancelled" } : a,
-            ),
-          );
-          toast.success("Đã hủy lịch hẹn thành công! ✅");
+    setConfirmModal({
+      open: true,
+      title: "Hủy lịch hẹn",
+      description: "Bạn có chắc muốn hủy lịch hẹn này?",
+      onConfirm: async () => {
+        try {
+          const res = await api.put(`/api/bookings/${id}/cancel`);
+
+          if (res.status === 200) {
+            setAppointments(
+              appointments.map((a) =>
+                a._id === id ? { ...a, status: "cancelled" } : a,
+              ),
+            );
+            toast.success("Đã hủy lịch hẹn thành công! ✅");
+          }
+        } catch (err) {
+          console.error("Failed to cancel booking:", err);
         }
-      } catch (err) {
-        console.error("Failed to cancel booking:", err);
-      }
-    }
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -869,15 +1052,15 @@ function AppointmentsView({
           }
         />
       ) : (
-        <motion.div 
+        <motion.div
           variants={{
             hidden: { opacity: 0 },
             show: {
               opacity: 1,
               transition: {
-                staggerChildren: 0.1
-              }
-            }
+                staggerChildren: 0.1,
+              },
+            },
           }}
           initial="hidden"
           animate="show"
@@ -888,7 +1071,7 @@ function AppointmentsView({
               key={appointment._id}
               variants={{
                 hidden: { opacity: 0, x: -20 },
-                show: { opacity: 1, x: 0 }
+                show: { opacity: 1, x: 0 },
               }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
               className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
@@ -896,9 +1079,12 @@ function AppointmentsView({
               <div className="flex items-start gap-6">
                 {/* Property Image */}
                 <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
-                  <img 
-                    src={getImageUrl(appointment.propertyId?.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
-                    alt={appointment.propertyId?.name} 
+                  <img
+                    src={
+                      getImageUrl(appointment.propertyId?.image) ||
+                      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"
+                    }
+                    alt={appointment.propertyId?.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -912,7 +1098,8 @@ function AppointmentsView({
                       </h4>
                       <p className="text-sm text-gray-600 flex items-center gap-1">
                         <MapPin className="size-4" />
-                        {appointment.propertyId?.address?.split(",")[0] || "Hồ Chí Minh"}
+                        {appointment.propertyId?.address?.split(",")[0] ||
+                          "Hồ Chí Minh"}
                       </p>
                     </div>
                     {getStatusBadge(appointment.status)}
@@ -923,7 +1110,9 @@ function AppointmentsView({
                       <p className="text-xs text-gray-500 mb-1">Ngày hẹn</p>
                       <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                         <Calendar className="size-4" />
-                        {new Date(appointment.bookingDate).toLocaleDateString("vi-VN")}
+                        {new Date(appointment.bookingDate).toLocaleDateString(
+                          "vi-VN",
+                        )}
                       </p>
                     </div>
                     <div>
@@ -937,14 +1126,18 @@ function AppointmentsView({
                       <p className="text-xs text-gray-500 mb-1">Chủ trọ</p>
                       <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                         <User className="size-4" />
-                        {appointment.landlordId?.fullName || appointment.landlordId?.username || "Chủ trọ"}
+                        {appointment.landlordId?.fullName ||
+                          appointment.landlordId?.username ||
+                          "Chủ trọ"}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Liên hệ</p>
                       <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                         <Phone className="size-4" />
-                        {appointment.phone || appointment.landlordId?.phone || "N/A"}
+                        {appointment.phone ||
+                          appointment.landlordId?.phone ||
+                          "N/A"}
                       </p>
                     </div>
                   </div>
@@ -957,12 +1150,12 @@ function AppointmentsView({
                       </p>
                     </div>
                   )}
-                  
+
                   {appointment.status === "pending" && (
                     <div className="flex justify-end mt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => handleCancelAppointment(appointment._id)}
                       >
@@ -1015,19 +1208,19 @@ function FilterButton({
 }
 
 // Premium Empty State Component
-function EmptyState({ 
-  icon: Icon, 
-  title, 
-  description, 
-  action 
-}: { 
-  icon: any; 
-  title: string; 
-  description: string; 
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: any;
+  title: string;
+  description: string;
   action?: React.ReactNode;
 }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-2xl p-20 text-center relative overflow-hidden"
@@ -1035,35 +1228,31 @@ function EmptyState({
       {/* Aura Background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-green-400/10 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] bg-blue-400/5 blur-[80px] rounded-full pointer-events-none" />
-      
+
       <div className="relative z-10">
         <motion.div
-          animate={{ 
+          animate={{
             y: [0, -15, 0],
-            rotate: [0, 5, -5, 0]
+            rotate: [0, 5, -5, 0],
           }}
-          transition={{ 
-            duration: 6, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut",
           }}
           className="w-28 h-28 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center mx-auto mb-10 border border-white shrink-0"
         >
           <Icon className="size-12 text-green-600/80" />
         </motion.div>
-        
+
         <h3 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">
           {title}
         </h3>
         <p className="text-gray-500 font-medium max-w-md mx-auto mb-10 leading-relaxed">
           {description}
         </p>
-        
-        {action && (
-          <div className="flex justify-center">
-            {action}
-          </div>
-        )}
+
+        {action && <div className="flex justify-center">{action}</div>}
       </div>
     </motion.div>
   );
@@ -1073,12 +1262,15 @@ function EmptyState({
 function InspectionsView({
   inspections,
   setInspections,
+  setConfirmModal,
 }: {
   inspections: any[];
   setInspections: (inspections: any[]) => void;
+  setConfirmModal: React.Dispatch<React.SetStateAction<ConfirmModalState>>;
 }) {
-
-  const [filter, setFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "completed" | "cancelled"
+  >("all");
 
   const filteredInspections =
     filter === "all"
@@ -1086,22 +1278,27 @@ function InspectionsView({
       : inspections.filter((i) => i.status === filter);
 
   const handleCancelInspection = async (id: string) => {
-    if (confirm("Bạn có chắc muốn hủy yêu cầu kiểm tra này?")) {
-      try {
-        const res = await api.put(`/api/inspections/${id}/cancel`);
+    setConfirmModal({
+      open: true,
+      title: "Hủy yêu cầu kiểm tra",
+      description: "Bạn có chắc muốn hủy yêu cầu kiểm tra này?",
+      onConfirm: async () => {
+        try {
+          const res = await api.put(`/api/inspections/${id}/cancel`);
 
-        if (res.status === 200) {
-          setInspections(
-            inspections.map((i) =>
-              i._id === id ? { ...i, status: "cancelled" } : i,
-            ),
-          );
-          toast.success("Đã hủy yêu cầu kiểm tra! 🛡️");
+          if (res.status === 200) {
+            setInspections(
+              inspections.map((i) =>
+                i._id === id ? { ...i, status: "cancelled" } : i,
+              ),
+            );
+            toast.success("Đã hủy yêu cầu kiểm tra! 🛡️");
+          }
+        } catch (err) {
+          console.error("Failed to cancel inspection:", err);
         }
-      } catch (err) {
-        console.error("Failed to cancel inspection:", err);
-      }
-    }
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -1138,17 +1335,32 @@ function InspectionsView({
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow p-4">
         <div className="flex items-center gap-2 overflow-x-auto">
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>
+          <FilterButton
+            active={filter === "all"}
+            onClick={() => setFilter("all")}
+          >
             Tất cả ({inspections.length})
           </FilterButton>
-          <FilterButton active={filter === "pending"} onClick={() => setFilter("pending")}>
-            Đang chờ ({inspections.filter((i) => i.status === "pending").length})
+          <FilterButton
+            active={filter === "pending"}
+            onClick={() => setFilter("pending")}
+          >
+            Đang chờ ({inspections.filter((i) => i.status === "pending").length}
+            )
           </FilterButton>
-          <FilterButton active={filter === "completed"} onClick={() => setFilter("completed")}>
-            Đã hoàn thành ({inspections.filter((i) => i.status === "completed").length})
+          <FilterButton
+            active={filter === "completed"}
+            onClick={() => setFilter("completed")}
+          >
+            Đã hoàn thành (
+            {inspections.filter((i) => i.status === "completed").length})
           </FilterButton>
-          <FilterButton active={filter === "cancelled"} onClick={() => setFilter("cancelled")}>
-            Đã hủy ({inspections.filter((i) => i.status === "cancelled").length})
+          <FilterButton
+            active={filter === "cancelled"}
+            onClick={() => setFilter("cancelled")}
+          >
+            Đã hủy ({inspections.filter((i) => i.status === "cancelled").length}
+            )
           </FilterButton>
         </div>
       </div>
@@ -1166,15 +1378,15 @@ function InspectionsView({
           </p>
         </div>
       ) : (
-        <motion.div 
+        <motion.div
           variants={{
             hidden: { opacity: 0 },
             show: {
               opacity: 1,
               transition: {
-                staggerChildren: 0.1
-              }
-            }
+                staggerChildren: 0.1,
+              },
+            },
           }}
           initial="hidden"
           animate="show"
@@ -1185,17 +1397,20 @@ function InspectionsView({
               key={insp._id}
               variants={{
                 hidden: { opacity: 0, x: -20 },
-                show: { opacity: 1, x: 0 }
+                show: { opacity: 1, x: 0 },
               }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
               className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-6"
             >
               <div className="flex items-start gap-6">
                 <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 overflow-hidden flex-shrink-0">
-                  <img 
-                    src={getImageUrl(insp.propertyId?.image) || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"} 
-                    alt={insp.propertyId?.name} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                  <img
+                    src={
+                      getImageUrl(insp.propertyId?.image) ||
+                      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"
+                    }
+                    alt={insp.propertyId?.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
 
@@ -1207,7 +1422,8 @@ function InspectionsView({
                       </h4>
                       <p className="text-sm text-gray-600 flex items-center gap-1">
                         <MapPin className="size-4" />
-                        {insp.propertyId?.address?.split(",")[0] || "Hồ Chí Minh"}
+                        {insp.propertyId?.address?.split(",")[0] ||
+                          "Hồ Chí Minh"}
                       </p>
                     </div>
                     {getStatusBadge(insp.status)}
@@ -1268,13 +1484,17 @@ function SettingsView() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center md:text-left mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Cài đặt tài khoản</h2>
-        <p className="text-gray-600">Quản lý thông tin cá nhân và bảo mật của bạn</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Cài đặt tài khoản
+        </h2>
+        <p className="text-gray-600">
+          Quản lý thông tin cá nhân và bảo mật của bạn
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Profile Information Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="bg-white/60 backdrop-blur-md rounded-2xl p-8 border border-white/50 shadow-xl"
@@ -1285,8 +1505,8 @@ function SettingsView() {
             </div>
             Thông tin cá nhân
           </h3>
-          
-          <form 
+
+          <form
             onSubmit={async (e) => {
               e.preventDefault();
               const target = e.target as any;
@@ -1294,7 +1514,10 @@ function SettingsView() {
               const phone = target.phone.value;
               try {
                 // Update user profile information via backend API using axios
-                const res = await api.put(`/api/user/${user?.id}`, { fullName, phone });
+                const res = await api.put(`/api/user/${user?.id}`, {
+                  fullName,
+                  phone,
+                });
 
                 if (res.status === 200) {
                   toast.success("Cập nhật thông tin thành công! ✨");
@@ -1304,9 +1527,11 @@ function SettingsView() {
                 }
               } catch (err: any) {
                 console.error("Profile update error:", err);
-                toast.error(err.response?.data?.message || "Lỗi cập nhật thông tin. ❌");
+                toast.error(
+                  err.response?.data?.message || "Lỗi cập nhật thông tin. ❌",
+                );
               }
-            }} 
+            }}
             className="space-y-5"
           >
             {/* Avatar Upload Section */}
@@ -1314,10 +1539,10 @@ function SettingsView() {
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-green-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
                   {user?.avatar ? (
-                    <img 
-                      src={getAvatarUrl(user.avatar) || ""} 
-                      alt="Avatar" 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={getAvatarUrl(user.avatar) || ""}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
                       style={{ imageRendering: "-webkit-optimize-contrast" }}
                     />
                   ) : (
@@ -1326,27 +1551,37 @@ function SettingsView() {
                 </div>
                 <label className="absolute bottom-0 right-0 p-2 bg-green-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-green-700 transition-all transform hover:scale-110">
                   <Camera className="size-4" />
-                  <input 
-                    type="file" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    className="hidden"
                     accept="image/*"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      
+
                       const formData = new FormData();
                       formData.append("image", file);
                       try {
                         // 1. Upload image to get URL
-                        const uploadRes = await api.post("/api/upload/single", formData, {
-                          headers: { "Content-Type": "multipart/form-data" }
-                        });
-                        
-                        if (uploadRes.status === 200 || uploadRes.status === 201) {
+                        const uploadRes = await api.post(
+                          "/api/upload/single",
+                          formData,
+                          {
+                            headers: { "Content-Type": "multipart/form-data" },
+                          },
+                        );
+
+                        if (
+                          uploadRes.status === 200 ||
+                          uploadRes.status === 201
+                        ) {
                           const { url } = uploadRes.data;
                           // 2. Update user profile with new avatar URL
-                          const updateRes = await api.put(`/api/user/${user?.id}`, { avatar: url });
-                          
+                          const updateRes = await api.put(
+                            `/api/user/${user?.id}`,
+                            { avatar: url },
+                          );
+
                           if (updateRes.status === 200) {
                             const updatedUser = updateRes.data;
                             updateUser(updatedUser);
@@ -1356,53 +1591,67 @@ function SettingsView() {
                         }
                       } catch (err: any) {
                         console.error("Avatar upload error:", err);
-                        toast.error(err.response?.data?.message || "Lỗi khi tải ảnh lên. ❌");
+                        toast.error(
+                          err.response?.data?.message ||
+                            "Lỗi khi tải ảnh lên. ❌",
+                        );
                       }
                     }}
                   />
                 </label>
               </div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Nhấp vào icon để đổi ảnh</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                Nhấp vào icon để đổi ảnh
+              </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Họ và tên</label>
-              <Input 
-                name="fullName" 
-                defaultValue={user?.fullName || user?.username} 
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
-                required 
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+                Họ và tên
+              </label>
+              <Input
+                name="fullName"
+                defaultValue={user?.fullName || user?.username}
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Số điện thoại</label>
-              <Input 
-                name="phone" 
-                defaultValue={user?.phone || ""} 
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+                Số điện thoại
+              </label>
+              <Input
+                name="phone"
+                defaultValue={user?.phone || ""}
                 placeholder="Nhập số điện thoại của bạn"
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
-                required 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Email (Read-only)</label>
-              <Input 
-                disabled 
-                value={user?.email || ""} 
-                className="rounded-xl border-gray-100 bg-gray-50 text-gray-400 h-12 cursor-not-allowed" 
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                required
               />
             </div>
 
-            <Button type="submit" className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:shadow-lg hover:shadow-green-500/20 text-white font-bold h-12 rounded-xl mt-4 transition-all">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+                Email (Read-only)
+              </label>
+              <Input
+                disabled
+                value={user?.email || ""}
+                className="rounded-xl border-gray-100 bg-gray-50 text-gray-400 h-12 cursor-not-allowed"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:shadow-lg hover:shadow-green-500/20 text-white font-bold h-12 rounded-xl mt-4 transition-all"
+            >
               Lưu thay đổi
             </Button>
           </form>
         </motion.div>
 
         {/* Security / Password Change Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
@@ -1414,8 +1663,8 @@ function SettingsView() {
             </div>
             Bảo mật & Mật khẩu
           </h3>
-          
-          <form 
+
+          <form
             onSubmit={async (e) => {
               e.preventDefault();
               const target = e.target as any;
@@ -1423,56 +1672,73 @@ function SettingsView() {
               const newPassword = target.newPassword.value;
               try {
                 // Change user password via authentication API using axios
-                const res = await api.put("/api/auth/change-password", { currentPassword, newPassword });
+                const res = await api.put("/api/auth/change-password", {
+                  currentPassword,
+                  newPassword,
+                });
 
                 if (res.status === 200) {
-                  toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại. 🔐");
+                  toast.success(
+                    "Đổi mật khẩu thành công! Vui lòng đăng nhập lại. 🔐",
+                  );
                   setTimeout(() => {
                     logout();
                     navigate("/login");
                   }, 2000);
                 } else {
-                  toast.error(res.data.message || "Mật khẩu hiện tại không chính xác. ❌");
+                  toast.error(
+                    res.data.message || "Mật khẩu hiện tại không chính xác. ❌",
+                  );
                 }
               } catch (err: any) {
                 console.error("Password change error:", err);
-                toast.error(err.response?.data?.message || "Lỗi đổi mật khẩu. ❌");
+                toast.error(
+                  err.response?.data?.message || "Lỗi đổi mật khẩu. ❌",
+                );
               }
-            }} 
+            }}
             className="space-y-5"
           >
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Mật khẩu hiện tại</label>
-              <Input 
-                type="password" 
-                name="currentPassword" 
-                placeholder="••••••••" 
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
-                required 
-                minLength={6} 
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+                Mật khẩu hiện tại
+              </label>
+              <Input
+                type="password"
+                name="currentPassword"
+                placeholder="••••••••"
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                required
+                minLength={6}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Mật khẩu mới</label>
-              <Input 
-                type="password" 
-                name="newPassword" 
-                placeholder="••••••••" 
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12" 
-                required 
-                minLength={6} 
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">
+                Mật khẩu mới
+              </label>
+              <Input
+                type="password"
+                name="newPassword"
+                placeholder="••••••••"
+                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                required
+                minLength={6}
               />
             </div>
 
             <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
               <p className="text-[10px] text-orange-800 leading-relaxed">
                 <AlertCircle className="size-3 inline mr-1 mb-0.5" />
-                <strong>Lưu ý:</strong> Sau khi đổi mật khẩu thành công, bạn sẽ bị đăng xuất khỏi hệ thống để đảm bảo an toàn bảo mật.
+                <strong>Lưu ý:</strong> Sau khi đổi mật khẩu thành công, bạn sẽ
+                bị đăng xuất khỏi hệ thống để đảm bảo an toàn bảo mật.
               </p>
             </div>
 
-            <Button type="submit" className="w-full bg-gray-900 hover:bg-black text-white font-bold h-12 rounded-xl mt-4 transition-all shadow-lg">
+            <Button
+              type="submit"
+              className="w-full bg-gray-900 hover:bg-black text-white font-bold h-12 rounded-xl mt-4 transition-all shadow-lg"
+            >
               Đổi mật khẩu
             </Button>
           </form>
