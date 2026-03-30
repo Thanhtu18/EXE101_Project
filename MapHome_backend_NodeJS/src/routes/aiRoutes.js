@@ -21,6 +21,9 @@ const { chatWithAI } = require("../controllers/aiController");
  *               message:
  *                 type: string
  *                 example: Tìm cho tôi phòng trọ tốt tại Quận 7
+ *               propertyId:
+ *                 type: string
+ *                 example: 61a7f8e4b2c1234567890abc
  *               history:
  *                 type: array
  *                 items:

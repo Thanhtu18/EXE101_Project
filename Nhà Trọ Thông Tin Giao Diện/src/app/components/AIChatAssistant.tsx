@@ -30,7 +30,35 @@ export const AIChatAssistant: React.FC = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Helper to detect current property ID from URL
+  useEffect(() => {
+    const detectPropertyId = () => {
+      const path = window.location.pathname;
+      const match = path.match(/\/room\/([a-zA-Z0-9]+)/);
+      const id = match ? match[1] : null;
+      setCurrentPropertyId(id);
+      
+      // Update greeting if we just switched to a room page
+      if (id && messages.length === 1 && messages[0].role === "assistant") {
+        setMessages([
+          {
+            text: "Tôi thấy bạn đang xem căn phòng này. Bạn có thắc mắc gì về tiện ích hay giá thuê không? Tôi có thể giải đáp ngay!",
+            role: "assistant",
+            timestamp: new Date(),
+          }
+        ]);
+      }
+    };
+
+    detectPropertyId();
+    
+    // Listen for URL changes (since it's a SPA)
+    window.addEventListener("popstate", detectPropertyId);
+    return () => window.removeEventListener("popstate", detectPropertyId);
+  }, [window.location.pathname]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,6 +87,7 @@ export const AIChatAssistant: React.FC = () => {
     try {
       const response = await api.post("/api/ai/chat", {
         message: userMessage,
+        propertyId: currentPropertyId,
         history: messages
           .filter((_, idx) => idx > 0)
           .map(m => ({
@@ -67,17 +96,27 @@ export const AIChatAssistant: React.FC = () => {
           })),
       });
 
-      const answerText = response.data.answer || "Xin lỗi, tôi không thể trả lời lúc này.";
+      const { answer, isLeadCaptured } = response.data;
+      const answerText = answer || "Xin lỗi, tôi không thể trả lời lúc này.";
 
-      setMessages((prev) => [
-        ...prev,
+      const newMessages: Message[] = [
         {
           text: answerText,
           role: "assistant",
           timestamp: new Date(),
-        },
-      ]);
+        }
+      ];
 
+      // If a lead was captured, add a special system acknowledgment
+      if (isLeadCaptured) {
+        newMessages.push({
+          text: "✨ **MapHome đã ghi nhận nhu cầu của bạn!** Chúng tôi đang kết nối với các chủ trọ uy tín để tìm cho bạn căn phòng phù hợp nhất. Bạn sẽ sớm nhận được đề xuất!",
+          role: "assistant",
+          timestamp: new Date(),
+        });
+      }
+
+      setMessages((prev) => [...prev, ...newMessages]);
       setIsLoading(false);
 
     } catch (error) {
@@ -110,9 +149,14 @@ export const AIChatAssistant: React.FC = () => {
                 <h3 className="font-semibold text-[15px] text-slate-800 leading-none">MapHome AI</h3>
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <span className="flex h-2 w-2">
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span className={cn(
+                      "relative inline-flex rounded-full h-2 w-2",
+                      currentPropertyId ? "bg-indigo-500 animate-pulse" : "bg-emerald-500"
+                    )}></span>
                   </span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Trực tuyến</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {currentPropertyId ? "Đang tư vấn về phòng" : "Trực tuyến"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -142,7 +186,7 @@ export const AIChatAssistant: React.FC = () => {
                     "px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm transition-all animate-in fade-in zoom-in-95 duration-200",
                     msg.role === "user"
                       ? "bg-indigo-600 text-white rounded-tr-none"
-                      : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
+                      : "bg-white border border-slate-100 text-slate-700 rounded-tl-none border-l-4 border-l-indigo-500" // Added accent for AI replies
                   )}
                   dangerouslySetInnerHTML={renderMarkdown(msg.text)}
                 />

@@ -31,10 +31,13 @@ import {
   CreditCard,
   LayoutDashboard,
   Settings,
-  X,
   Camera,
   Upload,
   User,
+  Users,
+  MessageSquare,
+  Sparkles,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
@@ -44,6 +47,7 @@ type DashboardTab =
   | "overview"
   | "posts"
   | "bookings"
+  | "leads"
   | "subscription"
   | "verification"
   | "settings";
@@ -57,6 +61,7 @@ const menuItems: Array<{
   { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
   { id: "posts", label: "Tin đăng của tôi", icon: FileText },
   { id: "bookings", label: "Lịch hẹn", icon: CalendarDays },
+  { id: "leads", label: "Khách hàng (AI)", icon: Users },
   { id: "subscription", label: "Gói đăng ký", icon: CreditCard },
   { id: "verification", label: "Yêu cầu xác thực", icon: ShieldCheck },
   { id: "settings", label: "Cài đặt", icon: Settings },
@@ -77,6 +82,8 @@ export function LandlordDashboardV2() {
     VerificationRequest[]
   >([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [landlordDistricts, setLandlordDistricts] = useState<string[]>([]);
   const [stats, setStats] = useState({
     totalPosts: 0,
     approvedPosts: 0,
@@ -132,6 +139,10 @@ export function LandlordDashboardV2() {
           ]);
           setVerificationRequests(reqsRes.data);
           setVerificationPricing(pricingRes.data);
+        } else if (activeTab === "leads") {
+          const response = await api.get("/api/landlord/leads");
+          setLeads(response.data.leads || []);
+          setLandlordDistricts(response.data.districts || []);
         }
       } catch (err) {
         console.error("Failed to fetch landlord data", err);
@@ -206,6 +217,285 @@ export function LandlordDashboardV2() {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
+      case "leads":
+        return (
+          <motion.div
+            key="leads"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-12"
+          >
+            {/* Hero Header Section */}
+            <div className="relative">
+              <div className="absolute -inset-6 bg-gradient-to-r from-maphome-500/10 via-indigo-500/5 to-maphome-400/10 rounded-[2.5rem] blur-xl" />
+              <div className="relative bg-gradient-to-br from-white via-white to-maphome-50/40 rounded-[2rem] border border-maphome-200/40 p-10 md:p-14 shadow-lg shadow-maphome-500/5 overflow-hidden">
+                {/* Decorative elements */}
+                <div className="absolute -top-12 -right-12 w-64 h-64 bg-maphome-100/30 rounded-full blur-3xl" />
+                <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-indigo-100/20 rounded-full blur-3xl" />
+
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-2">
+                        Khách hàng tiềm năng
+                      </h2>
+                      <p className="text-xl text-slate-600 font-bold leading-relaxed">
+                        từ{" "}
+                        <span className="bg-gradient-to-r from-maphome-600 to-indigo-600 bg-clip-text text-transparent font-black">
+                          AI Advisor
+                        </span>
+                      </p>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                      className="flex-shrink-0"
+                    >
+                      <div className="p-4 bg-gradient-to-br from-amber-400 to-amber-500 rounded-2xl shadow-lg shadow-amber-400/50">
+                        <Sparkles size={32} className="text-white" />
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-wrap mt-8">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-white/60 border border-maphome-200/60 rounded-2xl shadow-sm">
+                      <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-widest">
+                        {leads.length > 0 ? `${leads.length} khách` : "Chưa có"}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 font-bold text-base">
+                      {leads.length > 0
+                        ? `Những người đang tìm phòng ở khu vực của bạn`
+                        : `Sẵn sàng để bạn kết nối`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Districts Badge Cloud */}
+            {landlordDistricts.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="px-2"
+              >
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 ml-2">
+                  📍 Khu vực hoạt động
+                </p>
+                <div className="flex flex-wrap gap-3 mb-4">
+                  {landlordDistricts.map((dist, idx) => (
+                    <motion.span
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.08 }}
+                      className="px-5 py-2.5 bg-gradient-to-r from-white to-maphome-50/60 text-slate-700 rounded-2xl text-sm font-black border border-maphome-200/50 flex items-center gap-2 shadow-sm hover:shadow-md hover:border-maphome-300 transition-all cursor-default group"
+                    >
+                      <MapPin
+                        size={16}
+                        className="text-maphome-500 group-hover:animate-float"
+                      />
+                      {dist}
+                    </motion.span>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {leads.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+                {leads.map((lead, idx) => (
+                  <motion.div
+                    key={lead._id}
+                    initial={{ opacity: 0, scale: 0.98, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{
+                      delay: idx * 0.06,
+                      duration: 0.44,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="group bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl hover:border-maphome-200 smooth-transition will-change-transform transform-gpu relative overflow-hidden"
+                  >
+                    {/* Glow effect on hover */}
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-maphome-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 will-change-transform" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-maphome-500 to-maphome-600 flex items-center justify-center text-white shadow-lg group-hover:rotate-6 transition-transform transform-gpu will-change-transform">
+                          <User size={28} />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-xl text-slate-800 group-hover:text-maphome-700 transition-colors">
+                            {lead.name || "Khách ẩn danh"}
+                          </h4>
+                          <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest flex items-center gap-1">
+                            <Clock size={10} />
+                            {new Date(lead.createdAt).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 mb-8 bg-slate-50/50 p-5 rounded-3xl border border-slate-100/50 group-hover:bg-white transition-colors smooth-transition">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
+                            Khu vực tìm kiếm
+                          </span>
+                          <span className="text-sm font-black text-maphome-700 flex items-center gap-1">
+                            <MapPin size={14} />
+                            {lead.requirements.district}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
+                            Ngân sách tối đa
+                          </span>
+                          <span className="text-sm font-black text-emerald-600 flex items-center gap-1">
+                            <DollarSign size={14} />
+                            {Number(lead.requirements.maxPrice).toLocaleString(
+                              "vi-VN",
+                            )}{" "}
+                            VNĐ
+                          </span>
+                        </div>
+                        {lead.requirements.amenities &&
+                          lead.requirements.amenities.length > 0 && (
+                            <div className="pt-2">
+                              <div className="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-2">
+                                Tiện nghi mong muốn
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {lead.requirements.amenities
+                                  .slice(0, 3)
+                                  .map((ame: string, i: number) => (
+                                    <span
+                                      key={i}
+                                      className="text-[10px] font-black bg-white border border-slate-100 px-2.5 py-1 rounded-xl text-slate-600 shadow-sm"
+                                    >
+                                      {ame}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                      </div>
+
+                      <Button
+                        className="w-full py-7 rounded-2xl bg-maphome-600 hover:bg-maphome-700 text-white font-black shadow-xl shadow-maphome-100 group-hover:shadow-maphome-200 transition-all flex items-center justify-center gap-2 border-none transform-gpu will-change-transform smooth-transition hover:-translate-y-1 active:scale-95"
+                        onClick={() => {
+                          toast.info(
+                            "Tính năng 'Mở khóa số điện thoại' sẽ sớm khả dụng! 🔒",
+                          );
+                        }}
+                      >
+                        <MessageSquare size={18} />
+                        Liên hệ khách hàng
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="relative max-w-3xl mx-auto mt-16"
+              >
+                {/* Backdrop blur effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-maphome-100/30 via-indigo-100/20 to-maphome-100/30 rounded-[3rem] blur-3xl" />
+
+                <div className="relative bg-white/90 backdrop-blur-lg border border-white rounded-[3rem] shadow-2xl shadow-maphome-500/10 p-12 md:p-20 text-center overflow-hidden">
+                  {/* Decorative background elements */}
+                  <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-80 bg-maphome-100/20 rounded-full blur-3xl" />
+                  <div className="absolute -bottom-16 right-0 w-64 h-64 bg-indigo-100/15 rounded-full blur-3xl" />
+
+                  <div className="relative z-10">
+                    {/* Icon with animated ring */}
+                    <motion.div
+                      className="relative w-40 h-40 mx-auto mb-12"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3, type: "spring", bounce: 0.5 }}
+                    >
+                      {/* Animated ping ring */}
+                      <div className="absolute inset-0 bg-maphome-500 rounded-full opacity-20 animate-ping" />
+
+                      {/* Main icon container */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-maphome-50 to-indigo-50 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-maphome-500/20 border border-maphome-200/50 border-t-maphome-300">
+                        <Bot
+                          size={80}
+                          className="text-maphome-600 animate-float"
+                        />
+                      </div>
+
+                      {/* Floating sparkles */}
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 8,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                        className="absolute -top-4 -right-4 p-3.5 bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-2xl shadow-lg shadow-amber-400/60 origin-center"
+                      >
+                        <Sparkles size={24} />
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Text content */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <h3 className="text-4xl md:text-5xl font-black text-slate-900 mb-5 tracking-tight leading-tight">
+                        Đang tìm kiếm khách thuê
+                      </h3>
+                      <p className="text-lg text-slate-600 font-medium mb-12 leading-relaxed max-w-xl mx-auto">
+                        AI Advisor đang phân tích nhu cầu của các khách hàng
+                        tiềm năng ở khu vực hoạt động. Khi có người phù hợp,
+                        thông tin sẽ xuất hiện tại đây ngay lập tức.
+                      </p>
+
+                      {/* Status indicators */}
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+                        <motion.div
+                          animate={{ scale: [1, 1.05, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="px-7 py-3.5 bg-gradient-to-r from-emerald-50 to-emerald-100/50 rounded-2xl flex items-center gap-3 border border-emerald-200/50 shadow-md"
+                        >
+                          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                          <span className="text-sm font-black text-emerald-700 uppercase tracking-widest">
+                            AI Đang hoạt động
+                          </span>
+                        </motion.div>
+                      </div>
+
+                      {/* Info message */}
+                      <div className="mt-10 p-5 bg-maphome-50/40 rounded-2xl border border-maphome-200/40 border-dashed">
+                        <p className="text-sm font-bold text-slate-600">
+                          💡 <span className="text-maphome-700">Mẹo:</span> Đảm
+                          bảo thông tin phòng trọ của bạn chi tiết và hấp dẫn để
+                          tăng cơ hội kết nối với khách hàng.
+                        </p>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        );
+
       case "subscription":
         return (
           <motion.div
