@@ -43,6 +43,7 @@ export function SettingsView() {
   const [activeTab, setActiveTab] = useState<
     "general" | "pricing" | "broadcast" | "subscription_plans" | "account"
   >("general");
+  const [updatingAvatar, setUpdatingAvatar] = useState(false);
 
   const fetchSettings = async () => {
     try {
@@ -140,6 +141,45 @@ export function SettingsView() {
         }
       },
     });
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUpdatingAvatar(true);
+      const formData = new FormData();
+      formData.append("image", file);
+
+      // 1. Upload to Cloudinary
+      const uploadRes = await api.post("/api/upload/single", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (uploadRes.status === 201) {
+        const imageUrl = uploadRes.data.url;
+
+        // 2. Update user profile
+        // Note: Backend might use _id, but our User interface uses id
+        const userId = user?.id || (user as any)?._id;
+        const updateRes = await api.put(`/api/user/${userId}`, {
+          avatar: imageUrl,
+        });
+
+        if (updateRes.status === 200) {
+          updateUser(updateRes.data);
+          toast.success("Cập nhật ảnh đại diện thành công! ✨");
+        }
+      }
+    } catch (error: any) {
+      console.error("Avatar update failed:", error);
+      toast.error(
+        error.response?.data?.message || "Không thể cập nhật ảnh đại diện.",
+      );
+    } finally {
+      setUpdatingAvatar(false);
+    }
   };
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -728,22 +768,31 @@ export function SettingsView() {
                   />
                   <div className="flex flex-col items-center gap-6 pb-10 border-b border-slate-50">
                     <div className="relative group">
-                      <div className="w-32 h-32 rounded-[40px] border-[6px] border-white shadow-2xl overflow-hidden bg-gradient-to-br from-emerald-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-black group-hover:scale-105 transition-transform duration-500">
+                      <div className="w-32 h-32 rounded-[40px] border-[6px] border-white shadow-2xl overflow-hidden bg-gradient-to-br from-emerald-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-black group-hover:scale-105 transition-transform duration-500 relative">
                         {user?.avatar ? (
                           <img
                             src={getAvatarUrl(user.avatar) || ""}
-                            className="w-full h-full object-cover"
+                            className={`w-full h-full object-cover ${updatingAvatar ? "opacity-40" : ""}`}
                           />
                         ) : (
                           getInitials(user?.fullName, user?.username)
                         )}
+                        {updatingAvatar && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                          </div>
+                        )}
                       </div>
-                      <label className="absolute -bottom-2 -right-2 p-3 bg-white text-emerald-600 rounded-2xl shadow-xl cursor-pointer hover:bg-emerald-600 hover:text-white transition-all transform hover:rotate-12 border border-slate-100">
+                      <label 
+                        className={`absolute -bottom-2 -right-2 p-3 bg-white text-emerald-600 rounded-2xl shadow-xl transition-all transform hover:rotate-12 border border-slate-100 ${updatingAvatar ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-emerald-600 hover:text-white"}`}
+                      >
                         <Camera className="size-5" />
                         <input
                           type="file"
                           className="hidden"
                           accept="image/*"
+                          onChange={handleAvatarChange}
+                          disabled={updatingAvatar}
                         />
                       </label>
                     </div>

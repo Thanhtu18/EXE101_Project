@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import {
@@ -52,10 +52,12 @@ export function PaymentFailurePage() {
   const location = useLocation();
   const [selectedReason, setSelectedReason] = useState("declined");
 
-  // Get data from navigation state
+  const [searchParams] = useSearchParams();
+
+  // Get data from navigation state or URL params
   const tier = location.state?.tier;
   const amount = location.state?.amount;
-  const errorCode = location.state?.errorCode || "VNP_099";
+  const errorCode = location.state?.errorCode || searchParams.get("code") || "VNP_099";
 
   const currentTime = new Date().toLocaleString("vi-VN", {
     hour: "2-digit",

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "@/app/utils/api";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -97,20 +98,43 @@ function AnimatedCounter({
   );
 }
 
-// ─── District Data ────────────────────────────────────────────
-const districts: any[] = [];
-
-// ─── Testimonials Data ────────────────────────────────────────
-const testimonials: any[] = [];
-
-// ─── Blog Data ────────────────────────────────────────────────
-const blogPosts: any[] = [];
+// Data states are managed inside the component
 
 // ─── Main Component ──────────────────────────────────────────
 export function HomePage() {
   const navigate = useNavigate();
   const propertySliderRef = useRef<Slider>(null);
   const testimonialSliderRef = useRef<Slider>(null);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalProperties: 0,
+    totalUsers: 0,
+    totalDistricts: 12,
+    satisfactionRate: 98
+  });
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        const [statsRes, districtsRes, reviewsRes, blogsRes] = await Promise.allSettled([
+          api.get("/api/properties/stats/public"),
+          api.get("/api/properties/stats/districts"),
+          api.get("/api/reviews/latest"),
+          api.get("/api/blogs?limit=3")
+        ]);
+
+        if (statsRes.status === "fulfilled") setStats(statsRes.value.data);
+        if (districtsRes.status === "fulfilled") setDistricts(districtsRes.value.data);
+        if (reviewsRes.status === "fulfilled") setTestimonials(reviewsRes.value.data);
+        if (blogsRes.status === "fulfilled") setBlogPosts(blogsRes.value.data);
+      } catch (error) {
+        console.error("Error fetching homepage data:", error);
+      }
+    };
+    fetchHomeData();
+  }, []);
 
   const { properties } = useProperties();
   const verifiedProperties = properties
@@ -178,15 +202,15 @@ export function HomePage() {
             {[
               {
                 icon: Building2,
-                target: 0,
+                target: stats.totalProperties,
                 suffix: "+",
                 label: "Phòng trọ",
               },
-              { icon: Users, target: 0, suffix: "+", label: "Người dùng" },
-              { icon: Map, target: 0, suffix: "", label: "Quận / Huyện" },
+              { icon: Users, target: stats.totalUsers, suffix: "+", label: "Người dùng" },
+              { icon: Map, target: stats.totalDistricts, suffix: "", label: "Quận / Huyện" },
               {
                 icon: CheckCircle2,
-                target: 0,
+                target: stats.satisfactionRate,
                 suffix: "%",
                 label: "Hài lòng",
               },
