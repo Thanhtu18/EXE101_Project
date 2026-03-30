@@ -6,6 +6,7 @@ const {
   getLandlordVerificationRequests,
   getLandlordBookings,
   getLandlordAnalytics,
+  getLandlordLeads,
 } = require("../controllers/landlordController");
 const {
   authMiddleware,
@@ -99,5 +100,22 @@ router.get("/bookings", getLandlordBookings);
  *         description: Landlord profile not found
  */
 router.get("/analytics", getLandlordAnalytics);
+
+/**
+ * @swagger
+ * /api/landlord/leads:
+ *   get:
+ *     summary: Get relevant leads for the current landlord based on their property districts
+ *     tags:
+ *       - Landlord Dashboard
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of relevant leads
+ *       404:
+ *         description: Landlord profile not found
+ */
+router.get("/leads", getLandlordLeads);
 
 module.exports = router;

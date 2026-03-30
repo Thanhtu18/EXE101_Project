@@ -1,7 +1,7 @@
-@import './fonts.css';
-@import './tailwind.css';
-@import './theme.css';
-@import 'leaflet/dist/leaflet.css';
+@import "./fonts.css";
+@import "./theme.css";
+@import "./tailwind.css";
+@import "leaflet/dist/leaflet.css";
 
 /* Ensure Leaflet map stays below dialogs */
 .leaflet-container {
@@ -39,7 +39,9 @@
 }
 
 .custom-popup .leaflet-popup-content-wrapper {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .leaflet-popup-close-button {
@@ -151,12 +153,12 @@
   .hero-carousel-wrapper .slick-dots {
     bottom: 1.5rem;
   }
-  
+
   .hero-carousel-wrapper .slick-dots li button {
     width: 8px;
     height: 8px;
   }
-  
+
   .hero-carousel-wrapper .slick-dots li.slick-active button {
     width: 24px;
   }
