@@ -13,7 +13,6 @@ import { Separator } from "@/app/components/ui/separator";
 import { Badge } from "@/app/components/ui/badge";
 import { Navbar } from "@/app/components/Navbar";
 import { Footer } from "@/app/components/Footer";
-import { VNPayRedirectModal } from "@/app/components/VNPayRedirectModal";
 import {
   Check,
   ChevronLeft,
@@ -32,6 +31,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import api from "@/app/utils/api";
 
 interface PricingTier {
   id: string;
@@ -41,46 +41,7 @@ interface PricingTier {
   badge?: string;
 }
 
-const pricingTiers: Record<string, PricingTier> = {
-  basic: {
-    id: "basic",
-    name: "Gói Basic",
-    price: 50000,
-    features: [
-      "GPS xác thực độ chính xác 50m",
-      "Huy hiệu xanh tin cậy",
-      "Highlight nhẹ trên bản đồ",
-      "Yêu cầu quản trị viên kiểm tra",
-      "Tin đăng hiển thị 30 ngày",
-    ],
-  },
-  standard: {
-    id: "standard",
-    name: "Gói Standard",
-    price: 100000,
-    badge: "Phổ biến nhất",
-    features: [
-      "Tất cả tính năng Basic",
-      "Video 360° phòng trọ",
-      "Thống kê lượt xem chi tiết",
-      "Ưu tiên top tìm kiếm",
-      "Tin đăng vĩnh viễn",
-    ],
-  },
-  pro: {
-    id: "pro",
-    name: "Gói Pro",
-    price: 200000,
-    badge: "Chuyên nghiệp",
-    features: [
-      "Tất cả tính năng Standard",
-      "Boost vị trí 7 ngày/tháng",
-      "Hỗ trợ đăng tin Concierge",
-      "Ưu tiên hiển thị cao nhất",
-      "Phân tích nâng cao",
-    ],
-  },
-};
+
 
 const inspectionTypeLabels: Record<string, string> = {
   standard: "Kiểm tra tiêu chuẩn",
@@ -93,7 +54,8 @@ export function CheckoutPage() {
   const location = useLocation();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showVNPayModal, setShowVNPayModal] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
 
   // Đọc state từ location trước, fallback sessionStorage nếu bị mất (iframe/sandbox issue)
   const rawState =
@@ -117,15 +79,44 @@ export function CheckoutPage() {
 
   const selectedTierId = rawState?.selectedTier || "standard";
   const billingCycle = rawState?.billingCycle || "monthly";
-  const selectedTier = pricingTiers[selectedTierId];
+  const selectedTier = plans.find(p => p.planId === selectedTierId);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoadingPlans(true);
+        const res = await api.get("/api/subscriptions/plans");
+        if (res.status === 200) {
+          setPlans(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch plans:", error);
+        toast.error("Không thể tải thông báo gói dịch vụ. Vui lòng thử lại.");
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   useEffect(() => {
     // Chỉ redirect nếu KHÔNG có bất kỳ data nào (tránh redirect vô lý)
-    if (!isInspection && !selectedTier) {
+    // Sau khi đã load plans xong mà vẫn không thấy selectedTier
+    if (!loadingPlans && !isInspection && !selectedTier) {
       navigate("/pricing");
     }
-    // Không redirect về admin nếu thiếu inspectionData — hiển thị fallback thay thế
-  }, [isInspection, selectedTier, navigate]);
+  }, [loadingPlans, isInspection, selectedTier, navigate]);
+
+  if (loadingPlans) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Đang tải cấu hình thanh toán...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isInspection && !selectedTier) return null;
 
@@ -167,37 +158,37 @@ export function CheckoutPage() {
       ? "1 tháng (30 ngày)"
       : "12 tháng (1 năm)";
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!agreedToTerms) {
-      toast.warning(
-        "Vui lòng đồng ý với điều khoản sử dụng để tiếp tục",
-      );
+      toast.warning("Vui lòng đồng ý với điều khoản sử dụng để tiếp tục");
       return;
     }
-    setShowVNPayModal(true);
-  };
 
-  const handleVNPayComplete = () => {
-    navigate("/payment-success", {
-      state: {
-        type: checkoutType,
-        tier: isInspection
-          ? {
-              id: "inspection",
-              name: "Kiểm tra thực địa",
-              price: 199000,
-            }
-          : selectedTier,
+    try {
+      setIsProcessing(true);
+      
+      // 1. Create payment on backend
+      const res = await api.post("/api/payments/create", {
         amount: totalAmount,
-        orderId: "MH" + Date.now(),
-        inspectionData: isInspection ? inspectionData : undefined,
-      },
-    });
-  };
+        description: isInspection 
+          ? `Thanh toán kiểm tra căn trọ: ${inspectionData.propertyName}` 
+          : `Nâng cấp gói: ${selectedTier.name} (${billingCycle})`,
+        planId: isInspection ? "inspection" : selectedTierId
+      });
 
-  const handleCancelPayment = () => {
-    setShowVNPayModal(false);
-    setIsProcessing(false);
+      if (res.status === 200 && res.data.url) {
+        // 2. Redirect to VNPay
+        window.location.href = res.data.url;
+      } else {
+        throw new Error("Failed to create payment URL");
+      }
+    } catch (error: any) {
+      console.error("Payment initiation failed:", error);
+      toast.error(error.response?.data?.message || "Không thể khởi tạo thanh toán.");
+
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -874,12 +865,6 @@ export function CheckoutPage() {
       </main>
 
       <Footer />
-
-      <VNPayRedirectModal
-        isOpen={showVNPayModal}
-        onCancel={handleCancelPayment}
-        onComplete={handleVNPayComplete}
-      />
     </div>
   );
 }

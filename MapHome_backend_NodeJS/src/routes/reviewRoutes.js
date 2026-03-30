@@ -6,9 +6,11 @@ const {
   updateReview,
   deleteReview,
   replyToReview,
+  getLatestReviews,
 } = require("../controllers/reviewController");
 const { authMiddleware, requireAnyRole } = require("../middleware/authMiddleware");
 
+router.get("/latest", getLatestReviews);
 router.get("/property/:propertyId", getPropertyReviews);
 router.post("/", authMiddleware, createReview);
 router.put("/:id", authMiddleware, updateReview);

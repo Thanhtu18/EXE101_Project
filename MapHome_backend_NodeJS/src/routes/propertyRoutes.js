@@ -12,11 +12,17 @@ const {
   getPropertiesByLandlord,
   searchProperties,
   searchByMultipleLocations,
+  getPublicStats,
+  getDistrictsStats,
 } = require("../controllers/propertyController");
 const {
   authMiddleware,
   requireAnyRole,
 } = require("../middleware/authMiddleware");
+
+// Public statistics and district aggregates
+router.get("/stats/public", getPublicStats);
+router.get("/stats/districts", getDistrictsStats);
 
 // Search route (must come before /:id pattern)
 router.get("/search", searchProperties);

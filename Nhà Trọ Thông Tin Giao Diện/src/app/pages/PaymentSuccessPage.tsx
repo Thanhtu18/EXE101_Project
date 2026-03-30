@@ -1,5 +1,6 @@
-import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -19,18 +20,55 @@ export function PaymentSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const checkoutType = location.state?.type || "subscription";
+  const [searchParams] = useSearchParams();
+
+  const checkoutType = location.state?.type || searchParams.get("type") || "subscription";
   const isInspection = checkoutType === "inspection";
-  const tier = location.state?.tier;
-  const amount = location.state?.amount;
-  const orderId = location.state?.orderId;
+  
+  // Plan data reconstruction if coming from redirect
+  const planIdFromUrl = searchParams.get("planId");
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/api/subscriptions/plans");
+        if (res.status === 200) {
+          setAvailablePlans(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch plans in success page:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const tier = location.state?.tier || (planIdFromUrl ? availablePlans.find(p => p.planId === planIdFromUrl) : null);
+  const amountStr = searchParams.get("amount");
+  const amount = location.state?.amount || (amountStr ? Number(amountStr) : null);
+  const orderId = location.state?.orderId || searchParams.get("orderId");
   const inspectionData = location.state?.inspectionData;
 
   useEffect(() => {
-    if (!tier || !amount || !orderId) {
+    if (!loading && (!tier || !amount || !orderId)) {
       navigate(isInspection ? "/admin/dashboard" : "/pricing");
     }
-  }, [tier, amount, orderId, navigate, isInspection]);
+  }, [loading, tier, amount, orderId, navigate, isInspection]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Đang tải thông tin giao dịch...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!tier || !amount || !orderId) {
     return null;
