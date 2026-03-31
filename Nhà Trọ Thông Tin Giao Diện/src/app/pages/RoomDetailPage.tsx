@@ -581,6 +581,10 @@ export function RoomDetailPage() {
                         <Share2 className="size-5 text-gray-500" />
                       )}
                     </Button>
+                    <ReportPropertyDialog 
+                      propertyId={property._id || property.id} 
+                      propertyName={property.name} 
+                    />
                   </div>
                 </div>
               </motion.div>

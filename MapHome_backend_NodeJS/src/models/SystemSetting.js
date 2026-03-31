@@ -9,6 +9,10 @@ const SystemSettingSchema = new mongoose.Schema(
     pricing: {
       basicVerification: { type: Number, default: 0 },
       premiumVerification: { type: Number, default: 0 },
+      postRoomFee: { type: Number, default: 0 },
+      pushRoomFee: { type: Number, default: 0 },
+      urgentRoomFee: { type: Number, default: 0 },
+      commissionRate: { type: Number, default: 0 }, // percentage
     },
     broadcastMessage: { type: String, default: "" },
     isBroadcastEnabled: { type: Boolean, default: false },

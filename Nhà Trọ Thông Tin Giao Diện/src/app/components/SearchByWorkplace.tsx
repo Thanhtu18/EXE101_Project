@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { MapPin, X, Plus, Target } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, X, Plus, Target, Search, Sparkles, Building2, School } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
+
 
 export interface SearchLocation {
   id: string;
@@ -66,143 +68,205 @@ export function SearchByWorkplace({ onSearch, currentLocations }: SearchByWorkpl
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="relative">
-          <Target className="size-4 mr-2" />
+        <Button 
+          variant="outline" 
+          className="relative h-12 px-6 rounded-2xl border-emerald-900/10 bg-white/50 backdrop-blur-md hover:bg-emerald-50 hover:border-emerald-600/30 text-emerald-950 font-bold transition-all duration-300 group shadow-sm"
+        >
+          <Target className="size-4 mr-2 text-emerald-600 group-hover:scale-125 transition-transform duration-500" />
           Tìm gần chỗ làm/trường
           {currentLocations.length > 0 && (
-            <Badge className="ml-2 px-1.5 py-0 h-5 min-w-[20px]" variant="secondary">
+            <div className="ml-2 size-5 rounded-full bg-emerald-600 text-[10px] text-white flex items-center justify-center font-black animate-pulse">
               {currentLocations.length}
-            </Badge>
+            </div>
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Tìm trọ gần địa điểm</DialogTitle>
-          <DialogDescription>
-            Chọn nơi làm việc, trường học hoặc địa điểm quan trọng để tìm nhà trọ xung quanh
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden bg-white/80 backdrop-blur-3xl border-emerald-900/10 shadow-[0_32px_128px_-32px_rgba(6,78,59,0.2)] rounded-[32px]">
+        <div className="p-8 space-y-8 max-h-[85vh] overflow-y-auto will-change-transform">
+          <DialogHeader className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="size-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-900 flex items-center justify-center text-white shadow-xl shadow-emerald-900/20">
+                <Target className="size-7" />
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-3xl font-black text-emerald-950 tracking-tight leading-tight">Tìm trọ gần địa điểm</DialogTitle>
+                <DialogDescription className="text-emerald-900/60 font-medium text-base">
+                  Tối ưu hóa thời gian di chuyển của bạn tới nơi quan trọng
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
 
         <div className="space-y-4 mt-4">
           {/* Selected Locations */}
-          {selectedLocations.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Đã chọn ({selectedLocations.length})</Label>
-              <div className="flex flex-wrap gap-2">
-                {selectedLocations.map(loc => (
-                  <Badge key={loc.id} variant="secondary" className="px-3 py-2">
-                    <MapPin className="size-3 mr-1" />
-                    {loc.name}
-                    <button
-                      onClick={() => removeLocation(loc.id)}
-                      className="ml-2 hover:text-red-600"
+          <AnimatePresence>
+            {selectedLocations.length > 0 && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-3 overflow-hidden"
+              >
+                <div className="flex items-center gap-2">
+                   <Label className="text-[10px] font-black text-emerald-950 uppercase tracking-[0.2em]">Đã chọn ({selectedLocations.length})</Label>
+                   <div className="h-px flex-1 bg-emerald-900/5" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedLocations.map(loc => (
+                    <motion.div
+                      layout
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      key={loc.id}
+                      className="group flex items-center gap-2 pl-3 pr-2 py-2 bg-emerald-950 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-950/20 will-change-transform"
                     >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+                      <MapPin className="size-3 text-emerald-400" />
+                      {loc.name}
+                      <button
+                        onClick={() => removeLocation(loc.id)}
+                        className="p-1 rounded-md hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
 
           {/* Search */}
-          <div className="space-y-2">
-            <Label htmlFor="search-location">Tìm kiếm địa điểm</Label>
+          <div className="space-y-3 p-6 rounded-[24px] bg-emerald-900/[0.03] border border-emerald-900/5 relative group">
+            <Label htmlFor="search-location" className="text-[10px] font-black text-emerald-950 uppercase tracking-[0.2em] flex items-center gap-2">
+               <Search className="size-3 text-emerald-600" /> Tìm kiếm địa điểm
+            </Label>
             <Input
               id="search-location"
               placeholder="Nhập tên trường, công ty, địa điểm..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-14 px-5 rounded-2xl bg-white border-transparent focus:border-emerald-600/30 focus:ring-emerald-600/5 text-emerald-950 font-bold placeholder:text-emerald-900/40 transition-all text-base shadow-sm"
             />
           </div>
 
+
           {/* Popular Locations */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Địa điểm phổ biến</Label>
-            <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto">
-              {filteredPopularLocations.map(loc => {
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black text-emerald-950 uppercase tracking-[0.2em] flex items-center gap-2">
+               <Sparkles className="size-3 text-emerald-600" /> Địa điểm phổ biến
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[340px] overflow-y-auto px-1 pb-4 custom-scrollbar">
+              {filteredPopularLocations.map((loc, idx) => {
                 const isSelected = selectedLocations.find(l => l.id === loc.id);
                 return (
-                  <button
+                  <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
                     key={loc.id}
                     onClick={() => addLocation(loc)}
                     disabled={!!isSelected}
                     className={`
-                      text-left p-3 rounded-lg border transition-all
+                      group text-left p-4 rounded-[20px] border transition-all duration-300 relative overflow-hidden will-change-transform
                       ${isSelected 
-                        ? 'bg-blue-50 border-blue-300 cursor-not-allowed opacity-60' 
-                        : 'hover:bg-gray-50 hover:border-gray-300 cursor-pointer'
+                        ? 'bg-emerald-50 border-emerald-600 shadow-sm opacity-60' 
+                        : 'bg-white border-emerald-900/5 hover:border-emerald-600/40 hover:shadow-xl hover:shadow-emerald-900/5 hover:-translate-y-1'
                       }
                     `}
                   >
-                    <div className="flex items-start gap-3">
-                      <MapPin className="size-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm">{loc.name}</h4>
-                        <p className="text-xs text-gray-600 truncate">{loc.address}</p>
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className={`
+                        size-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                        ${isSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'}
+                      `}>
+                        {loc.name.includes('ĐH') ? <School className="size-5" /> : <Building2 className="size-5" />}
                       </div>
-                      {isSelected ? (
-                        <Badge variant="secondary" className="flex-shrink-0">Đã chọn</Badge>
-                      ) : (
-                        <Plus className="size-4 text-gray-400 flex-shrink-0" />
-                      )}
+                      <div className="flex-1 min-w-0 py-0.5">
+                        <h4 className="font-black text-emerald-950 text-sm tracking-tight">{loc.name}</h4>
+                        <p className="text-[11px] font-medium text-emerald-900/40 truncate mt-0.5">{loc.address}</p>
+                      </div>
+                      <div className="flex-shrink-0 mt-1">
+                        {isSelected ? (
+                          <div className="bg-emerald-600/10 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Đã chọn</div>
+                        ) : (
+                          <Plus className="size-5 text-emerald-900/20 group-hover:text-emerald-600 transition-colors" />
+                        )}
+                      </div>
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
           </div>
 
-          {/* Custom Location Input (Future enhancement) */}
-          <div className="border-t pt-4 space-y-3">
-            <Label className="text-sm font-semibold">Hoặc nhập địa chỉ tùy chỉnh</Label>
-            <div className="space-y-2">
+
+          {/* Custom Location Input */}
+          <div className="pt-6 border-t border-emerald-900/5 space-y-4">
+            <Label className="text-[10px] font-black text-emerald-950 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Plus className="size-3 text-emerald-600" /> Hoặc thêm địa chỉ tùy chỉnh
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                placeholder="Tên địa điểm (VD: Văn phòng của tôi)"
+                placeholder="Tên địa điểm (VD: Nhà của tôi)"
                 value={customLocation.name}
                 onChange={(e) => setCustomLocation({ ...customLocation, name: e.target.value })}
+                className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
               />
               <Input
-                placeholder="Địa chỉ cụ thể"
+                placeholder="Địa chỉ cụ thể tại TP.HCM"
                 value={customLocation.address}
                 onChange={(e) => setCustomLocation({ ...customLocation, address: e.target.value })}
+                className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
               />
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={!customLocation.name || !customLocation.address}
-                onClick={() => {
-                  // For now, use center of HCM as coordinates
-                  // In real app, would use geocoding API
-                  const newLocation: SearchLocation = {
-                    id: `custom-${Date.now()}`,
-                    name: customLocation.name,
-                    address: customLocation.address,
-                    coordinates: [10.7769, 106.7009], // Default to Nhà thờ Đức Bà
-                  };
-                  addLocation(newLocation);
-                  setCustomLocation({ name: '', address: '' });
-                }}
-              >
-                <Plus className="size-4 mr-2" />
-                Thêm địa điểm
-              </Button>
             </div>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-12 rounded-2xl border-emerald-950/10 text-emerald-950 font-black text-xs uppercase tracking-widest hover:bg-emerald-950 hover:text-white hover:border-transparent transition-all"
+              disabled={!customLocation.name || !customLocation.address}
+              onClick={() => {
+                const newLocation: SearchLocation = {
+                  id: `custom-${Date.now()}`,
+                  name: customLocation.name,
+                  address: customLocation.address,
+                  coordinates: [10.7769, 106.7009],
+                };
+                addLocation(newLocation);
+                setCustomLocation({ name: '', address: '' });
+              }}
+            >
+              <Plus className="size-4 mr-2" />
+              Thêm địa điểm của tôi
+            </Button>
           </div>
 
+
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleClear} className="flex-1">
+          <div className="grid grid-cols-2 gap-3 pt-6 border-t border-emerald-900/5">
+            <Button 
+              variant="outline" 
+              onClick={handleClear} 
+              className="h-14 rounded-2xl border-emerald-950/10 text-emerald-950 font-black text-xs uppercase tracking-widest hover:bg-emerald-50"
+            >
               Xóa tất cả
             </Button>
-            <Button onClick={handleApply} className="flex-1" disabled={selectedLocations.length === 0}>
+            <Button 
+              onClick={handleApply} 
+              className="h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-950 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all will-change-transform" 
+              disabled={selectedLocations.length === 0}
+            >
               Áp dụng ({selectedLocations.length})
             </Button>
           </div>
         </div>
-      </DialogContent>
+      </div>
+    </DialogContent>
+
+
+
     </Dialog>
   );
 }

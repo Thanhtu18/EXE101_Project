@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Filter, X, ChevronDown, ChevronUp, Sparkles, SlidersHorizontal, Target } from 'lucide-react';
+
 import { Button } from '@/app/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Slider } from '@/app/components/ui/slider';
@@ -8,6 +10,7 @@ import { Label } from '@/app/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Badge } from '@/app/components/ui/badge';
 import { RentalFilters } from '@/app/components/types';
+
 
 
 
@@ -76,276 +79,371 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" className="relative">
-          <Filter className="size-4 mr-2" />
+        <Button 
+          variant="outline" 
+          className="relative h-12 px-6 rounded-2xl border-emerald-900/10 bg-white/50 backdrop-blur-md hover:bg-emerald-50 hover:border-emerald-600/30 text-emerald-950 font-bold transition-all duration-300 group"
+        >
+          <SlidersHorizontal className="size-4 mr-2 text-emerald-600 transition-transform duration-500 group-hover:rotate-180" />
           Lọc & Sắp xếp
           {activeFiltersCount > 0 && (
-            <Badge className="ml-2 px-1.5 py-0 h-5 min-w-[20px]" variant="destructive">
+            <div className="ml-2 size-5 rounded-full bg-emerald-600 text-[10px] text-white flex items-center justify-center font-black animate-pulse">
               {activeFiltersCount}
-            </Badge>
+            </div>
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-full sm:w-[400px] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-2xl">Bộ lọc tìm kiếm</SheetTitle>
-          <SheetDescription>
-            Tùy chỉnh kết quả tìm kiếm theo nhu cầu của bạn
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent side="left" className="w-full sm:w-[420px] overflow-y-auto bg-white/80 backdrop-blur-3xl border-r border-emerald-900/10 p-0 shadow-[24px_0_80px_-20px_rgba(6,78,59,0.15)]">
+        <div className="p-8 space-y-8 will-change-transform">
+          <SheetHeader className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-900 flex items-center justify-center text-white shadow-lg shadow-emerald-900/20">
+                <Filter className="size-6" />
+              </div>
+              <div>
+                <SheetTitle className="text-2xl font-black text-emerald-950 tracking-tight leading-tight">Bộ lọc & Phân loại</SheetTitle>
+                <SheetDescription className="text-emerald-900/60 font-medium">
+                  Tinh chỉnh tìm kiếm lý tưởng của bạn
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
 
         <div className="mt-6 space-y-6">
-          {/* Reset Button */}
-          <div className="flex justify-end">
-            <Button variant="ghost" size="sm" onClick={handleReset}>
+          <div className="flex items-center justify-between pt-2">
+            <div className="bg-emerald-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-emerald-100">
+               <Sparkles className="size-3 text-emerald-600" />
+               <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">{activeFiltersCount} Đang kích hoạt</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleReset}
+              className="text-emerald-900/40 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+            >
               <X className="size-4 mr-2" />
-              Đặt lại bộ lọc
+              Đặt lại
             </Button>
           </div>
 
+
           {/* Sort By */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Sắp xếp theo</Label>
+          <div className="space-y-4 bg-emerald-900/[0.03] p-5 rounded-[24px] border border-emerald-900/5">
+            <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em]">Sắp xếp theo</Label>
             <RadioGroup 
               value={filters.sortBy} 
               onValueChange={(value) => updateFilter('sortBy', value as RentalFilters['sortBy'])}
+              className="grid grid-cols-1 gap-2"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="distance" id="sort-distance" />
-                <Label htmlFor="sort-distance" className="cursor-pointer font-normal">
-                  Khoảng cách gần nhất
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="price-asc" id="sort-price-asc" />
-                <Label htmlFor="sort-price-asc" className="cursor-pointer font-normal">
-                  Giá thấp đến cao
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="price-desc" id="sort-price-desc" />
-                <Label htmlFor="sort-price-desc" className="cursor-pointer font-normal">
-                  Giá cao đến thấp
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="area" id="sort-area" />
-                <Label htmlFor="sort-area" className="cursor-pointer font-normal">
-                  Diện tích lớn nhất
-                </Label>
-              </div>
+              {[
+                { id: 'sort-distance', value: 'distance', label: 'Khoảng cách gần nhất' },
+                { id: 'sort-price-asc', value: 'price-asc', label: 'Giá thấp đến cao' },
+                { id: 'sort-price-desc', value: 'price-desc', label: 'Giá cao đến thấp' },
+                { id: 'sort-area', value: 'area', label: 'Diện tích lớn nhất' }
+              ].map((item) => (
+                <div 
+                  key={item.id}
+                  className={`
+                    flex items-center space-x-3 p-3 rounded-xl border transition-all duration-300
+                    ${filters.sortBy === item.value 
+                      ? 'bg-white border-emerald-600/20 shadow-sm' 
+                      : 'border-transparent hover:bg-white/50'}
+                  `}
+                >
+                  <RadioGroupItem value={item.value} id={item.id} className="text-emerald-600 border-emerald-200" />
+                  <Label htmlFor={item.id} className="cursor-pointer font-bold text-emerald-900/80 text-sm flex-1">
+                    {item.label}
+                  </Label>
+                </div>
+              ))}
             </RadioGroup>
           </div>
 
+
           {/* Radius */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Bán kính tìm kiếm</Label>
-            <div className="space-y-2">
+          <div className="space-y-5 p-5 rounded-[24px] border border-emerald-900/5 bg-white/40 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+               <Target className="size-12 text-emerald-600" />
+            </div>
+            <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] relative">Bán kính tìm kiếm</Label>
+            <div className="space-y-6 pt-2 relative">
               <Slider
                 value={[filters.radius]}
                 onValueChange={(value) => updateFilter('radius', value[0])}
                 min={1}
                 max={20}
                 step={1}
-                className="w-full"
+                className="w-full [&_[role=slider]]:bg-emerald-600 [&_[role=slider]]:border-emerald-950/20 [&_.relative]:bg-emerald-100"
               />
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>1km</span>
-                <span className="font-semibold text-blue-600">{filters.radius}km</span>
-                <span>20km</span>
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[10px] font-bold text-emerald-900/40">1km</span>
+                <div className="bg-emerald-900 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-lg shadow-emerald-900/20 transition-all duration-300 transform group-hover:scale-110">
+                   {filters.radius} KM
+                </div>
+                <span className="text-[10px] font-bold text-emerald-900/40">20km</span>
               </div>
             </div>
           </div>
 
+
           {/* Price Range */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={() => toggleSection('price')}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full group"
             >
-              <Label className="text-base font-semibold cursor-pointer">Khoảng giá</Label>
-              {expandedSections.price ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-            </button>
-            {expandedSections.price && (
-              <div className="space-y-2">
-                <Slider
-                  value={filters.priceRange}
-                  onValueChange={(value) => updateFilter('priceRange', value as [number, number])}
-                  min={1000000}
-                  max={10000000}
-                  step={100000}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{formatPrice(filters.priceRange[0])}</span>
-                  <span className="font-semibold text-blue-600">
-                    {formatPrice(filters.priceRange[0])} - {formatPrice(filters.priceRange[1])}
-                  </span>
-                  <span>{formatPrice(filters.priceRange[1])}</span>
-                </div>
+              <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] cursor-pointer group-hover:text-emerald-600 transition-colors">Khoảng giá</Label>
+              <div className="size-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-900/40 transition-all duration-300 group-hover:bg-emerald-100 group-hover:text-emerald-600">
+                 {expandedSections.price ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               </div>
-            )}
+            </button>
+            <AnimatePresence>
+              {expandedSections.price && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-6 p-5 pt-2 rounded-[24px] bg-emerald-900/[0.02] border border-emerald-900/5 mt-2">
+                    <Slider
+                      value={filters.priceRange}
+                      onValueChange={(value) => updateFilter('priceRange', value as [number, number])}
+                      min={1000000}
+                      max={10000000}
+                      step={100000}
+                      className="w-full [&_[role=slider]]:bg-emerald-600 [&_[role=slider]]:border-emerald-950/20"
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(filters.priceRange[0])}</span>
+                      <span className="text-xs font-black text-emerald-950 bg-white px-4 py-1.5 rounded-xl border border-emerald-950/5 shadow-sm">
+                        {formatPrice(filters.priceRange[0])} — {formatPrice(filters.priceRange[1])}
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(filters.priceRange[1])}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
 
           {/* Area Range */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={() => toggleSection('area')}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full group"
             >
-              <Label className="text-base font-semibold cursor-pointer">Diện tích (m²)</Label>
-              {expandedSections.area ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-            </button>
-            {expandedSections.area && (
-              <div className="space-y-2">
-                <Slider
-                  value={filters.areaRange}
-                  onValueChange={(value) => updateFilter('areaRange', value as [number, number])}
-                  min={10}
-                  max={50}
-                  step={5}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>10m²</span>
-                  <span className="font-semibold text-blue-600">
-                    {filters.areaRange[0]}m² - {filters.areaRange[1]}m²
-                  </span>
-                  <span>50m²</span>
-                </div>
+              <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] cursor-pointer group-hover:text-emerald-600 transition-colors">Diện tích (m²)</Label>
+              <div className="size-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-900/40 transition-all duration-300 group-hover:bg-emerald-100 group-hover:text-emerald-600">
+                 {expandedSections.area ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               </div>
-            )}
+            </button>
+            <AnimatePresence>
+              {expandedSections.area && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-6 p-5 pt-2 rounded-[24px] bg-emerald-900/[0.02] border border-emerald-900/5 mt-2">
+                    <Slider
+                      value={filters.areaRange}
+                      onValueChange={(value) => updateFilter('areaRange', value as [number, number])}
+                      min={10}
+                      max={50}
+                      step={5}
+                      className="w-full [&_[role=slider]]:bg-emerald-600"
+                    />
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-emerald-900/40">10m²</span>
+                      <span className="text-xs font-black text-emerald-950 bg-white px-4 py-1.5 rounded-xl border border-emerald-950/5 shadow-sm">
+                        {filters.areaRange[0]}m² - {filters.areaRange[1]}m²
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-900/40">50m²</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
 
           {/* Amenities */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={() => toggleSection('amenities')}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full group"
             >
-              <Label className="text-base font-semibold cursor-pointer">
-                Tiện nghi
+              <div className="flex items-center gap-3">
+                <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] cursor-pointer group-hover:text-emerald-600 transition-colors">
+                  Tiện nghi
+                </Label>
                 {selectedAmenitiesCount > 0 && (
-                  <Badge className="ml-2" variant="secondary">{selectedAmenitiesCount}</Badge>
+                  <div className="size-5 rounded-full bg-emerald-600 text-[10px] text-white flex items-center justify-center font-black">
+                    {selectedAmenitiesCount}
+                  </div>
                 )}
-              </Label>
-              {expandedSections.amenities ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-            </button>
-            {expandedSections.amenities && (
-              <div className="space-y-3">
-                {Object.entries(filters.amenities).map(([key, value]) => {
-                  const labels: Record<string, string> = {
-                    wifi: '📶 WiFi',
-                    furniture: '🛋️ Full nội thất',
-                    tv: '📺 TV',
-                    washingMachine: '🧺 Máy giặt',
-                    kitchen: '🍳 Bếp',
-                    refrigerator: '❄️ Tủ lạnh',
-                    airConditioner: '❄️ Máy lạnh',
-                  };
-                  return (
-                    <div key={key} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={key}
-                        checked={value}
-                        onCheckedChange={(checked) => 
-                          updateAmenity(key as keyof RentalFilters['amenities'], checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={key} className="cursor-pointer font-normal">
-                        {labels[key]}
-                      </Label>
-                    </div>
-                  );
-                })}
               </div>
-            )}
+              <div className="size-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-900/40 transition-all duration-300 group-hover:bg-emerald-100 group-hover:text-emerald-600">
+                 {expandedSections.amenities ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              </div>
+            </button>
+            <AnimatePresence>
+              {expandedSections.amenities && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-2"
+                >
+                  <div className="grid grid-cols-1 gap-1.5 p-1">
+                    {Object.entries(filters.amenities).map(([key, value]) => {
+                      const labels: Record<string, string> = {
+                        wifi: '📶 WiFi tốc độ cao',
+                        furniture: '🛋️ Full nội thất',
+                        tv: '📺 Smart TV',
+                        washingMachine: '🧺 Máy giặt riêng',
+                        kitchen: '🍳 Khu vực bếp',
+                        refrigerator: '❄️ Tủ lạnh',
+                        airConditioner: '❄️ Điều hòa',
+                      };
+                      return (
+                        <div 
+                          key={key} 
+                          className={`
+                            flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200
+                            ${value ? 'bg-emerald-50/50 border-emerald-600/20' : 'border-transparent hover:bg-emerald-900/[0.02]'}
+                          `}
+                        >
+                          <Checkbox
+                            id={key}
+                            checked={value}
+                            onCheckedChange={(checked) => 
+                              updateAmenity(key as keyof RentalFilters['amenities'], checked as boolean)
+                            }
+                            className="border-emerald-200 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-transparent"
+                          />
+                          <Label htmlFor={key} className="cursor-pointer font-bold text-sm text-emerald-900/70 flex-1">
+                            {labels[key]}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
 
           {/* Availability */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={() => toggleSection('availability')}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full group"
             >
-              <Label className="text-base font-semibold cursor-pointer">Tình trạng</Label>
-              {expandedSections.availability ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] cursor-pointer group-hover:text-emerald-600 transition-colors">Tình trạng</Label>
+              <div className="size-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-900/40 transition-all duration-300 group-hover:bg-emerald-100 group-hover:text-emerald-600">
+                 {expandedSections.availability ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              </div>
             </button>
-            {expandedSections.availability && (
-              <RadioGroup 
-                value={filters.availability} 
-                onValueChange={(value) => updateFilter('availability', value as RentalFilters['availability'])}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="availability-all" />
-                  <Label htmlFor="availability-all" className="cursor-pointer font-normal">
-                    Tất cả
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="available" id="availability-available" />
-                  <Label htmlFor="availability-available" className="cursor-pointer font-normal">
-                    Còn phòng
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="unavailable" id="availability-unavailable" />
-                  <Label htmlFor="availability-unavailable" className="cursor-pointer font-normal">
-                    Hết phòng
-                  </Label>
-                </div>
-              </RadioGroup>
-            )}
+            <AnimatePresence>
+              {expandedSections.availability && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-2"
+                >
+                  <RadioGroup 
+                    value={filters.availability} 
+                    onValueChange={(value) => updateFilter('availability', value as RentalFilters['availability'])}
+                    className="grid grid-cols-1 gap-2"
+                  >
+                    {[
+                      { id: 'availability-all', value: 'all', label: 'Tất cả' },
+                      { id: 'availability-available', value: 'available', label: '🟢 Còn phòng' },
+                      { id: 'availability-unavailable', value: 'unavailable', label: '🔴 Hết phòng' }
+                    ].map((item) => (
+                      <div 
+                        key={item.id}
+                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${filters.availability === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
+                      >
+                        <RadioGroupItem value={item.value} id={item.id} className="text-emerald-600 border-emerald-200" />
+                        <Label htmlFor={item.id} className="cursor-pointer font-bold text-sm text-emerald-900/70 flex-1">
+                          {item.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
+
           {/* Verification Level */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={() => toggleSection('verification')}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full group"
             >
-              <Label className="text-base font-semibold cursor-pointer">Mức xác thực</Label>
-              {expandedSections.verification ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] cursor-pointer group-hover:text-emerald-600 transition-colors">Mức xác thực</Label>
+              <div className="size-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-900/40 transition-all duration-300 group-hover:bg-emerald-100 group-hover:text-emerald-600">
+                 {expandedSections.verification ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              </div>
             </button>
-            {expandedSections.verification && (
-              <RadioGroup 
-                value={filters.verificationLevel} 
-                onValueChange={(value) => updateFilter('verificationLevel', value as RentalFilters['verificationLevel'])}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="verification-all" />
-                  <Label htmlFor="verification-all" className="cursor-pointer font-normal">
-                    Tất cả
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="verified" id="verification-verified" />
-                  <Label htmlFor="verification-verified" className="cursor-pointer font-normal">
-                    ✅ Đã xác thực
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="none" id="verification-none" />
-                  <Label htmlFor="verification-none" className="cursor-pointer font-normal">
-                    ⚠️ Chưa xác thực
-                  </Label>
-                </div>
-              </RadioGroup>
-            )}
+            <AnimatePresence>
+              {expandedSections.verification && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden pt-2"
+                >
+                  <RadioGroup 
+                    value={filters.verificationLevel} 
+                    onValueChange={(value) => updateFilter('verificationLevel', value as RentalFilters['verificationLevel'])}
+                    className="grid grid-cols-1 gap-2"
+                  >
+                    {[
+                      { id: 'verification-all', value: 'all', label: 'Tất cả listing' },
+                      { id: 'verification-verified', value: 'verified', label: '✅ Host đã xác thực' },
+                      { id: 'verification-none', value: 'none', label: '⚠️ Chưa xác thực' }
+                    ].map((item) => (
+                      <div 
+                        key={item.id}
+                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${filters.verificationLevel === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
+                      >
+                        <RadioGroupItem value={item.value} id={item.id} className="text-emerald-600 border-emerald-200" />
+                        <Label htmlFor={item.id} className="cursor-pointer font-bold text-sm text-emerald-900/70 flex-1">
+                          {item.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         {/* Apply Button */}
-        <div className="mt-6 pt-6 border-t">
+        <div className="p-8 border-t border-emerald-900/5 bg-white/50 backdrop-blur-md">
           <Button 
-            className="w-full" 
+            className="w-full h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-950 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-emerald-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all will-change-transform" 
             size="lg"
             onClick={() => setIsOpen(false)}
           >
-            Áp dụng bộ lọc
+            Áp dụng thay đổi
           </Button>
         </div>
+        </div>
       </SheetContent>
+
+
     </Sheet>
   );
 }

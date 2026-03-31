@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RentalProperty, LandlordProfile } from './types';
@@ -11,11 +13,13 @@ interface RentalMapViewProps {
   selectedProperty: RentalProperty | null;
   onPropertySelect: (property: RentalProperty) => void;
   searchLocations?: SearchLocation[];
+  searchRadius?: number; // in km
+  searchCenter?: [number, number];
 }
 
 // Regular property icon (no pin)
 const createPropertyIcon = (available: boolean, isVerified: boolean = false) => {
-  const color = available ? '#6b7280' : '#9ca3af';
+  const color = available ? '#059669' : '#9ca3af'; // emerald-600 vs gray-400
   const verifiedBadge = isVerified
     ? `<div style="
         position: absolute;
@@ -26,7 +30,7 @@ const createPropertyIcon = (available: boolean, isVerified: boolean = false) => 
         height: 16px;
         border-radius: 50%;
         border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 8px rgba(6,78,59,0.3);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -48,11 +52,11 @@ const createPropertyIcon = (available: boolean, isVerified: boolean = false) => 
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
           border: 3px solid white;
-          box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+          box-shadow: 0 6px 12px rgba(6,78,59,0.2);
           display: flex;
           align-items: center;
           justify-content: center;
-          opacity: 0.85;
+          opacity: 0.95;
         ">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
@@ -74,12 +78,13 @@ const createPropertyIcon = (available: boolean, isVerified: boolean = false) => 
   });
 };
 
+
 // Landlord-pinned property icon (prominent, with glow)
 const createPinnedPropertyIcon = (available: boolean) => {
   const gradient = available
-    ? 'linear-gradient(135deg, #10b981, #059669)'
+    ? 'linear-gradient(135deg, #059669, #064e3b)' // emerald-600 to emerald-950
     : 'linear-gradient(135deg, #f97316, #ea580c)';
-  const glowColor = available ? 'rgba(16,185,129,0.4)' : 'rgba(249,115,22,0.4)';
+  const glowColor = available ? 'rgba(5,150,105,0.4)' : 'rgba(249,115,22,0.4)';
   return L.divIcon({
     html: `
       <div style="position: relative;">
@@ -88,8 +93,8 @@ const createPinnedPropertyIcon = (available: boolean) => {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 56px;
-          height: 56px;
+          width: 64px;
+          height: 64px;
           border-radius: 50%;
           background: ${glowColor};
           animation: pin-glow 2s infinite;
@@ -101,7 +106,7 @@ const createPinnedPropertyIcon = (available: boolean) => {
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
           border: 3px solid white;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 16px rgba(6,78,59,0.3);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -118,16 +123,16 @@ const createPinnedPropertyIcon = (available: boolean) => {
           position: absolute;
           top: -6px;
           right: -6px;
-          background: #ef4444;
+          background: #ff4d4d;
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          border: 2px solid white;
+          border: 2.5px solid white;
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 3;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         ">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/>
@@ -137,8 +142,8 @@ const createPinnedPropertyIcon = (available: boolean) => {
       </div>
       <style>
         @keyframes pin-glow {
-          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
-          50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0; }
+          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+          50% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
         }
       </style>
     `,
@@ -149,23 +154,26 @@ const createPinnedPropertyIcon = (available: boolean) => {
   });
 };
 
+
 const userLocationIcon = L.divIcon({
   html: `
     <div style="position: relative;">
       <div style="
-        background-color: #3b82f6;
-        width: 40px;
-        height: 40px;
+        background-color: #10b981;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         border: 4px solid white;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 16px rgba(6,78,59,0.4);
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: pulse 2s infinite;
+        animation: pulse-aura 2.5s infinite ease-out;
+        z-index: 10;
+        position: relative;
       ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
           <circle cx="12" cy="10" r="3"></circle>
         </svg>
       </div>
@@ -174,30 +182,31 @@ const userLocationIcon = L.divIcon({
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 80px;
-        height: 80px;
+        width: 90px;
+        height: 90px;
         border-radius: 50%;
-        background-color: rgba(59, 130, 246, 0.2);
-        border: 2px solid rgba(59, 130, 246, 0.4);
-        animation: ripple 2s infinite;
+        background-color: rgba(16, 185, 129, 0.15);
+        border: 2px solid rgba(16, 185, 129, 0.3);
+        animation: ripple-aura 2.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
       "></div>
     </div>
     <style>
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
+      @keyframes pulse-aura {
+        0%, 100% { transform: scale(1); filter: brightness(1); }
+        50% { transform: scale(1.1); filter: brightness(1.2); }
       }
-      @keyframes ripple {
-        0% { width: 80px; height: 80px; opacity: 1; }
-        100% { width: 120px; height: 120px; opacity: 0; }
+      @keyframes ripple-aura {
+        0% { width: 44px; height: 44px; opacity: 1; }
+        100% { width: 140px; height: 140px; opacity: 0; }
       }
     </style>
   `,
   className: 'user-location-marker',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-  popupAnchor: [0, -20],
+  iconSize: [44, 44],
+  iconAnchor: [22, 22],
+  popupAnchor: [0, -22],
 });
+
 
 // Facility icons
 const createFacilityIcon = (type: string) => {
@@ -236,22 +245,26 @@ const createFacilityIcon = (type: string) => {
   });
 };
 
-export function RentalMapView({ properties, selectedProperty, onPropertySelect, searchLocations }: RentalMapViewProps) {
+export function RentalMapView({ properties, selectedProperty, onPropertySelect, searchLocations, searchRadius = 1, searchCenter }: RentalMapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userCircleRef = useRef<L.Circle | null>(null);
   const [showLegend, setShowLegend] = useState(true);
+  // Shared drag position for legend button + legend panel
+  const legendX = useMotionValue(16);
+  const legendY = useMotionValue(16);
 
   // Simulated user location (near Nhà thờ Đức Bà, TP.HCM)
-  const [userLocation] = useState<[number, number]>([10.7769, 106.7009]);
+  const defaultCenter: [number, number] = [10.7769, 106.7009];
+  const effectiveCenter = searchCenter || defaultCenter;
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current).setView(userLocation, 13);
+      mapRef.current = L.map(mapContainerRef.current).setView(effectiveCenter, 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -363,20 +376,17 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
 
     // Add user location marker and circle
     if (!userMarkerRef.current) {
-      userMarkerRef.current = L.marker(userLocation, {
+      userMarkerRef.current = L.marker(effectiveCenter, {
         icon: userLocationIcon,
       }).addTo(mapRef.current);
 
       const userPopupContent = `
         <div style="min-width: 180px; text-align: center;">
           <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #3b82f6;">
-            📍 Vị trí của bạn
+            📍 Vị trí đang tìm
           </h3>
           <p style="margin: 0; font-size: 14px; color: #666;">
-            Nhà thờ Đức Bà, TP.HCM
-          </p>
-          <p style="margin: 8px 0 0 0; font-size: 12px; color: #999;">
-            Bán kính 500m xung quanh
+            Khu vực tìm kiếm của bạn
           </p>
         </div>
       `;
@@ -385,15 +395,23 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
         maxWidth: 200,
         className: 'custom-popup',
       });
+    } else {
+      userMarkerRef.current.setLatLng(effectiveCenter);
     }
     if (!userCircleRef.current) {
-      userCircleRef.current = L.circle(userLocation, {
-        color: '#3b82f6',
-        fillColor: '#3b82f6',
-        fillOpacity: 0.2,
-        radius: 500,
+      userCircleRef.current = L.circle(effectiveCenter, {
+        color: '#10b981',
+        fillColor: '#10b981',
+        fillOpacity: 0.1,
+        weight: 2,
+        radius: (searchRadius || 1) * 1000, // Convert km to meters
       }).addTo(mapRef.current);
+    } else {
+      // Update existing circle
+      userCircleRef.current.setLatLng(effectiveCenter);
+      userCircleRef.current.setRadius((searchRadius || 1) * 1000);
     }
+
 
     // Add facilities
     // Facilities removed for now
@@ -491,7 +509,7 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
 
   const handleCenterOnUser = () => {
     if (mapRef.current) {
-      mapRef.current.setView(userLocation, 15, { animate: true });
+      mapRef.current.setView(effectiveCenter, 15, { animate: true });
       if (userMarkerRef.current) {
         userMarkerRef.current.openPopup();
       }
@@ -516,73 +534,125 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
     <div className="relative h-full w-full">
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" />
 
-      {/* Legend */}
-      {showLegend && (
-        <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 p-3 max-w-[220px]">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Chú thích</h4>
-            <button
-              onClick={() => setShowLegend(false)}
-              className="text-gray-400 hover:text-gray-600 text-xs"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-2">
-            {/* Pinned */}
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex-shrink-0">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-500 to-green-700 border-2 border-white shadow" />
-                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 border border-white" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-800">Chủ trọ đã ghim</p>
-                <p className="text-[10px] text-gray-500">{pinnedCount} vị trí xác thực GPS</p>
-              </div>
+      {/* Legend - always mounted, dark emerald glassmorphism */}
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.08}
+        dragConstraints={mapContainerRef}
+        style={{ x: legendX, y: legendY, position: 'absolute', top: 0, left: 0, cursor: 'grab', pointerEvents: showLegend ? 'auto' : 'none' }}
+        animate={{ opacity: showLegend ? 1 : 0, scale: showLegend ? 1 : 0.95 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        whileDrag={{ scale: 1.02, boxShadow: '0 24px 60px -10px rgba(6,78,59,0.5)', cursor: 'grabbing' }}
+        className="z-20 w-[230px] will-change-transform select-none rounded-2xl overflow-hidden shadow-2xl shadow-emerald-900/40"
+      >
+        {/* Dark Emerald Header */}
+        <div className="bg-gradient-to-r from-emerald-950 to-emerald-900 px-4 pt-4 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Grip dots — white */}
+            <div className="grid grid-cols-2 gap-[3px] opacity-30">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="w-1 h-1 rounded-full bg-white" />
+              ))}
             </div>
-            {/* Regular */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-gray-500 border-2 border-white shadow opacity-80 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-gray-800">Chưa ghim vị trí</p>
-                <p className="text-[10px] text-gray-500">{regularCount} tin đăng thường</p>
-              </div>
-            </div>
-            {/* User */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white shadow flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-gray-800">Vị trí của bạn</p>
-              </div>
+            <div>
+              <h4 className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.35em]">Bản đồ tìm kiếm</h4>
             </div>
           </div>
-          {/* Stats */}
-          <div className="mt-3 pt-2 border-t border-gray-100">
-            <p className="text-[10px] text-gray-500 text-center">
-              📌 Ghim GPS = Chủ trọ có mặt tại vị trí
-            </p>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setShowLegend(false); }}
+            className="size-6 rounded-lg bg-white/10 hover:bg-red-500/80 flex items-center justify-center text-white/50 hover:text-white transition-all duration-200"
+            style={{ cursor: 'pointer' }}
+          >
+            <span className="text-[10px] font-bold">✕</span>
+          </button>
+        </div>
+
+        {/* Content — semi-dark */}
+        <div className="bg-emerald-950/90 backdrop-blur-md px-4 py-4 space-y-4 border-t border-emerald-800/30">
+          {/* Pinned */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-800 border-2 border-emerald-700/50 shadow-lg" />
+              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-emerald-950 shadow-md animate-bounce" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-white leading-tight">Chủ trọ đã ghim</p>
+              <p className="text-[10px] font-semibold text-emerald-400/70 uppercase tracking-widest">{pinnedCount} Vị trí GPS</p>
+            </div>
+          </div>
+
+          {/* Regular */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-900/60 border border-emerald-700/40 flex-shrink-0 flex items-center justify-center">
+              <div className="size-3.5 bg-emerald-400 rounded-full" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-white leading-tight">Chưa ghim vị trí</p>
+              <p className="text-[10px] font-semibold text-emerald-400/70 uppercase tracking-widest">{regularCount} Tin thường</p>
+            </div>
+          </div>
+
+          {/* User */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600 border border-emerald-500/40 shadow-lg shadow-emerald-900/50 flex-shrink-0 flex items-center justify-center">
+              <Navigation className="size-4 text-white" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-white leading-tight">Vị trí của bạn</p>
+              <p className="text-[10px] font-semibold text-emerald-400/70 uppercase tracking-widest">Đang hoạt động</p>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Show legend button */}
-      {!showLegend && (
-        <button
-          onClick={() => setShowLegend(true)}
-          className="absolute top-4 left-4 z-[1000] bg-white shadow-lg rounded-lg px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border"
-        >
-          📌 Chú thích
-        </button>
-      )}
+        {/* Tip Footer */}
+        <div className="bg-emerald-900/80 px-4 py-3 border-t border-emerald-800/30">
+          <p className="text-[9px] text-emerald-400/80 font-bold text-center leading-relaxed uppercase tracking-tight">
+            📌 Ghim GPS = Chủ trọ đã xác thực có mặt tại vị trí đăng bài.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Chú thích toggle button — emerald pill style */}
+      <motion.button
+        drag
+        dragMomentum={false}
+        dragElastic={0.08}
+        dragConstraints={mapContainerRef}
+        style={{ x: legendX, y: legendY, position: 'absolute', top: 0, left: 0, cursor: 'grab', pointerEvents: showLegend ? 'none' : 'auto' }}
+        animate={{ opacity: showLegend ? 0 : 1, scale: showLegend ? 0.9 : 1 }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
+        whileDrag={{ scale: 1.05, cursor: 'grabbing' }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.97 }}
+        onPointerUp={(e) => {
+          const hasMoved = Math.abs(legendX.get() - legendX.getPrevious()!) > 4 ||
+                           Math.abs(legendY.get() - legendY.getPrevious()!) > 4;
+          if (!hasMoved) setShowLegend(true);
+        }}
+        className="z-20 bg-emerald-950 text-white shadow-xl shadow-emerald-900/40 rounded-xl px-3 py-2 text-[11px] font-bold flex items-center gap-2 select-none will-change-transform border border-emerald-800/50 hover:bg-emerald-900 transition-colors"
+      >
+        <div className="grid grid-cols-2 gap-[2.5px] opacity-50">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="w-[3px] h-[3px] rounded-full bg-white" />
+          ))}
+        </div>
+        <span className="text-emerald-400">📌</span>
+        <span>Chú thích</span>
+      </motion.button>
+
 
       {/* My Location Button */}
-      <Button
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 15 }}
+        whileTap={{ scale: 0.9 }}
         onClick={handleCenterOnUser}
-        className="absolute bottom-6 right-6 z-[1000] shadow-lg bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-600"
-        size="icon"
+        className="absolute bottom-32 right-8 z-[1000] size-14 bg-gradient-to-br from-emerald-600 to-emerald-800 text-white rounded-2xl shadow-2xl shadow-emerald-900/30 flex items-center justify-center hover:brightness-110 transition-all will-change-transform"
       >
-        <Navigation className="size-5" />
-      </Button>
+        <Navigation className="size-6" />
+      </motion.button>
+
     </div>
   );
 }
