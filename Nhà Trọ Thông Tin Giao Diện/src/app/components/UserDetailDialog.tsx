@@ -20,6 +20,8 @@ import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import api from "@/app/utils/api";
 import { toast } from "sonner";
 import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
+import { RoleBadge } from "@/app/components/RoleBadge";
+
 interface UserDetailDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -132,15 +134,12 @@ export function UserDetailDialog({
                         data?.user?.username ||
                         "Đang tải..."}
                     </h2>
-                    <motion.span
-                      layoutId="user-role-badge"
-                      className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/30 border border-white/40 shadow-sm text-white"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.13 }}
-                    >
-                      {data?.user?.role || "USER"}
-                    </motion.span>
+                    <RoleBadge 
+                      role={(data?.user?.role as any) || "user"} 
+                      showIcon={true}
+                      className="!bg-white/20 !border-white/30"
+                    />
+
                   </div>
                   <p className="text-white/90 text-base flex items-center gap-2 font-medium drop-shadow-sm">
                     <Mail className="size-4" /> {data?.user?.email}
@@ -276,16 +275,15 @@ export function UserDetailDialog({
                                 : "BỊ KHOÁ"}
                             </motion.span>
                           </div>
-                          <InfoItem
-                            label="Vai trò"
-                            value={
-                              data?.user?.role === "landlord"
-                                ? "Chủ trọ"
-                                : data?.user?.role === "admin"
-                                  ? "Quản trị viên"
-                                  : "Người thuê"
-                            }
-                          />
+                          <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-slate-50/50 transition-colors rounded-xl px-2 -mx-2">
+                            <span className="text-gray-500 text-sm font-medium">Vai trò:</span>
+                            <RoleBadge 
+                              role={(data?.user?.role as any) || "user"} 
+                              showIcon={false}
+                              className="scale-90"
+                            />
+                          </div>
+
                           <InfoItem
                             label="Ngày tham gia"
                             value={

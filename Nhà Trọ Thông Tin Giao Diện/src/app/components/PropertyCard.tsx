@@ -15,9 +15,11 @@ import {
   Calendar,
   Heart,
   GitCompare,
+  MapPin,
   Car,
   Droplets,
 } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -170,13 +172,15 @@ export function PropertyCard({
 
   return (
     <motion.div
-      whileHover={{ y: -8 }}
-      transition={{ duration: 0.3 }}
+      whileHover={{ y: -12, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="will-change-transform"
     >
       <Card
-        className="hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden border-gray-100 shadow-md"
+        className="cursor-pointer overflow-hidden border-emerald-50 shadow-xl shadow-slate-200/50 hover:shadow-emerald-900/10 transition-shadow duration-500 bg-white rounded-[32px]"
         onClick={onClick}
       >
+
       <div className="relative h-44 w-full">
         <ImageWithFallback
           src={property.image}
@@ -200,50 +204,56 @@ export function PropertyCard({
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 bg-white/90 hover:bg-white shadow-md h-8 w-8"
+          className="absolute top-3 right-3 bg-white/90 backdrop-blur-md hover:bg-white shadow-xl h-10 w-10 rounded-2xl will-change-transform"
           onClick={handleFavoriteClick}
         >
           <Heart
-            className={`size-4 ${favorite ? "fill-red-500 text-red-500" : "text-gray-600"}`}
+            className={`size-5 ${favorite ? "fill-red-500 text-red-500" : "text-emerald-950/40"}`}
           />
         </Button>
       </div>
+
       <CardHeader className="pb-2 pt-3">
         <div className="flex justify-between items-start gap-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <CardTitle className="text-lg leading-tight">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-xl font-black text-emerald-950 tracking-tight leading-tight transition-colors line-clamp-1">
                 {property.name}
-              </CardTitle>
+            </CardTitle>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <VerificationBadge
+                level={property.verificationLevel}
+                verifiedAt={property.verifiedAt}
+                locationAccuracy={property.locationAccuracy}
+                size="sm"
+              />
             </div>
-            <VerificationBadge
-              level={property.verificationLevel}
-              verifiedAt={property.verifiedAt}
-              locationAccuracy={property.locationAccuracy}
-              size="sm"
-            />
-            <p className="text-xs text-gray-600 mt-1.5 line-clamp-1">
-              {property.address}
-            </p>
+            <div className="flex items-center gap-1.5 mt-2 text-emerald-950/60 transition-all">
+              <MapPin className="size-3.5 shrink-0" />
+              <p className="text-xs font-medium line-clamp-1">
+                {property.address}
+              </p>
+            </div>
           </div>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-2.5 pt-0">
         {/* Verification Warning/Info */}
         {property.verificationLevel === "none" && <UnverifiedWarning />}
 
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-3 border-y border-emerald-50/50 my-2">
           <div>
-            <p className="text-xl font-bold text-blue-600">
+            <p className="text-2xl font-black text-emerald-600 tracking-tighter">
               {property.price.toLocaleString("vi-VN")}đ
             </p>
-            <p className="text-xs text-gray-500">/tháng</p>
+            <p className="text-[10px] font-bold text-emerald-950/40 uppercase tracking-widest">/ tháng</p>
           </div>
           <div className="text-right">
-            <p className="text-base font-semibold">{property.area}m²</p>
-            <p className="text-xs text-gray-500">Diện tích</p>
+            <p className="text-lg font-black text-emerald-950">{property.area}m²</p>
+            <p className="text-[10px] font-bold text-emerald-950/40 uppercase tracking-widest">Diện tích</p>
           </div>
         </div>
+
 
         <div>
           <p className="text-xs font-semibold mb-1.5 text-gray-700">
@@ -292,7 +302,7 @@ export function PropertyCard({
             </Button>
             <Button
               size="sm"
-              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-xs h-8"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-xs h-9 font-black shadow-lg rounded-xl"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsBookingOpen(true);
@@ -301,6 +311,7 @@ export function PropertyCard({
               <Calendar className="size-3.5 mr-1.5" />
               Đặt lịch
             </Button>
+
           </div>
           <div className="grid grid-cols-2 gap-2 mt-1">
             <Button

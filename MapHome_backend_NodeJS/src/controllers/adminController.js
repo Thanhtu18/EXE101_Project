@@ -472,29 +472,43 @@ const getWeeklySearchStats = async (req, res) => {
   }
 };
 
-// @desc    Broadcast notification to all users
+// @desc    Broadcast notification to multiple users
 // @route   POST /api/admin/notifications/broadcast
 const broadcastNotification = async (req, res) => {
   try {
-    const { title, message, type } = req.body;
+    const { title, message, type, targetRole, link } = req.body;
     if (!title || !message) {
       return res.status(400).json({ message: "Title and message are required" });
     }
 
     const Notification = require("../models/Notification");
-    const users = await User.find({}, "_id");
     
+    // Filter users based on targetRole
+    const userQuery = {};
+    if (targetRole && targetRole !== "all") {
+      userQuery.role = targetRole;
+    }
+    
+    const users = await User.find(userQuery, "_id");
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: "No users found for this target role" });
+    }
+
     const notifications = users.map(user => ({
       userId: user._id,
       title,
       message,
-      type: type || "system",
+      type: type || "info",
+      link: link || "",
       isRead: false
     }));
 
     await Notification.insertMany(notifications);
 
-    res.status(200).json({ message: `Notification broadcasted to ${users.length} users` });
+    res.status(200).json({ 
+      message: `Đã gửi thông báo thành công đến ${users.length} người dùng (${targetRole || "tất cả"})` 
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

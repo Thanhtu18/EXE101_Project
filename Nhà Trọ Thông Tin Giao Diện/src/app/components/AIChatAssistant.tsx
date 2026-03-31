@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageSquare, Send, X, Bot, Loader2, Minus } from "lucide-react";
+import { MessageSquare, Send, X, Bot, Loader2 } from "lucide-react";
 import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -134,13 +134,13 @@ export const AIChatAssistant: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-      {/* Chat Window */}
+    <>
+      {/* Chat Window - anchored independently from bottom-24 to leave room for button */}
       {isOpen && (
-        <div className="mb-4 w-[360px] sm:w-[380px] h-[540px] max-h-[80vh] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/40 bg-white/80 backdrop-blur-xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 fade-in duration-300 ease-out">
-          
-          {/* Header - Refined & Professional */}
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white/40">
+        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] h-[500px] max-h-[calc(100vh-120px)] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/40 bg-white/80 backdrop-blur-xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 fade-in duration-300 ease-out">
+
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white/40 shrink-0">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100/50">
                 <Bot size={22} />
@@ -160,18 +160,16 @@ export const AIChatAssistant: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-md text-slate-400 transition-colors"
-              >
-                <Minus size={20} />
-              </button>
-            </div>
+
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          {/* Messages Area - Modern Chat Style */}
+          {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4 scroll-smooth">
             {messages.map((msg, idx) => (
               <div
@@ -186,7 +184,7 @@ export const AIChatAssistant: React.FC = () => {
                     "px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm transition-all animate-in fade-in zoom-in-95 duration-200",
                     msg.role === "user"
                       ? "bg-indigo-600 text-white rounded-tr-none"
-                      : "bg-white border border-slate-100 text-slate-700 rounded-tl-none border-l-4 border-l-indigo-500" // Added accent for AI replies
+                      : "bg-white border border-slate-100 text-slate-700 rounded-tl-none border-l-4 border-l-indigo-500"
                   )}
                   dangerouslySetInnerHTML={renderMarkdown(msg.text)}
                 />
@@ -198,7 +196,7 @@ export const AIChatAssistant: React.FC = () => {
                 </span>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex flex-col mr-auto max-w-[85%] animate-pulse">
                 <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-2">
@@ -210,19 +208,19 @@ export const AIChatAssistant: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area - Integrated & Subtle */}
-          <div className="p-4 bg-white/40 border-t border-gray-100">
+          {/* Input Area */}
+          <div className="p-4 bg-white/40 border-t border-gray-100 shrink-0">
             <form onSubmit={handleSend} className="flex gap-2 bg-white border border-slate-200 p-1.5 pl-4 rounded-xl shadow-sm focus-within:border-indigo-500/50 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
               <input
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Hỏi tôi bất cứ điều gì..."
-                className="flex-1 bg-transparent border-none py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                className="flex-1 bg-transparent border-none py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 min-w-0"
               />
-              <Button 
-                type="submit" 
-                size="icon" 
+              <Button
+                type="submit"
+                size="icon"
                 disabled={!message.trim() || isLoading}
                 className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white h-9 w-9 shrink-0 shadow-md transform active:scale-95 transition-all"
               >
@@ -234,18 +232,18 @@ export const AIChatAssistant: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Button - Simplified & High Contrast */}
+      {/* Floating Toggle Button - always visible at bottom-6 right-6 */}
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "h-14 w-14 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95",
-          isOpen 
-            ? "bg-slate-800 text-white" 
+          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95",
+          isOpen
+            ? "bg-slate-700 text-white hover:bg-slate-800"
             : "bg-indigo-600 text-white hover:bg-indigo-700 hover:rotate-12"
         )}
       >
-        {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
+        {isOpen ? <X size={24} /> : <MessageSquare size={26} />}
       </Button>
-    </div>
+    </>
   );
 };

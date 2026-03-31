@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   ChevronRight,
   CheckCircle,
+  TrendingUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -427,6 +428,117 @@ export function SettingsView() {
                         Xác minh tận nơi bởi MapHome
                       </p>
                     </div>
+
+                    <div className="p-8 bg-emerald-50/30 rounded-[32px] border border-emerald-50 space-y-6">
+                      <div className="flex items-center gap-3 text-emerald-700">
+                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-inner border border-emerald-100">
+                          <Plus className="size-5" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">
+                          Phí Đăng Bài
+                        </span>
+                      </div>
+                      <InputGroup
+                        label="Chi phí (VNĐ)"
+                        type="number"
+                        value={settings.pricing.postRoomFee || 0}
+                        onChange={(val) =>
+                          setSettings({
+                            ...settings,
+                            pricing: {
+                              ...settings.pricing,
+                              postRoomFee: parseInt(val),
+                            },
+                          })
+                        }
+                      />
+                      <p className="text-[10px] text-emerald-400 font-bold uppercase italic tracking-tighter">
+                        Áp dụng khi đăng tin nhà trọ mới
+                      </p>
+                    </div>
+
+                    <div className="p-8 bg-violet-50/30 rounded-[32px] border border-violet-50 space-y-6">
+                      <div className="flex items-center gap-3 text-violet-700">
+                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-inner border border-violet-100">
+                          <TrendingUp className="size-5" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">
+                          Phí Đẩy Bài (Push)
+                        </span>
+                      </div>
+                      <InputGroup
+                        label="Chi phí (VNĐ)"
+                        type="number"
+                        value={settings.pricing.pushRoomFee || 0}
+                        onChange={(val) =>
+                          setSettings({
+                            ...settings,
+                            pricing: {
+                              ...settings.pricing,
+                              pushRoomFee: parseInt(val),
+                            },
+                          })
+                        }
+                      />
+                      <p className="text-[10px] text-violet-400 font-bold uppercase italic tracking-tighter">
+                        Dịch vụ đưa tin đăng lên đầu trang
+                      </p>
+                    </div>
+
+                    <div className="p-8 bg-rose-50/30 rounded-[32px] border border-rose-50 space-y-6">
+                      <div className="flex items-center gap-3 text-rose-700">
+                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-inner border border-rose-100">
+                          <Zap className="size-5 text-rose-600" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">
+                          Tin Đăng Gấp
+                        </span>
+                      </div>
+                      <InputGroup
+                        label="Chi phí (VNĐ)"
+                        type="number"
+                        value={settings.pricing.urgentRoomFee || 0}
+                        onChange={(val) =>
+                          setSettings({
+                            ...settings,
+                            pricing: {
+                              ...settings.pricing,
+                              urgentRoomFee: parseInt(val),
+                            },
+                          })
+                        }
+                      />
+                      <p className="text-[10px] text-rose-400 font-bold uppercase italic tracking-tighter">
+                        Phí gắn nhãn ưu tiên "Gấp"
+                      </p>
+                      <div className="p-8 bg-indigo-50/30 rounded-[32px] border border-indigo-50 space-y-6">
+                      <div className="flex items-center gap-3 text-indigo-700">
+                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-inner border border-indigo-100 font-black text-xs">
+                          %
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest">
+                          Tỷ lệ Hoa hồng
+                        </span>
+                      </div>
+                      <InputGroup
+                        label="Tỷ lệ (%)"
+                        type="number"
+                        value={settings.pricing.commissionRate || 0}
+                        onChange={(val) =>
+                          setSettings({
+                            ...settings,
+                            pricing: {
+                              ...settings.pricing,
+                              commissionRate: parseInt(val),
+                            },
+                          })
+                        }
+                      />
+                      <p className="text-[10px] text-indigo-400 font-bold uppercase italic tracking-tighter">
+                        Phần trăm mỗi giao dịch thành công
+                      </p>
+                    </div>
+                  </div>
                   </div>
                 </div>
               )}

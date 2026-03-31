@@ -12,6 +12,8 @@ import { VerificationRequest } from "@/app/components/types";
 import { UserDetailDialog } from "@/app/components/UserDetailDialog";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
 import PromptDialog from "@/app/components/PromptDialog";
+import { RoleBadge } from "@/app/components/RoleBadge";
+
 import {
   LayoutDashboard,
   FileText,
@@ -41,6 +43,8 @@ import {
   LockOpen,
   Lock,
   Star,
+  Send,
+  Link as LinkIcon,
 } from "lucide-react";
 import { RevenueView } from "./RevenueView";
 import { InspectionsView } from "@/app/components/InspectionsView";
@@ -56,6 +60,8 @@ type AdminView =
   | "reviews"
   | "revenue"
   | "inspections"
+  | "reports"
+  | "notifications"
   | "settings";
 
 // Note: Mock data constants removed. Data is now fetched from the backend.
@@ -73,6 +79,7 @@ export function AdminPage() {
   const [verifications, setVerifications] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<any>(null);
   const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
@@ -108,6 +115,7 @@ export function AdminPage() {
         verificationsRes,
         bookingsRes,
         reviewsRes,
+        reportsRes,
         notifRes,
       ] = await Promise.all([
         api.get(`/api/admin/stats?month=${selectedMonth}&year=${selectedYear}`),
@@ -118,6 +126,7 @@ export function AdminPage() {
         api.get("/api/admin/verification-requests"),
         api.get("/api/admin/bookings"),
         api.get("/api/admin/reviews"),
+        api.get("/api/reports"),
         api.get("/api/admin/notifications"),
       ]);
 
@@ -129,6 +138,7 @@ export function AdminPage() {
       const verificationsData = verificationsRes.data || [];
       const bookingsData = bookingsRes.data || [];
       const reviewsData = reviewsRes.data || [];
+      const reportsData = reportsRes.data || [];
       const notifsData = notifRes.data || [];
 
       if (stats) setStats(stats);
@@ -147,6 +157,7 @@ export function AdminPage() {
       setVerifications(verificationsData);
       setBookings(bookingsData);
       setReviews(reviewsData);
+      setReports(reportsData);
 
       const activities = [
         ...verificationsData.slice(0, 2).map((v: any) => ({
@@ -311,6 +322,35 @@ export function AdminPage() {
       },
     });
   };
+  
+  const handleUpdateReportStatus = async (id: string, status: string, notes?: string) => {
+    try {
+      const res = await api.put(`/api/reports/${id}`, {
+        status,
+        adminNotes: notes,
+      });
+      if (res.status === 200) {
+        setReports(reports.map(r => r._id === id ? { ...r, status, adminNotes: notes } : r));
+        toast.success(`Đã cập nhật trạng thái báo cáo thành công! ✅`);
+        fetchData(false); // Refresh stats/properties if they changed
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleBroadcastNotification = async (data: any) => {
+    try {
+      const res = await api.post("/api/admin/notifications/broadcast", data);
+      if (res.status === 200) {
+        toast.success(`Đã gửi thông báo thành công! 🔔`);
+        fetchData(false);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Có lỗi xảy ra khi gửi thông báo.");
+    }
+  };
 
   const handleDeleteUser = (id: string) => {
     setConfirmDeleteId(id);
@@ -398,6 +438,8 @@ export function AdminPage() {
                   color: "rose",
                 },
                 { id: "bookings", label: "Lịch hẹn", icon: Calendar },
+                { id: "reports", label: "Báo cáo", icon: AlertTriangle, count: reports.filter(r => r.status === "pending").length, color: "rose" },
+                { id: "notifications", label: "Thông báo", icon: Bell },
                 { id: "reviews", label: "Đánh giá", icon: Award },
                 {
                   id: "inspections",
@@ -523,6 +565,8 @@ export function AdminPage() {
                 {activeView === "verification" && "Xác thực Tích Xanh"}
                 {activeView === "bookings" && "Quản lý Lịch hẹn"}
                 {activeView === "reviews" && "Quản lý Đánh giá"}
+                {activeView === "reports" && "Quản lý Báo cáo"}
+                {activeView === "notifications" && "Trung tâm Thông báo"}
                 {activeView === "revenue" && "Báo cáo Doanh Thu"}
                 {activeView === "inspections" && "Kiểm tra thực địa"}
                 {activeView === "settings" && "Cấu hình hệ thống"}
@@ -679,6 +723,17 @@ export function AdminPage() {
                     <ReviewsView
                       reviews={reviews}
                       onDeleteReview={handleDeleteReview}
+                    />
+                  )}
+                  {activeView === "reports" && (
+                    <ReportsView
+                      reports={reports}
+                      onUpdateStatus={handleUpdateReportStatus}
+                    />
+                  )}
+                  {activeView === "notifications" && (
+                    <NotificationsManagementView
+                      onSendBroadcast={handleBroadcastNotification}
                     />
                   )}
                   {activeView === "revenue" && <RevenueView />}
@@ -1626,21 +1681,11 @@ function UsersView({
                     <h3 className="text-[15px] font-black text-slate-800">
                       {user.fullName || user.username}
                     </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
-                        user.role === "landlord"
-                          ? "bg-amber-50 text-amber-600"
-                          : user.role === "admin"
-                            ? "bg-indigo-50 text-indigo-600"
-                            : "bg-blue-50 text-blue-600"
-                      }`}
-                    >
-                      {user.role === "landlord"
-                        ? "Chủ trọ"
-                        : user.role === "admin"
-                          ? "Admin"
-                          : "Người thuê"}
-                    </span>
+                    <RoleBadge 
+                      role={user.role as any} 
+                      showIcon={false}
+                      className="scale-90 origin-left"
+                    />
                   </div>
                   <p className="text-[11px] text-slate-400 font-medium">
                     {user.email}
@@ -2473,3 +2518,393 @@ const NotificationTray = forwardRef(function NotificationTray(
     </>
   );
 });
+
+// Reports View Component
+function ReportsView({
+  reports,
+  onUpdateStatus,
+}: {
+  reports: any[];
+  onUpdateStatus: (id: string, status: string, notes?: string) => void;
+}) {
+  const [promptTarget, setPromptTarget] = useState<{
+    id: string | null;
+    status: string;
+    open: boolean;
+  }>({ id: null, status: "", open: false });
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+      }}
+      className="space-y-6"
+    >
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div>
+          <h3 className="text-lg font-black bg-gradient-to-r from-rose-600 to-red-600 bg-clip-text text-transparent tracking-tight uppercase">
+            Báo cáo vi phạm
+          </h3>
+          <p className="text-xs text-slate-400 font-bold mt-1">
+            Xử lý các khiếu nại từ người dùng về tin đăng
+          </p>
+        </div>
+        <div className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-3 py-1 bg-rose-50/80 rounded-lg border border-rose-100 shadow-sm shadow-rose-50">
+          {reports.length} BÁO CÁO
+        </div>
+      </div>
+
+      <AnimatePresence mode="popLayout">
+        {reports.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
+            {reports.map((report) => (
+              <motion.div
+                layout
+                key={report._id}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  show: { opacity: 1, y: 0 },
+                }}
+                className={`bg-white border rounded-[32px] p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 transition-all group relative overflow-hidden ${
+                  report.status === "pending" ? "border-rose-100" : "border-slate-100"
+                }`}
+              >
+                {/* Status Badge */}
+                <div className="absolute top-6 right-6">
+                  <StatusPill status={report.status} />
+                </div>
+
+                {/* Property Info */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                    <AlertTriangle className="size-6 text-rose-600" />
+                  </div>
+                  <div className="min-w-0 pr-12">
+                    <h4 className="font-black text-slate-800 text-[16px] truncate">
+                      {report.propertyId?.name || "Tin đăng đã bị xóa"}
+                    </h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <MapPin className="size-3 text-slate-300" />
+                      <span className="text-[11px] font-bold text-slate-400 truncate">
+                        {report.propertyId?.address || "Không xác định"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Report Content */}
+                <div className="space-y-4 mb-8">
+                  <div className="p-5 bg-rose-50/50 rounded-[24px] border border-rose-50">
+                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block mb-2">
+                      Lý do: {
+                        report.reason === "incorrect_info" ? "Thông tin sai" :
+                        report.reason === "fraud" ? "Lừa đảo" :
+                        report.reason === "sold_rented" ? "Đã cho thuê" :
+                        report.reason === "duplicate" ? "Tin trùng" : "Khác"
+                      }
+                    </span>
+                    <p className="text-[13px] text-slate-700 font-medium leading-relaxed">
+                      {report.description || "Không có mô tả chi tiết."}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <User className="size-3.5 text-slate-300" />
+                      <span className="text-slate-400">Người báo cáo: </span>
+                      <span className="text-slate-600 font-bold">{report.reporterId?.username || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <Clock className="size-3.5" />
+                      {new Date(report.createdAt).toLocaleDateString("vi-VN")}
+                    </div>
+                  </div>
+
+                  {report.adminNotes && (
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        Ghi chú Admin:
+                      </span>
+                      <p className="text-[11px] text-slate-500 italic">
+                        {report.adminNotes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                {report.status === "pending" && (
+                  <div className="flex items-center gap-3 pt-4 border-t border-slate-50">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPromptTarget({ id: report._id, status: "resolved", open: true })}
+                      className="flex-1 py-3 bg-emerald-500 text-white rounded-xl text-[11px] font-black shadow-lg shadow-emerald-50 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="size-3.5" /> Giải quyết
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPromptTarget({ id: report._id, status: "dismissed", open: true })}
+                      className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-black hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="size-3.5" /> Bỏ qua
+                    </motion.button>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <ModernEmptyState
+            icon="🛡️"
+            title="Không có báo cáo mới"
+            description="Tuyệt vời! Hiện tại không có tin đăng nào bị người dùng báo cáo vi phạm."
+            color="rose"
+          />
+        )}
+      </AnimatePresence>
+
+      <PromptDialog
+        open={promptTarget.open}
+        title={promptTarget.status === "resolved" ? "Giải quyết báo cáo" : "Bỏ qua báo cáo"}
+        placeholder="Nhập ghi chú xử lý..."
+        submitText="Xác nhận"
+        cancelText="Huỷ"
+        onSubmit={(notes) => {
+          onUpdateStatus(promptTarget.id!, promptTarget.status, notes);
+          setPromptTarget({ id: null, status: "", open: false });
+        }}
+        onCancel={() => setPromptTarget({ id: null, status: "", open: false })}
+      />
+    </motion.div>
+  );
+}
+
+// Notifications Management View Component
+function NotificationsManagementView({
+  onSendBroadcast,
+}: {
+  onSendBroadcast: (data: any) => Promise<void>;
+}) {
+  const [formData, setFormData] = useState({
+    title: "",
+    message: "",
+    type: "info",
+    targetRole: "all",
+    link: "",
+  });
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.message) {
+      toast.error("Vui lòng nhập đầy đủ tiêu đề và nội dung.");
+      return;
+    }
+    setIsSending(true);
+    await onSendBroadcast(formData);
+    setIsSending(false);
+    // Reset form after sending
+    setFormData({
+      title: "",
+      message: "",
+      type: "info",
+      targetRole: "all",
+      link: "",
+    });
+  };
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+      }}
+      className="space-y-10"
+    >
+      <div className="flex items-center justify-between px-2">
+        <div>
+          <h3 className="text-[20px] font-black bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent tracking-tight uppercase">
+            Trung tâm Thông báo Hệ thống
+          </h3>
+          <p className="text-xs text-slate-400 font-bold mt-1">
+            Gửi thông báo quan trọng đến cộng đồng MapHome
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Composition Form */}
+        <motion.div
+          variants={{ hidden: { opacity: 0, x: -20 }, show: { opacity: 1, x: 0 } }}
+          className="bg-white border border-slate-100 rounded-[40px] p-10 shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 transition-all"
+        >
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shadow-inner">
+              <Send className="size-6 text-blue-600" />
+            </div>
+            <h4 className="text-lg font-black text-slate-800">Soạn thông báo</h4>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Tiêu đề</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Nhập tiêu đề thông báo..."
+                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Loại</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-600 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all cursor-pointer"
+                >
+                  <option value="info">Thông tin (Info)</option>
+                  <option value="success">Thành công (Success)</option>
+                  <option value="warning">Cảnh báo (Warning)</option>
+                  <option value="error">Khẩn cấp (Error)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Đối tượng</label>
+                <select
+                  value={formData.targetRole}
+                  onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-600 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all cursor-pointer"
+                >
+                  <option value="all">Tất cả người dùng</option>
+                  <option value="landlord">Chỉ Chủ trọ</option>
+                  <option value="user">Chỉ Khách thuê</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Nội dung</label>
+              <textarea
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="Nhập nội dung thông báo chi tiết..."
+                rows={4}
+                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500/50 transition-all outline-none resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">Liên kết (Tùy chọn)</label>
+              <div className="relative">
+                <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-300" />
+                <input
+                  type="text"
+                  value={formData.link}
+                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500/50 transition-all outline-none"
+                />
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isSending}
+              type="submit"
+              className={`w-full py-5 rounded-[24px] text-white font-black text-sm shadow-xl transition-all flex items-center justify-center gap-3 ${
+                isSending 
+                ? "bg-slate-300 cursor-not-allowed" 
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-200 hover:shadow-blue-300"
+              }`}
+            >
+              {isSending ? (
+                <>Đang gửi...</>
+              ) : (
+                <>
+                  <Send className="size-5" /> Gửi thông báo ngay
+                </>
+              )}
+            </motion.button>
+          </form>
+        </motion.div>
+
+        {/* Live Preview */}
+        <motion.div
+          variants={{ hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0 } }}
+          className="space-y-6"
+        >
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+              <Eye className="size-5 text-emerald-600" />
+            </div>
+            <h4 className="text-lg font-black text-slate-800">Xem trước</h4>
+          </div>
+
+          <div className="bg-slate-50 rounded-[40px] p-10 border border-slate-100 border-dashed min-h-[400px] flex items-center justify-center relative overflow-hidden">
+             {/* Abstract Background for Preview */}
+             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl -mr-32 -mt-32" />
+             <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-100/30 rounded-full blur-3xl -ml-32 -mb-32" />
+
+             {formData.title || formData.message ? (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl shadow-slate-200 border border-white relative z-10"
+                >
+                  <div className="flex gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${
+                      formData.type === "success" ? "bg-emerald-50" :
+                      formData.type === "warning" ? "bg-amber-50" :
+                      formData.type === "error" ? "bg-rose-50" : "bg-blue-50"
+                    }`}>
+                      {formData.type === "success" ? "✅" :
+                       formData.type === "warning" ? "⚠️" :
+                       formData.type === "error" ? "🚨" : "📢"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-black text-slate-800 text-[15px] mb-1 truncate">{formData.title || "Tiêu đề mẫu"}</h5>
+                      <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-3">
+                        {formData.message || "Nội dung thông báo sẽ xuất hiện ở đây khi bạn nhập vào biểu mẫu bên trái..."}
+                      </p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Vừa xong</span>
+                        {formData.link && (
+                          <span className="text-[10px] font-black text-blue-600 flex items-center gap-1">
+                            Xem chi tiết <ChevronRight className="size-3" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+             ) : (
+                <div className="text-center space-y-4 max-w-xs grayscale opacity-40">
+                  <Bell className="size-16 mx-auto text-slate-300" />
+                  <p className="text-sm font-bold text-slate-400">Nhập thông tin để xem trước giao diện hiển thị phía người dùng</p>
+                </div>
+             )}
+          </div>
+
+          <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex gap-4">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-xl flex-shrink-0">💡</div>
+            <p className="text-xs text-amber-700 font-medium leading-relaxed">
+              <strong>Mẹo:</strong> Hãy sử dụng các loại thông báo khác nhau để thu hút sự chú ý. Loại <b>Cảnh báo</b> hoặc <b>Khẩn cấp</b> nên được dùng cho các thay đổi quan trọng về chính sách hoặc bảo trì hệ thống.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}

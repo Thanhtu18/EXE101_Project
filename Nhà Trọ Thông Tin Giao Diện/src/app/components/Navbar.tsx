@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { RoleBadge } from "@/app/components/RoleBadge";
+
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -69,7 +71,8 @@ export function Navbar() {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-600 to-blue-600 flex items-center justify-center shadow-md">
               <Home className="size-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900">MapHome</h1>
+            <h1 className="text-xl font-black text-emerald-950 tracking-tight">MapHome</h1>
+
           </div>
 
           {/* Navigation Buttons */}
@@ -137,23 +140,22 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             {!isAuthenticated ? (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <motion.button
+                  whileHover={{ 
+                    scale: 1.05, 
+                    boxShadow: "0 15px 30px -10px rgba(16, 185, 129, 0.4)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   onClick={() => navigate("/login")}
-                  className="hidden sm:flex"
+                  className="relative group overflow-hidden px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl text-sm font-black shadow-lg will-change-transform flex items-center gap-2"
                 >
-                  <User className="size-4 mr-1.5" />
-                  Đăng nhập
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/login")}
-                  className="sm:hidden"
-                >
-                  <User className="size-4" />
-                </Button>
+                  <div className="absolute inset-0 w-1/4 h-full bg-white/20 -skew-x-[30deg] -translate-x-[150%] group-hover:translate-x-[400%] transition-transform duration-700 ease-in-out will-change-transform" />
+                  <User className="size-4 shrink-0" />
+                  <span className="hidden sm:inline">Đăng nhập</span>
+                </motion.button>
+
+
               </>
             ) : (
               <>
@@ -178,17 +180,12 @@ export function Navbar() {
                       {user?.fullName || user?.username}
                     </strong>
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUserAction}
-                  >
-                    {user?.role === "admin"
-                      ? "Quản trị"
-                      : user?.role === "landlord"
-                        ? "Kênh Chủ nhà"
-                        : "Người thuê"}
-                  </Button>
+                  <div onClick={handleUserAction} className="cursor-pointer">
+                    <RoleBadge 
+                      role={(user?.role as any) || "user"} 
+                      showIcon={true}
+                    />
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
