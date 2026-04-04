@@ -45,6 +45,11 @@ import { toast } from "sonner";
 import { amenityMeta } from "@/app/constants/amenities";
 import api from "@/app/utils/api";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import { 
+  validateFullName, 
+  validatePhone, 
+  validatePassword 
+} from "@/app/utils/validationRules";
 
 // Define available views for the user dashboard
 type UserView =
@@ -1481,6 +1486,13 @@ function SettingsView() {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
 
+  const [fieldErrors, setFieldErrors] = useState({
+    fullName: "",
+    phone: "",
+    currentPassword: "",
+    newPassword: "",
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center md:text-left mb-8">
@@ -1512,6 +1524,22 @@ function SettingsView() {
               const target = e.target as any;
               const fullName = target.fullName.value;
               const phone = target.phone.value;
+
+              const fullNameValid = validateFullName(fullName);
+              const phoneValid = validatePhone(phone);
+
+              const newErrors = {
+                ...fieldErrors,
+                fullName: fullNameValid.error || "",
+                phone: phoneValid.error || "",
+              };
+              setFieldErrors(newErrors);
+
+              if (!fullNameValid.valid || !phoneValid.valid) {
+                toast.error("Vui lòng kiểm tra lại thông tin! ❌");
+                return;
+              }
+
               try {
                 // Update user profile information via backend API using axios
                 const res = await api.put(`/api/user/${user?.id}`, {
@@ -1612,9 +1640,16 @@ function SettingsView() {
               <Input
                 name="fullName"
                 defaultValue={user?.fullName || user?.username}
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.fullName ? "border-red-500" : ""}`}
+                onChange={() => setFieldErrors({...fieldErrors, fullName: ""})}
+                onBlur={(e) => setFieldErrors({...fieldErrors, fullName: validateFullName(e.target.value).error || ""})}
                 required
               />
+              {fieldErrors.fullName && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                  <AlertCircle className="size-3" /> {fieldErrors.fullName}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -1625,9 +1660,16 @@ function SettingsView() {
                 name="phone"
                 defaultValue={user?.phone || ""}
                 placeholder="Nhập số điện thoại của bạn"
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.phone ? "border-red-500" : ""}`}
+                onChange={() => setFieldErrors({...fieldErrors, phone: ""})}
+                onBlur={(e) => setFieldErrors({...fieldErrors, phone: validatePhone(e.target.value).error || ""})}
                 required
               />
+              {fieldErrors.phone && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                  <AlertCircle className="size-3" /> {fieldErrors.phone}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -1670,6 +1712,18 @@ function SettingsView() {
               const target = e.target as any;
               const currentPassword = target.currentPassword.value;
               const newPassword = target.newPassword.value;
+
+              const newPasswordValid = validatePassword(newPassword);
+              
+              if (!newPasswordValid.valid) {
+                 setFieldErrors({
+                   ...fieldErrors,
+                   newPassword: newPasswordValid.error || ""
+                 });
+                 toast.error(newPasswordValid.error || "Mật khẩu không hợp lệ! ❌");
+                 return;
+              }
+
               try {
                 // Change user password via authentication API using axios
                 const res = await api.put("/api/auth/change-password", {
@@ -1721,10 +1775,16 @@ function SettingsView() {
                 type="password"
                 name="newPassword"
                 placeholder="••••••••"
-                className="rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12"
+                className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.newPassword ? "border-red-500" : ""}`}
+                onChange={() => setFieldErrors({...fieldErrors, newPassword: ""})}
+                onBlur={(e) => setFieldErrors({...fieldErrors, newPassword: validatePassword(e.target.value).error || ""})}
                 required
-                minLength={6}
               />
+              {fieldErrors.newPassword && (
+                <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                  <AlertCircle className="size-3" /> {fieldErrors.newPassword}
+                </p>
+              )}
             </div>
 
             <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">

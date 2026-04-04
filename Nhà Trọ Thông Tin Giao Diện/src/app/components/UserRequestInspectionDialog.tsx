@@ -1,13 +1,28 @@
-import { useState } from 'react';
-import { RentalProperty } from './types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { Button } from './ui/button';
-import { Label } from './ui/label';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { useVerification } from '@/app/contexts/VerificationContext';
-import { toast } from 'sonner';
-import { Calendar, Clock, User, Phone, AlertCircle, ShieldCheck, Info } from 'lucide-react';
+import { useState } from "react";
+import { RentalProperty } from "./types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { useVerification } from "@/app/contexts/VerificationContext";
+import { toast } from "sonner";
+import {
+  Calendar,
+  Clock,
+  User,
+  Phone,
+  AlertCircle,
+  ShieldCheck,
+  Info,
+} from "lucide-react";
 
 interface UserRequestInspectionDialogProps {
   open: boolean;
@@ -26,28 +41,38 @@ export function UserRequestInspectionDialog({
 }: UserRequestInspectionDialogProps) {
   const { addRequest } = useVerification();
   const [formData, setFormData] = useState({
-    scheduledDate: '',
-    scheduledTime: '',
-    userPhone: '',
-    notes: '',
+    scheduledDate: "",
+    scheduledTime: "",
+    userPhone: "",
+    notes: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.scheduledDate || !formData.scheduledTime || !formData.userPhone) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+
+    if (
+      !formData.scheduledDate ||
+      !formData.scheduledTime ||
+      !formData.userPhone
+    ) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      // Extract landlordId if it's an object
+      const landlordId =
+        typeof property.landlordId === "string"
+          ? property.landlordId
+          : property.landlordId?.id || "unknown";
+
       addRequest({
         propertyId: property.id,
         propertyName: property.name,
-        landlordId: property.landlordId || 'unknown',
+        landlordId: landlordId,
         landlordName: property.ownerName,
         phone: property.phone,
         address: property.address,
@@ -55,24 +80,24 @@ export function UserRequestInspectionDialog({
         scheduledTime: formData.scheduledTime,
         notes: formData.notes,
         // User-specific fields
-        requesterType: 'user',
+        requesterType: "user",
         requesterId: currentUserId,
         requesterName: currentUserName,
         requesterPhone: formData.userPhone,
       });
 
-      toast.success('Yêu cầu kiểm tra đã được gửi! Admin sẽ liên hệ bạn sớm.');
+      toast.success("Yêu cầu kiểm tra đã được gửi! Admin sẽ liên hệ bạn sớm.");
       onOpenChange(false);
-      
+
       // Reset form
       setFormData({
-        scheduledDate: '',
-        scheduledTime: '',
-        userPhone: '',
-        notes: '',
+        scheduledDate: "",
+        scheduledTime: "",
+        userPhone: "",
+        notes: "",
       });
     } catch (error) {
-      toast.error('Có lỗi xảy ra. Vui lòng thử lại.');
+      toast.error("Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -87,7 +112,9 @@ export function UserRequestInspectionDialog({
               <ShieldCheck className="size-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl">Yêu cầu kiểm tra phòng trọ</DialogTitle>
+              <DialogTitle className="text-xl">
+                Yêu cầu kiểm tra phòng trọ
+              </DialogTitle>
               <DialogDescription className="text-sm">
                 Gửi yêu cầu để MapHome kiểm tra thực địa
               </DialogDescription>
@@ -100,7 +127,9 @@ export function UserRequestInspectionDialog({
           <div className="flex items-start gap-2">
             <Info className="size-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-900">
-              <p className="font-semibold mb-1">Tại sao bạn nên yêu cầu kiểm tra?</p>
+              <p className="font-semibold mb-1">
+                Tại sao bạn nên yêu cầu kiểm tra?
+              </p>
               <ul className="space-y-1 text-xs">
                 <li>✓ Đội ngũ MapHome sẽ đến thực địa xác minh thông tin</li>
                 <li>✓ Bảo vệ bạn khỏi tin ảo và lừa đảo</li>
@@ -113,12 +142,24 @@ export function UserRequestInspectionDialog({
 
         {/* Property info */}
         <div className="bg-gray-50 rounded-lg p-4 border">
-          <h4 className="font-semibold text-sm mb-2 text-gray-700">Thông tin phòng trọ</h4>
+          <h4 className="font-semibold text-sm mb-2 text-gray-700">
+            Thông tin phòng trọ
+          </h4>
           <div className="space-y-1 text-sm">
-            <p><span className="font-medium">Tên:</span> {property.name}</p>
-            <p><span className="font-medium">Địa chỉ:</span> {property.address}</p>
-            <p><span className="font-medium">Giá:</span> {property.price.toLocaleString('vi-VN')}đ/tháng</p>
-            <p><span className="font-medium">Chủ trọ:</span> {property.ownerName} - {property.phone}</p>
+            <p>
+              <span className="font-medium">Tên:</span> {property.name}
+            </p>
+            <p>
+              <span className="font-medium">Địa chỉ:</span> {property.address}
+            </p>
+            <p>
+              <span className="font-medium">Giá:</span>{" "}
+              {property.price.toLocaleString("vi-VN")}đ/tháng
+            </p>
+            <p>
+              <span className="font-medium">Chủ trọ:</span> {property.ownerName}{" "}
+              - {property.phone}
+            </p>
           </div>
         </div>
 
@@ -129,7 +170,7 @@ export function UserRequestInspectionDialog({
               <User className="size-4" />
               Thông tin của bạn
             </h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="userName" className="text-sm">
                 Họ tên <span className="text-red-500">*</span>
@@ -153,12 +194,16 @@ export function UserRequestInspectionDialog({
                   type="tel"
                   placeholder="0901234567"
                   value={formData.userPhone}
-                  onChange={(e) => setFormData({ ...formData, userPhone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, userPhone: e.target.value })
+                  }
                   className="pl-10"
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500">Admin sẽ liên hệ bạn qua số này</p>
+              <p className="text-xs text-gray-500">
+                Admin sẽ liên hệ bạn qua số này
+              </p>
             </div>
           </div>
 
@@ -178,8 +223,10 @@ export function UserRequestInspectionDialog({
                   id="scheduledDate"
                   type="date"
                   value={formData.scheduledDate}
-                  onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) =>
+                    setFormData({ ...formData, scheduledDate: e.target.value })
+                  }
+                  min={new Date().toISOString().split("T")[0]}
                   required
                 />
               </div>
@@ -194,7 +241,12 @@ export function UserRequestInspectionDialog({
                     id="scheduledTime"
                     type="time"
                     value={formData.scheduledTime}
-                    onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        scheduledTime: e.target.value,
+                      })
+                    }
                     className="pl-10"
                     required
                   />
@@ -215,7 +267,9 @@ export function UserRequestInspectionDialog({
               id="notes"
               placeholder="VD: Tôi có thể đến cùng admin để xem phòng trực tiếp..."
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
               rows={3}
             />
           </div>
@@ -225,7 +279,11 @@ export function UserRequestInspectionDialog({
             <AlertCircle className="size-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-xs text-amber-900">
               <p className="font-semibold mb-1">Lưu ý quan trọng:</p>
-              <p>Admin có thể yêu cầu bạn gửi ảnh chụp thực tế của phòng trọ để xác minh. Vui lòng kiểm tra thông báo trong dashboard sau khi gửi yêu cầu.</p>
+              <p>
+                Admin có thể yêu cầu bạn gửi ảnh chụp thực tế của phòng trọ để
+                xác minh. Vui lòng kiểm tra thông báo trong dashboard sau khi
+                gửi yêu cầu.
+              </p>
             </div>
           </div>
 

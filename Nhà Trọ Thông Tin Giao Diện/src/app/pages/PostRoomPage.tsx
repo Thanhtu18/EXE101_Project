@@ -48,6 +48,14 @@ import { toast } from "sonner";
 import { RentalProperty, GreenBadgeLevel } from "@/app/components/types";
 import { vietnamLocations, Province, District, Ward } from "@/app/data/vietnamLocations";
 import { amenityLabels, amenityMeta } from "@/app/constants/amenities";
+import { 
+  validatePropertyName, 
+  validatePrice, 
+  validateArea, 
+  validateDescription, 
+  validatePhone 
+} from "@/app/utils/validationRules";
+import { AlertCircle } from "lucide-react";
 
 
 type Step = "info" | "pin-map" | "verify" | "upload-photos" | "preview";
@@ -86,6 +94,15 @@ export function PostRoomPage() {
     street: "",
     description: "",
     phone: "",
+  });
+
+  const [fieldErrors, setFieldErrors] = useState({
+    name: "",
+    price: "",
+    area: "",
+    description: "",
+    phone: "",
+    address: "",
   });
 
   const [selectedProvince, setSelectedProvince] = useState("HCM");
@@ -146,6 +163,35 @@ export function PostRoomPage() {
   const currentStepIndex = steps.findIndex((s) => s.key === step);
 
   const handleNext = () => {
+    if (step === "info") {
+      const nameValid = validatePropertyName(formData.name);
+      const priceValid = validatePrice(formData.price);
+      const areaValid = validateArea(formData.area);
+      const descriptionValid = validateDescription(formData.description);
+      const phoneValid = validatePhone(formData.phone);
+
+      const newErrors = {
+        name: nameValid.error || "",
+        price: priceValid.error || "",
+        area: areaValid.error || "",
+        description: descriptionValid.error || "",
+        phone: phoneValid.error || "",
+        address: (!selectedProvince || !selectedDistrict || !selectedWard || !formData.street) ? "Vui lòng nhập đầy đủ địa chỉ" : "",
+      };
+
+      setFieldErrors(newErrors);
+
+      if (Object.values(newErrors).some(error => error)) {
+        toast.error("Vui lòng kiểm tra lại thông tin!");
+        return;
+      }
+    }
+
+    if (step === "pin-map" && !pinnedLocation) {
+      toast.error("Vui lòng ghim vị trí trên bản đồ!");
+      return;
+    }
+
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setStep(steps[nextIndex].key);
@@ -406,9 +452,20 @@ export function PostRoomPage() {
                     <Input
                       placeholder="VD: Cửa sổ trời - Quận 1"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="h-12 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-medium bg-white transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
+                      }}
+                      onBlur={() => setFieldErrors({ ...fieldErrors, name: validatePropertyName(formData.name).error || "" })}
+                      className={`h-12 rounded-lg border focus:ring-2 text-base font-medium bg-white transition-all ${
+                        fieldErrors.name ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                      }`}
                     />
+                    {fieldErrors.name && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                        <AlertCircle className="size-3" /> {fieldErrors.name}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -419,11 +476,22 @@ export function PostRoomPage() {
                           type="number"
                           placeholder="3000000"
                           value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          className="h-12 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-medium bg-white pl-10 transition-all"
+                          onChange={(e) => {
+                            setFormData({ ...formData, price: e.target.value });
+                            if (fieldErrors.price) setFieldErrors({ ...fieldErrors, price: "" });
+                          }}
+                          onBlur={() => setFieldErrors({ ...fieldErrors, price: validatePrice(formData.price).error || "" })}
+                          className={`h-12 rounded-lg border focus:ring-2 text-base font-medium bg-white pl-10 transition-all ${
+                            fieldErrors.price ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                          }`}
                         />
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">₫</span>
                       </div>
+                      {fieldErrors.price && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                          <AlertCircle className="size-3" /> {fieldErrors.price}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Diện tích (m²) *</Label>
@@ -432,11 +500,22 @@ export function PostRoomPage() {
                           type="number"
                           placeholder="25"
                           value={formData.area}
-                          onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                          className="h-12 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-medium bg-white pr-10 transition-all"
+                          onChange={(e) => {
+                            setFormData({ ...formData, area: e.target.value });
+                            if (fieldErrors.area) setFieldErrors({ ...fieldErrors, area: "" });
+                          }}
+                          onBlur={() => setFieldErrors({ ...fieldErrors, area: validateArea(formData.area).error || "" })}
+                          className={`h-12 rounded-lg border focus:ring-2 text-base font-medium bg-white pr-10 transition-all ${
+                            fieldErrors.area ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                          }`}
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">m²</span>
                       </div>
+                      {fieldErrors.area && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                          <AlertCircle className="size-3" /> {fieldErrors.area}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
@@ -445,9 +524,20 @@ export function PostRoomPage() {
                     <textarea
                       placeholder="Mô tả không gian, tiện ích xung quanh..."
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full min-h-[140px] p-4 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-medium bg-white resize-none outline-none transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, description: e.target.value });
+                        if (fieldErrors.description) setFieldErrors({ ...fieldErrors, description: "" });
+                      }}
+                      onBlur={() => setFieldErrors({ ...fieldErrors, description: validateDescription(formData.description).error || "" })}
+                      className={`w-full min-h-[140px] p-4 rounded-lg border focus:ring-2 text-base font-medium bg-white resize-none outline-none transition-all ${
+                        fieldErrors.description ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                      }`}
                     />
+                    {fieldErrors.description && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                        <AlertCircle className="size-3" /> {fieldErrors.description}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -529,10 +619,20 @@ export function PostRoomPage() {
                         <Input
                           placeholder="VD: Số 123 Đường Láng"
                           value={formData.street}
-                          onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                          className="h-11 rounded-lg border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-indigo-100 transition-all"
+                          onChange={(e) => {
+                            setFormData({ ...formData, street: e.target.value });
+                            if (fieldErrors.address) setFieldErrors({ ...fieldErrors, address: "" });
+                          }}
+                          className={`h-11 rounded-lg border bg-white font-medium focus:ring-2 transition-all ${
+                            fieldErrors.address ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:ring-indigo-100"
+                          }`}
                         />
                       </div>
+                      {fieldErrors.address && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                          <AlertCircle className="size-3" /> {fieldErrors.address}
+                        </p>
+                      )}
                     </div>
 
                     {fullAddress && (
@@ -565,9 +665,20 @@ export function PostRoomPage() {
                         type="tel"
                         placeholder="0912 345 678"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="h-12 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-medium bg-white transition-all"
+                        onChange={(e) => {
+                          setFormData({ ...formData, phone: e.target.value });
+                          if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: "" });
+                        }}
+                        onBlur={() => setFieldErrors({ ...fieldErrors, phone: validatePhone(formData.phone).error || "" })}
+                        className={`h-12 rounded-lg border focus:ring-2 text-base font-medium bg-white transition-all ${
+                          fieldErrors.phone ? "border-red-500 focus:ring-red-100" : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-100"
+                        }`}
                       />
+                      {fieldErrors.phone && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-medium">
+                          <AlertCircle className="size-3" /> {fieldErrors.phone}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,11 @@
 import { useState } from 'react';
+import { 
+  validateBookingDate, 
+  validateBookingTime,
+  validateFullName,
+  validatePhone 
+} from '@/app/utils/validationRules';
+import { AlertCircle } from 'lucide-react';
 import { format, addDays, isAfter, startOfDay } from 'date-fns';
 import { vi } from 'date-fns/locale/vi';
 import {
@@ -41,13 +48,33 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
   const [customerPhone, setCustomerPhone] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({
+    date: '',
+    time: '',
+    name: '',
+    phone: '',
+  });
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDate || !selectedTime) {
-      toast.warning('Vui lòng chọn ngày và giờ xem nhà');
+    // Validate all fields
+    const dateValid = validateBookingDate(selectedDate);
+    const timeValid = validateBookingTime(selectedTime);
+    const nameValid = validateFullName(customerName);
+    const phoneValid = validatePhone(customerPhone);
+
+    const newErrors = {
+      date: dateValid.error || '',
+      time: timeValid.error || '',
+      name: nameValid.error || '',
+      phone: phoneValid.error || '',
+    };
+    setFieldErrors(newErrors);
+
+    if (!dateValid.valid || !timeValid.valid || !nameValid.valid || !phoneValid.valid) {
+      toast.error('Vui lòng kiểm tra lại thông tin đăng ký! ❌');
       return;
     }
 
@@ -73,6 +100,7 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
           setCustomerName('');
           setCustomerPhone('');
           setNote('');
+          setFieldErrors({ date: '', time: '', name: '', phone: '' });
         }, 300);
       }, 1500);
 
@@ -135,15 +163,23 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      if (fieldErrors.date) setFieldErrors({...fieldErrors, date: ''});
+                    }}
                     disabled={(date) => 
                       !isAfter(date, addDays(today, -1)) || 
                       isAfter(date, maxDate)
                     }
                     locale={vi}
-                    className="rounded-md border"
+                    className={`rounded-md border ${fieldErrors.date ? 'border-red-500' : ''}`}
                   />
                 </div>
+                {fieldErrors.date && (
+                  <p className="text-center mt-2 text-[11px] text-red-500 flex items-center justify-center gap-1 font-bold">
+                    <AlertCircle className="size-3" /> {fieldErrors.date}
+                  </p>
+                )}
                 {selectedDate && (
                   <p className="text-center mt-2 text-sm text-blue-600 font-medium">
                     Đã chọn: {format(selectedDate, 'EEEE, dd/MM/yyyy', { locale: vi })}
@@ -162,17 +198,27 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
                     <button
                       key={slot.value}
                       type="button"
-                      onClick={() => setSelectedTime(slot.value)}
+                      onClick={() => {
+                        setSelectedTime(slot.value);
+                        if (fieldErrors.time) setFieldErrors({...fieldErrors, time: ''});
+                      }}
                       className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
                         selectedTime === slot.value
                           ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                          : fieldErrors.time 
+                            ? 'border-red-200 hover:border-red-300 bg-red-50/30' 
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                       }`}
                     >
                       {slot.label}
                     </button>
                   ))}
                 </div>
+                {fieldErrors.time && (
+                  <p className="mt-2 text-[11px] text-red-500 flex items-center gap-1 font-bold">
+                    <AlertCircle className="size-3" /> {fieldErrors.time}
+                  </p>
+                )}
               </div>
 
               {/* Customer Info */}
@@ -186,9 +232,18 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
                     type="text"
                     placeholder="Nguyễn Văn A"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      if (fieldErrors.name) setFieldErrors({...fieldErrors, name: ''});
+                    }}
+                    className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     required
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1 font-bold">
+                      <AlertCircle className="size-3" /> {fieldErrors.name}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -200,9 +255,18 @@ export function BookingDialog({ open, onOpenChange, property }: BookingDialogPro
                     type="tel"
                     placeholder="0912 345 678"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onChange={(e) => {
+                      setCustomerPhone(e.target.value);
+                      if (fieldErrors.phone) setFieldErrors({...fieldErrors, phone: ''});
+                    }}
+                    className={fieldErrors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
                     required
                   />
+                  {fieldErrors.phone && (
+                    <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1 font-bold">
+                      <AlertCircle className="size-3" /> {fieldErrors.phone}
+                    </p>
+                  )}
                 </div>
               </div>
 

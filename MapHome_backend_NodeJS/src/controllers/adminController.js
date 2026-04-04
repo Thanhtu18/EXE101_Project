@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Landlord = require("../models/Landlord");
 const VerificationRequest = require("../models/VerificationRequest");
 const Booking = require("../models/Booking");
+const Review = require("../models/Review");
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -24,16 +25,31 @@ const getDashboardStats = async (req, res) => {
       pendingVerifications,
       completedVerifications,
       pendingBookings,
+      distinctDistricts,
+      reviews,
     ] = await Promise.all([
-      Property.countDocuments(query),
-      User.countDocuments(query),
-      Landlord.countDocuments(query),
+      Property.countDocuments({}), // Global total
+      User.countDocuments({}),     // Global total
+      Landlord.countDocuments({}), // Global total
       VerificationRequest.countDocuments(query),
       Booking.countDocuments(query),
       VerificationRequest.countDocuments({ ...query, status: "pending" }),
       VerificationRequest.countDocuments({ ...query, status: "completed" }),
       Booking.countDocuments({ ...query, status: "pending" }),
+      Property.distinct("district"),
+      Review.find().select("rating"),
     ]);
+
+    // Calculate satisfaction rate from average review rating
+    const satisfactionRate =
+      reviews.length > 0
+        ? Math.round(
+            (reviews.reduce((sum, r) => sum + r.rating, 0) /
+              reviews.length /
+              5) *
+              100,
+          )
+        : 98; // Default 98% if no reviews
 
     res.status(200).json({
       totalProperties,
@@ -44,6 +60,8 @@ const getDashboardStats = async (req, res) => {
       pendingVerifications,
       completedVerifications,
       pendingBookings,
+      uniqueDistricts: distinctDistricts.filter((d) => d).length, // Count unique districts, exclude null
+      satisfactionRate,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -129,10 +147,10 @@ const completeVerification = async (req, res) => {
 
     const verification = await VerificationRequest.findByIdAndUpdate(
       req.params.id,
-      { 
-        status: badgeAwarded === "none" ? "rejected" : "completed", 
+      {
+        status: badgeAwarded === "none" ? "rejected" : "completed",
         completedAt: new Date(),
-        inspectorNotes: inspectorNotes || ""
+        inspectorNotes: inspectorNotes || "",
       },
       { new: true },
     );
@@ -150,8 +168,8 @@ const completeVerification = async (req, res) => {
           level: "verified",
           awardedAt: new Date(),
           awardedBy: "admin", // Or req.user.id if available
-          inspectionNotes: inspectorNotes || ""
-        }
+          inspectionNotes: inspectorNotes || "",
+        },
       });
     }
 
@@ -185,7 +203,9 @@ const toggleUserStatus = async (req, res) => {
     user.status = user.status === "blocked" ? "active" : "blocked";
     await user.save();
 
-    res.status(200).json({ message: `User status changed to ${user.status}`, user });
+    res
+      .status(200)
+      .json({ message: `User status changed to ${user.status}`, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -250,7 +270,8 @@ const getAllLandlords = async (req, res) => {
 const deleteLandlord = async (req, res) => {
   try {
     const landlord = await Landlord.findByIdAndDelete(req.params.id);
-    if (!landlord) return res.status(404).json({ message: "Landlord not found" });
+    if (!landlord)
+      return res.status(404).json({ message: "Landlord not found" });
     res.status(200).json({ message: "Landlord removed" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -339,12 +360,15 @@ const getRevenueStats = async (req, res) => {
     }
 
     const completedVerifications = await VerificationRequest.find(matchQuery);
-    
-    const totalRevenue = completedVerifications.reduce((sum, v) => sum + (v.amount || 0), 0);
-    
+
+    const totalRevenue = completedVerifications.reduce(
+      (sum, v) => sum + (v.amount || 0),
+      0,
+    );
+
     // Group by packageType
     const revenueByPackage = completedVerifications.reduce((acc, v) => {
-      const type = v.packageType || 'other';
+      const type = v.packageType || "other";
       if (!acc[type]) acc[type] = { amount: 0, count: 0 };
       acc[type].amount += v.amount || 0;
       acc[type].count += 1;
@@ -366,19 +390,19 @@ const getRevenueStats = async (req, res) => {
       {
         $match: {
           status: "completed",
-          completedAt: { $gte: sixMonthsAgo }
-        }
+          completedAt: { $gte: sixMonthsAgo },
+        },
       },
       {
         $group: {
           _id: {
             year: { $year: "$completedAt" },
-            month: { $month: "$completedAt" }
+            month: { $month: "$completedAt" },
           },
-          revenue: { $sum: "$amount" }
-        }
+          revenue: { $sum: "$amount" },
+        },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]);
 
     // Calculate revenue change percentage
@@ -395,7 +419,9 @@ const getRevenueStats = async (req, res) => {
     }
 
     // Pending transactions count
-    const pendingCount = await VerificationRequest.countDocuments({ status: "pending" });
+    const pendingCount = await VerificationRequest.countDocuments({
+      status: "pending",
+    });
 
     // Simulate "Chi phí Maps API" based on total properties
     const totalProperties = await Property.countDocuments();
@@ -420,19 +446,22 @@ const getRevenueStats = async (req, res) => {
 const updatePropertyStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['pending', 'approved', 'rejected', 'reported'].includes(status)) {
+    if (!["pending", "approved", "rejected", "reported"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
     const property = await Property.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true },
     );
 
-    if (!property) return res.status(404).json({ message: "Property not found" });
+    if (!property)
+      return res.status(404).json({ message: "Property not found" });
 
-    res.status(200).json({ message: `Property status updated to ${status}`, property });
+    res
+      .status(200)
+      .json({ message: `Property status updated to ${status}`, property });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -478,36 +507,40 @@ const broadcastNotification = async (req, res) => {
   try {
     const { title, message, type, targetRole, link } = req.body;
     if (!title || !message) {
-      return res.status(400).json({ message: "Title and message are required" });
+      return res
+        .status(400)
+        .json({ message: "Title and message are required" });
     }
 
     const Notification = require("../models/Notification");
-    
+
     // Filter users based on targetRole
     const userQuery = {};
     if (targetRole && targetRole !== "all") {
       userQuery.role = targetRole;
     }
-    
+
     const users = await User.find(userQuery, "_id");
-    
+
     if (users.length === 0) {
-      return res.status(404).json({ message: "No users found for this target role" });
+      return res
+        .status(404)
+        .json({ message: "No users found for this target role" });
     }
 
-    const notifications = users.map(user => ({
+    const notifications = users.map((user) => ({
       userId: user._id,
       title,
       message,
       type: type || "info",
       link: link || "",
-      isRead: false
+      isRead: false,
     }));
 
     await Notification.insertMany(notifications);
 
-    res.status(200).json({ 
-      message: `Đã gửi thông báo thành công đến ${users.length} người dùng (${targetRole || "tất cả"})` 
+    res.status(200).json({
+      message: `Đã gửi thông báo thành công đến ${users.length} người dùng (${targetRole || "tất cả"})`,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -517,53 +550,60 @@ const broadcastNotification = async (req, res) => {
 const getAdminNotifications = async (req, res) => {
   try {
     // Get latest system events across models
-    const [
-      newUsers,
-      newProperties,
-      newVerifications,
-      newBookings
-    ] = await Promise.all([
-      User.find().sort({ createdAt: -1 }).limit(5),
-      Property.find().sort({ createdAt: -1 }).limit(5).populate("landlordId", "name"),
-      VerificationRequest.find().sort({ createdAt: -1 }).limit(5).populate("landlordId", "name"),
-      Booking.find().sort({ createdAt: -1 }).limit(5).populate("userId", "fullName")
-    ]);
+    const [newUsers, newProperties, newVerifications, newBookings] =
+      await Promise.all([
+        User.find().sort({ createdAt: -1 }).limit(5),
+        Property.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("landlordId", "name"),
+        VerificationRequest.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("landlordId", "name"),
+        Booking.find()
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("userId", "fullName"),
+      ]);
 
     // Format all events into a unified notification structure
     const notifications = [
-      ...newUsers.map(u => ({
+      ...newUsers.map((u) => ({
         id: `user-${u._id}`,
         title: "Người dùng mới",
         message: `Tài khoản '${u.username}' vừa mới đăng ký.`,
         time: u.createdAt,
         type: "user",
-        icon: "👤"
+        icon: "👤",
       })),
-      ...newProperties.map(p => ({
+      ...newProperties.map((p) => ({
         id: `property-${p._id}`,
         title: "Tin đăng mới",
         message: `Căn hộ '${p.name}' vừa được đăng bởi ${p.landlordId?.name || "Ẩn danh"}.`,
         time: p.createdAt,
         type: "property",
-        icon: "🏠"
+        icon: "🏠",
       })),
-      ...newVerifications.map(v => ({
+      ...newVerifications.map((v) => ({
         id: v._id,
         title: "Yêu cầu Tích Xanh",
         message: `${v.landlordId?.name || "Chủ trọ"} yêu cầu kiểm tra cho '${v.propertyName}'.`,
         time: v.createdAt,
         type: "verification",
-        icon: "✅"
+        icon: "✅",
       })),
-      ...newBookings.map(b => ({
+      ...newBookings.map((b) => ({
         id: b._id,
         title: "Lịch hẹn mới",
         message: `${b.userId?.fullName || "Khách"} vừa đặt lịch xem phòng.`,
         time: b.createdAt,
         type: "booking",
-        icon: "📅"
-      }))
-    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
+        icon: "📅",
+      })),
+    ]
+      .sort((a, b) => new Date(b.time) - new Date(a.time))
+      .slice(0, 20);
 
     res.status(200).json(notifications);
   } catch (error) {

@@ -1,5 +1,6 @@
 const Property = require("../models/Property");
 const User = require("../models/User");
+const Review = require("../models/Review");
 
 const haversineKm = (lat1, lon1, lat2, lon2) => {
   const toRad = (v) => (v * Math.PI) / 180;
@@ -43,7 +44,7 @@ const getProperties = async (req, res) => {
     if (req.query.maxArea)
       query.area = { ...(query.area || {}), $lte: Number(req.query.maxArea) };
     if (req.query.available) query.available = req.query.available === "true";
-    
+
     // Add status and verified filters
     if (req.query.status) query.status = req.query.status;
     else if (!req.query.all) query.status = "approved"; // Default to approved unless explicitly asking for all
@@ -87,7 +88,7 @@ const createProperty = async (req, res) => {
       if (landlord) {
         payload.landlordId = landlord._id;
         payload.ownerName = landlord.name;
-        
+
         // Increment listing count
         landlord.totalListings += 1;
         await landlord.save();
@@ -145,8 +146,13 @@ const updateProperty = async (req, res) => {
     if (req.user && req.user.role === "landlord") {
       const Landlord = require("../models/Landlord");
       const landlord = await Landlord.findOne({ userId: req.user._id });
-      if (!landlord || property.landlordId.toString() !== landlord._id.toString()) {
-        return res.status(403).json({ message: "Not authorized to update this property" });
+      if (
+        !landlord ||
+        property.landlordId.toString() !== landlord._id.toString()
+      ) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to update this property" });
       }
     }
 
@@ -170,13 +176,20 @@ const deleteProperty = async (req, res) => {
     const Landlord = require("../models/Landlord");
     if (req.user && req.user.role === "landlord") {
       const landlord = await Landlord.findOne({ userId: req.user._id });
-      if (!landlord || property.landlordId.toString() !== landlord._id.toString()) {
-        return res.status(403).json({ message: "Not authorized to delete this property" });
+      if (
+        !landlord ||
+        property.landlordId.toString() !== landlord._id.toString()
+      ) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to delete this property" });
       }
     }
 
     if (property.landlordId) {
-      await Landlord.findByIdAndUpdate(property.landlordId, { $inc: { totalListings: -1 } });
+      await Landlord.findByIdAndUpdate(property.landlordId, {
+        $inc: { totalListings: -1 },
+      });
     }
 
     await Property.findByIdAndDelete(req.params.id);
@@ -300,7 +313,9 @@ const searchProperties = async (req, res) => {
 
     // Amenities filter (Expected as comma-separated or array)
     if (amenities) {
-      const amenityList = Array.isArray(amenities) ? amenities : amenities.split(",");
+      const amenityList = Array.isArray(amenities)
+        ? amenities
+        : amenities.split(",");
       amenityList.forEach((a) => {
         const key = a.split(":")[0]?.trim(); // Handle key or key:value format
         if (key) {
@@ -308,7 +323,6 @@ const searchProperties = async (req, res) => {
         }
       });
     }
-    
 
     const skip = (Number(page) - 1) * Number(limit);
     const properties = await Property.find(query)
@@ -372,20 +386,33 @@ const searchByMultipleLocations = async (req, res) => {
 // @route   GET /api/properties/stats/public
 const getPublicStats = async (req, res) => {
   try {
-    const [totalProperties, totalUsers] = await Promise.all([
-      Property.countDocuments({ status: "approved" }),
-      User.countDocuments(),
-    ]);
+    const [totalProperties, totalUsers, distinctDistricts, reviews] =
+      await Promise.all([
+        Property.countDocuments({ status: "approved" }),
+        User.countDocuments(),
+        Property.distinct("district", {
+          status: "approved",
+          district: { $ne: null },
+        }),
+        Review.find().select("rating"),
+      ]);
 
-    // Distinct districts from approved properties
-    const districts = await Property.distinct("address", { status: "approved" });
-    // This is a naive way to count districts. Better way below in getDistrictsStats.
-    
+    // Calculate satisfaction rate from average review rating
+    const satisfactionRate =
+      reviews.length > 0
+        ? Math.round(
+            (reviews.reduce((sum, r) => sum + r.rating, 0) /
+              reviews.length /
+              5) *
+              100,
+          )
+        : 98; // Default 98% if no reviews
+
     res.status(200).json({
       totalProperties,
       totalUsers,
-      totalDistricts: 12, // Default or calculated
-      satisfactionRate: 98,
+      totalDistricts: distinctDistricts.length || 12,
+      satisfactionRate,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -398,24 +425,35 @@ const getDistrictsStats = async (req, res) => {
   try {
     // Standard Hanoi districts for better mapping if address check is fuzzy
     const hanoiDistricts = [
-      "Cầu Giấy", "Đống Đa", "Ba Đình", "Hai Bà Trưng", "Hoàn Kiếm",
-      "Thanh Xuân", "Long Biên", "Nam Từ Liêm", "Bắc Từ Liêm", "Tây Hồ",
-      "Hoàng Mai", "Hà Đông"
+      "Cầu Giấy",
+      "Đống Đa",
+      "Ba Đình",
+      "Hai Bà Trưng",
+      "Hoàn Kiếm",
+      "Thanh Xuân",
+      "Long Biên",
+      "Nam Từ Liêm",
+      "Bắc Từ Liêm",
+      "Tây Hồ",
+      "Hoàng Mai",
+      "Hà Đông",
     ];
 
-    const stats = await Promise.all(hanoiDistricts.map(async (name) => {
-      const count = await Property.countDocuments({
-        status: "approved",
-        address: new RegExp(name, "i")
-      });
-      return {
-        name,
-        count,
-        image: `https://source.unsplash.com/featured/?hanoi,city,${name.replace(/ /g, "")}`
-      };
-    }));
+    const stats = await Promise.all(
+      hanoiDistricts.map(async (name) => {
+        const count = await Property.countDocuments({
+          status: "approved",
+          address: new RegExp(name, "i"),
+        });
+        return {
+          name,
+          count,
+          image: `https://source.unsplash.com/featured/?hanoi,city,${name.replace(/ /g, "")}`,
+        };
+      }),
+    );
 
-    // Filter out districts with 0 properties for the landing page if desired, 
+    // Filter out districts with 0 properties for the landing page if desired,
     // or return all. We'll return top 6 with most properties.
     const sortedStats = stats.sort((a, b) => b.count - a.count).slice(0, 6);
 

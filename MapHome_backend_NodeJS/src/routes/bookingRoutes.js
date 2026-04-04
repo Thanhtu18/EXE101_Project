@@ -9,6 +9,9 @@ const {
   cancelBooking,
   updateBookingStatus,
 } = require("../controllers/bookingController");
+const { createBookingRules, updateBookingStatusRules } = require("../validators/bookingValidator");
+const validate = require("../middleware/validate");
+
 const {
   authMiddleware,
   requireAnyRole,
@@ -17,7 +20,8 @@ const {
 router
   .route("/")
   .get(authMiddleware, requireAnyRole(["admin", "landlord"]), getBookings)
-  .post(authMiddleware, createBooking);
+  .post(authMiddleware, createBookingRules, validate, createBooking);
+
 
 router
   .route("/:id")
@@ -29,6 +33,7 @@ router
 router.put("/:id/cancel", authMiddleware, requireAnyRole(["user"]), cancelBooking);
 
 // Landlord or Admin can update status (accept/reject/complete)
-router.put("/:id/status", authMiddleware, requireAnyRole(["admin", "landlord"]), updateBookingStatus);
+router.put("/:id/status", authMiddleware, requireAnyRole(["admin", "landlord"]), updateBookingStatusRules, validate, updateBookingStatus);
+
 
 module.exports = router;

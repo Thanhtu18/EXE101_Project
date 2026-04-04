@@ -11,6 +11,7 @@ import { BlogPage } from "@/app/pages/BlogPage";
 import { PolicyPage } from "@/app/pages/PolicyPage";
 import { ContactPage } from "@/app/pages/ContactPage";
 import { LoginPage } from "@/app/pages/LoginPage";
+import { ForgotPasswordPage } from "@/app/pages/ForgotPasswordPage";
 import { AdminPage } from "@/app/pages/AdminPage";
 import { LandlordDashboardV2 } from "@/app/pages/LandlordDashboardV2";
 import { UserDashboard } from "@/app/pages/UserDashboard";
@@ -41,12 +42,12 @@ const router = createBrowserRouter([
   { path: "/policy", Component: PolicyPage },
   { path: "/contact", Component: ContactPage },
   { path: "/login", Component: LoginPage },
+  { path: "/forgot-password", Component: ForgotPasswordPage },
   { path: "/admin/login", Component: LoginPage },
   { path: "/admin/dashboard", Component: AdminPage },
   { path: "/landlord/dashboard", Component: LandlordDashboardV2 },
   { path: "/user/dashboard", Component: UserDashboard },
 ]);
-
 
 export default function App() {
   return (

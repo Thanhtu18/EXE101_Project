@@ -5,7 +5,6 @@ import { useAuth } from "@/app/contexts/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import { toast } from "sonner";
 
-
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import {
@@ -19,6 +18,16 @@ import {
   Shield,
   Building2,
 } from "lucide-react";
+import {
+  validateUsernameOrEmail,
+  validatePassword,
+  validateUsername,
+  validateEmail,
+  validatePasswordMatch,
+  validateFullName,
+  validatePhone,
+  getPasswordStrength,
+} from "@/app/utils/validationRules";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -31,6 +40,10 @@ export function LoginPage() {
   // Login form
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginErrors, setLoginErrors] = useState({
+    username: "",
+    password: "",
+  });
 
   // Register form
   const [registerData, setRegisterData] = useState({
@@ -43,10 +56,40 @@ export function LoginPage() {
     role: "landlord" as "landlord" | "user" | "admin",
   });
 
+  const [registerErrors, setRegisterErrors] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    fullName: "",
+    phone: "",
+  });
+
+  const [passwordStrength, setPasswordStrength] = useState({
+    minLength: false,
+    hasLowercase: false,
+    hasUppercase: false,
+    hasDigit: false,
+    hasSpecialChar: false,
+  });
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    // Validate fields
+    const usernameError = validateUsernameOrEmail(loginUsername);
+    const passwordError = validatePassword(loginPassword);
+
+    setLoginErrors({
+      username: usernameError.error || "",
+      password: passwordError.error || "",
+    });
+
+    if (!usernameError.valid || !passwordError.valid) {
+      return;
+    }
 
     try {
       const result = await login(loginUsername, loginPassword);
@@ -73,14 +116,34 @@ export function LoginPage() {
     setError("");
     setSuccess("");
 
-    // Validate
-    if (registerData.password !== registerData.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp");
-      return;
-    }
+    // Validate all fields
+    const fullNameError = validateFullName(registerData.fullName);
+    const usernameError = validateUsername(registerData.username);
+    const emailError = validateEmail(registerData.email);
+    const passwordError = validatePassword(registerData.password);
+    const confirmPasswordError = validatePasswordMatch(
+      registerData.password,
+      registerData.confirmPassword,
+    );
+    const phoneError = validatePhone(registerData.phone);
 
-    if (registerData.password.length < 6) {
-      setError("Mật khẩu phải có ít nhất 6 ký tự");
+    setRegisterErrors({
+      fullName: fullNameError.error || "",
+      username: usernameError.error || "",
+      email: emailError.error || "",
+      password: passwordError.error || "",
+      confirmPassword: confirmPasswordError.error || "",
+      phone: phoneError.error || "",
+    });
+
+    if (
+      !fullNameError.valid ||
+      !usernameError.valid ||
+      !emailError.valid ||
+      !passwordError.valid ||
+      !confirmPasswordError.valid ||
+      !phoneError.valid
+    ) {
       return;
     }
 
@@ -88,12 +151,32 @@ export function LoginPage() {
     try {
       const result = await register(dataToSubmit as any);
       if (result.success) {
-        setSuccess("Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...");
+        setSuccess(
+          "Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...",
+        );
         setTimeout(() => {
           setMode("login");
           setSuccess("");
           // Điền sẵn username vừa đăng ký
           setLoginUsername(registerData.username);
+          // Reset form
+          setRegisterData({
+            username: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+            fullName: "",
+            phone: "",
+            role: "landlord",
+          });
+          setRegisterErrors({
+            username: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+            fullName: "",
+            phone: "",
+          });
         }, 1500);
       } else {
         setError(result.message || "Đăng ký thất bại");
@@ -105,9 +188,9 @@ export function LoginPage() {
 
   const handleGoogleSuccess = async (tokenResponse: any) => {
     try {
-      // For useGoogleLogin 'implicit' flow, we get access_token. 
-      // But the backend expects idToken. 
-      // Actually, if we use the GSI button, we get idToken. 
+      // For useGoogleLogin 'implicit' flow, we get access_token.
+      // But the backend expects idToken.
+      // Actually, if we use the GSI button, we get idToken.
       // If we use useGoogleLogin, we usually get access_token.
       // I'll use the idToken flow.
       setError("");
@@ -187,7 +270,7 @@ export function LoginPage() {
               "url(https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&q=80)",
           }}
         />
-        
+
         {/* Animated Aura Blobs */}
         <motion.div
           animate={{
@@ -209,7 +292,7 @@ export function LoginPage() {
         />
 
         {/* Logo Content */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
@@ -221,7 +304,9 @@ export function LoginPage() {
             </div>
             <div>
               <h1 className="text-5xl font-bold tracking-tight">MapHome</h1>
-              <p className="text-white/80 mt-2 text-lg">Tìm đúng trọ - Ở đúng nơi</p>
+              <p className="text-white/80 mt-2 text-lg">
+                Tìm đúng trọ - Ở đúng nơi
+              </p>
             </div>
           </div>
         </motion.div>
@@ -229,7 +314,7 @@ export function LoginPage() {
 
       {/* Right Side - Premium Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 bg-white/10 lg:bg-transparent">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
@@ -237,7 +322,6 @@ export function LoginPage() {
         >
           {/* Glass Card Container */}
           <div className="bg-white/95 backdrop-blur-3xl border border-white shadow-[0_40px_120px_-20px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-8 lg:p-12 space-y-8 overflow-hidden relative group">
-            
             {/* Subtle Inner Glow */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
 
@@ -253,13 +337,15 @@ export function LoginPage() {
                   <Home className="size-8 text-white" />
                 </div>
               </motion.div>
-              
+
               <h2 className="text-3xl lg:text-4xl font-[900] bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent tracking-tight leading-tight">
-                {mode === "login" ? "Chào mừng trở lại!" : "Khởi tạo hành trình"}
+                {mode === "login"
+                  ? "Chào mừng trở lại!"
+                  : "Khởi tạo hành trình"}
               </h2>
               <p className="text-slate-400 font-semibold text-lg leading-relaxed">
-                {mode === "login" 
-                  ? "Cùng MapHome tìm kiếm không gian sống lý tưởng của bạn." 
+                {mode === "login"
+                  ? "Cùng MapHome tìm kiếm không gian sống lý tưởng của bạn."
                   : "Tham gia cùng cộng đồng tìm trọ hiện đại nhất hiện nay."}
               </p>
             </header>
@@ -277,7 +363,9 @@ export function LoginPage() {
                   <form onSubmit={handleLogin} className="space-y-5">
                     <motion.div variants={itemVariants} className="space-y-2.5">
                       <div className="flex items-center justify-between ml-1">
-                        <label className="text-[14px] font-black text-emerald-600/80 uppercase tracking-wide">Tài khoản</label>
+                        <label className="text-[14px] font-black text-emerald-600/80 uppercase tracking-wide">
+                          Tài khoản
+                        </label>
                       </div>
                       <div className="relative group">
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 size-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-focus-within:bg-emerald-50 group-focus-within:text-emerald-500 transition-all duration-300">
@@ -286,18 +374,47 @@ export function LoginPage() {
                         <Input
                           type="text"
                           value={loginUsername}
-                          onChange={(e) => setLoginUsername(e.target.value)}
+                          onChange={(e) => {
+                            setLoginUsername(e.target.value);
+                            if (e.target.value.trim()) {
+                              setLoginErrors({ ...loginErrors, username: "" });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result =
+                              validateUsernameOrEmail(loginUsername);
+                            setLoginErrors({
+                              ...loginErrors,
+                              username: result.error || "",
+                            });
+                          }}
                           placeholder="username hoặc email"
-                          className="pl-16 h-14 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 rounded-2xl transition-all shadow-sm font-medium"
+                          className={`pl-16 h-14 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 rounded-2xl transition-all shadow-sm font-medium border ${loginErrors.username ? "border-red-500" : "border-slate-200"}`}
                           required
                         />
                       </div>
+                      {loginErrors.username && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                        >
+                          <AlertCircle className="size-3" />
+                          {loginErrors.username}
+                        </motion.p>
+                      )}
                     </motion.div>
 
                     <motion.div variants={itemVariants} className="space-y-2.5">
                       <div className="flex items-center justify-between ml-1">
-                        <label className="text-[14px] font-black text-blue-600/80 uppercase tracking-wide">Mật khẩu</label>
-                        <button type="button" className="text-[13px] font-bold text-emerald-500 hover:text-emerald-600 hover:underline decoration-2 underline-offset-4 transition-colors">
+                        <label className="text-[14px] font-black text-blue-600/80 uppercase tracking-wide">
+                          Mật khẩu
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => navigate("/forgot-password")}
+                          className="text-[13px] font-bold text-emerald-500 hover:text-emerald-600 hover:underline decoration-2 underline-offset-4 transition-colors"
+                        >
                           Quên mật khẩu?
                         </button>
                       </div>
@@ -308,18 +425,40 @@ export function LoginPage() {
                         <Input
                           type="password"
                           value={loginPassword}
-                          onChange={(e) => setLoginPassword(e.target.value)}
+                          onChange={(e) => {
+                            setLoginPassword(e.target.value);
+                            if (e.target.value) {
+                              setLoginErrors({ ...loginErrors, password: "" });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result = validatePassword(loginPassword);
+                            setLoginErrors({
+                              ...loginErrors,
+                              password: result.error || "",
+                            });
+                          }}
                           placeholder="••••••••"
-                          className="pl-16 h-14 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 rounded-2xl transition-all shadow-sm"
+                          className={`pl-16 h-14 bg-white focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 rounded-2xl transition-all shadow-sm border ${loginErrors.password ? "border-red-500" : "border-slate-200"}`}
                           required
                         />
                       </div>
+                      {loginErrors.password && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                        >
+                          <AlertCircle className="size-3" />
+                          {loginErrors.password}
+                        </motion.p>
+                      )}
                     </motion.div>
 
                     {error && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }} 
-                        animate={{ opacity: 1, scale: 1 }} 
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3 text-rose-700 shadow-sm"
                       >
                         <AlertCircle className="size-6 text-rose-500 flex-shrink-0" />
@@ -328,9 +467,9 @@ export function LoginPage() {
                     )}
 
                     <motion.div variants={itemVariants} className="pt-2">
-                        <Button
+                      <Button
                         type="submit"
-                        className="w-full h-15 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all rounded-[1.25rem] group"
+                        className="w-full h-15 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all rounded-[1.25rem] group disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Đăng nhập ngay
                         <motion.span
@@ -347,61 +486,317 @@ export function LoginPage() {
                   <form onSubmit={handleRegister} className="space-y-5">
                     <div className="grid grid-cols-2 gap-4">
                       <motion.div variants={itemVariants} className="space-y-2">
-                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">Họ và tên</label>
+                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">
+                          Họ và tên
+                        </label>
                         <Input
                           value={registerData.fullName}
-                          onChange={(e) => setRegisterData({...registerData, fullName: e.target.value})}
+                          onChange={(e) => {
+                            setRegisterData({
+                              ...registerData,
+                              fullName: e.target.value,
+                            });
+                            if (e.target.value.trim()) {
+                              setRegisterErrors({
+                                ...registerErrors,
+                                fullName: "",
+                              });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result = validateFullName(
+                              registerData.fullName,
+                            );
+                            setRegisterErrors({
+                              ...registerErrors,
+                              fullName: result.error || "",
+                            });
+                          }}
                           placeholder="Nguyễn Văn A"
-                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                          className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.fullName ? "border-red-500" : "border-slate-200"}`}
                           required
                         />
+                        {registerErrors.fullName && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                          >
+                            <AlertCircle className="size-3" />
+                            {registerErrors.fullName}
+                          </motion.p>
+                        )}
                       </motion.div>
                       <motion.div variants={itemVariants} className="space-y-2">
-                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">Số điện thoại</label>
+                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">
+                          Số điện thoại
+                        </label>
                         <Input
                           value={registerData.phone}
-                          onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
+                          onChange={(e) => {
+                            setRegisterData({
+                              ...registerData,
+                              phone: e.target.value,
+                            });
+                            if (!e.target.value || e.target.value.trim()) {
+                              setRegisterErrors({
+                                ...registerErrors,
+                                phone: "",
+                              });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result = validatePhone(registerData.phone);
+                            setRegisterErrors({
+                              ...registerErrors,
+                              phone: result.error || "",
+                            });
+                          }}
                           placeholder="091..."
-                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
-                          required
+                          className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.phone ? "border-red-500" : "border-slate-200"}`}
                         />
+                        {registerErrors.phone && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                          >
+                            <AlertCircle className="size-3" />
+                            {registerErrors.phone}
+                          </motion.p>
+                        )}
                       </motion.div>
                     </div>
 
                     <motion.div variants={itemVariants} className="space-y-2">
-                      <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest ml-1">Email liên lạc</label>
+                      <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        Email liên lạc
+                      </label>
                       <Input
                         type="email"
                         value={registerData.email}
-                        onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                        onChange={(e) => {
+                          setRegisterData({
+                            ...registerData,
+                            email: e.target.value,
+                          });
+                          if (e.target.value.trim()) {
+                            setRegisterErrors({ ...registerErrors, email: "" });
+                          }
+                        }}
+                        onBlur={() => {
+                          const result = validateEmail(registerData.email);
+                          setRegisterErrors({
+                            ...registerErrors,
+                            email: result.error || "",
+                          });
+                        }}
                         placeholder="email@example.com"
-                        className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                        className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.email ? "border-red-500" : "border-slate-200"}`}
                         required
                       />
+                      {registerErrors.email && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                        >
+                          <AlertCircle className="size-3" />
+                          {registerErrors.email}
+                        </motion.p>
+                      )}
                     </motion.div>
 
-                    <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+                    <motion.div
+                      variants={itemVariants}
+                      className="grid grid-cols-2 gap-4"
+                    >
                       <div className="space-y-2">
-                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">Tên đăng nhập</label>
+                        <label className="text-[12px] font-black text-emerald-600/70 uppercase tracking-widest ml-1">
+                          Tên đăng nhập
+                        </label>
                         <Input
                           value={registerData.username}
-                          onChange={(e) => setRegisterData({...registerData, username: e.target.value})}
+                          onChange={(e) => {
+                            setRegisterData({
+                              ...registerData,
+                              username: e.target.value,
+                            });
+                            if (e.target.value.trim()) {
+                              setRegisterErrors({
+                                ...registerErrors,
+                                username: "",
+                              });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result = validateUsername(
+                              registerData.username,
+                            );
+                            setRegisterErrors({
+                              ...registerErrors,
+                              username: result.error || "",
+                            });
+                          }}
                           placeholder="username"
-                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                          className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.username ? "border-red-500" : "border-slate-200"}`}
                           required
                         />
+                        {registerErrors.username && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                          >
+                            <AlertCircle className="size-3" />
+                            {registerErrors.username}
+                          </motion.p>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">Mật khẩu</label>
+                        <label className="text-[12px] font-black text-blue-600/70 uppercase tracking-widest ml-1">
+                          Mật khẩu
+                        </label>
                         <Input
                           type="password"
                           value={registerData.password}
-                          onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                          onChange={(e) => {
+                            setRegisterData({
+                              ...registerData,
+                              password: e.target.value,
+                            });
+                            setPasswordStrength(
+                              getPasswordStrength(e.target.value),
+                            );
+                            if (e.target.value) {
+                              setRegisterErrors({
+                                ...registerErrors,
+                                password: "",
+                              });
+                            }
+                          }}
+                          onBlur={() => {
+                            const result = validatePassword(
+                              registerData.password,
+                            );
+                            setRegisterErrors({
+                              ...registerErrors,
+                              password: result.error || "",
+                            });
+                          }}
                           placeholder="••••••••"
-                          className="h-13 bg-white border-slate-200 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium"
+                          className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.password ? "border-red-500" : "border-slate-200"}`}
                           required
                         />
+                        {registerErrors.password && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                          >
+                            <AlertCircle className="size-3" />
+                            {registerErrors.password}
+                          </motion.p>
+                        )}
+                        {registerData.password && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-2 space-y-1.5"
+                          >
+                            <div className="text-xs font-semibold text-slate-600 ml-1">
+                              Yêu cầu mật khẩu:
+                            </div>
+                            <div className="space-y-1 ml-1">
+                              <div
+                                className={`text-xs flex items-center gap-2 ${passwordStrength.minLength ? "text-emerald-600" : "text-slate-400"}`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full ${passwordStrength.minLength ? "bg-emerald-500" : "bg-slate-300"}`}
+                                />
+                                Tối thiểu 8 ký tự
+                              </div>
+                              <div
+                                className={`text-xs flex items-center gap-2 ${passwordStrength.hasLowercase ? "text-emerald-600" : "text-slate-400"}`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full ${passwordStrength.hasLowercase ? "bg-emerald-500" : "bg-slate-300"}`}
+                                />
+                                Chứa chữ thường (a-z)
+                              </div>
+                              <div
+                                className={`text-xs flex items-center gap-2 ${passwordStrength.hasUppercase ? "text-emerald-600" : "text-slate-400"}`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full ${passwordStrength.hasUppercase ? "bg-emerald-500" : "bg-slate-300"}`}
+                                />
+                                Chứa chữ hoa (A-Z)
+                              </div>
+                              <div
+                                className={`text-xs flex items-center gap-2 ${passwordStrength.hasDigit ? "text-emerald-600" : "text-slate-400"}`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full ${passwordStrength.hasDigit ? "bg-emerald-500" : "bg-slate-300"}`}
+                                />
+                                Chứa chữ số (0-9)
+                              </div>
+                              <div
+                                className={`text-xs flex items-center gap-2 ${passwordStrength.hasSpecialChar ? "text-emerald-600" : "text-slate-400"}`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full ${passwordStrength.hasSpecialChar ? "bg-emerald-500" : "bg-slate-300"}`}
+                                />
+                                Chứa ký tự đặc biệt (!@#$%^&*...)
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="space-y-2">
+                      <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        Xác nhận mật khẩu
+                      </label>
+                      <Input
+                        type="password"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => {
+                          setRegisterData({
+                            ...registerData,
+                            confirmPassword: e.target.value,
+                          });
+                          if (e.target.value) {
+                            setRegisterErrors({
+                              ...registerErrors,
+                              confirmPassword: "",
+                            });
+                          }
+                        }}
+                        onBlur={() => {
+                          const result = validatePasswordMatch(
+                            registerData.password,
+                            registerData.confirmPassword,
+                          );
+                          setRegisterErrors({
+                            ...registerErrors,
+                            confirmPassword: result.error || "",
+                          });
+                        }}
+                        placeholder="••••••••"
+                        className={`h-13 bg-white focus:bg-white focus:ring-4 focus:ring-emerald-500/10 rounded-2xl font-medium border transition-colors ${registerErrors.confirmPassword ? "border-red-500" : "border-slate-200"}`}
+                        required
+                      />
+                      {registerErrors.confirmPassword && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"
+                        >
+                          <AlertCircle className="size-3" />
+                          {registerErrors.confirmPassword}
+                        </motion.p>
+                      )}
                     </motion.div>
 
                     <motion.div variants={itemVariants} className="space-y-4">
@@ -411,27 +806,62 @@ export function LoginPage() {
                       </label>
                       <div className="grid grid-cols-3 gap-3">
                         {[
-                          { id: "landlord", label: "Chủ trọ", icon: Building2, desc: "Đăng tin", color: "emerald" },
-                          { id: "user", label: "Người tìm", icon: User, desc: "Tìm thuê", color: "blue" },
-                          { id: "admin", label: "Quản trị", icon: Shield, desc: "Quản lý", color: "slate" }
+                          {
+                            id: "landlord",
+                            label: "Chủ trọ",
+                            icon: Building2,
+                            desc: "Đăng tin",
+                            color: "emerald",
+                          },
+                          {
+                            id: "user",
+                            label: "Người tìm",
+                            icon: User,
+                            desc: "Tìm thuê",
+                            color: "blue",
+                          },
+                          {
+                            id: "admin",
+                            label: "Quản trị",
+                            icon: Shield,
+                            desc: "Quản lý",
+                            color: "slate",
+                          },
                         ].map((role) => (
                           <button
                             key={role.id}
                             type="button"
-                            onClick={() => setRegisterData({...registerData, role: role.id as any})}
+                            onClick={() =>
+                              setRegisterData({
+                                ...registerData,
+                                role: role.id as any,
+                              })
+                            }
                             className={`relative p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 group overflow-hidden ${
-                              registerData.role === role.id 
-                                ? `border-${role.color}-500 bg-${role.color}-50 shadow-lg shadow-${role.color}-500/10 scale-[1.02]` 
+                              registerData.role === role.id
+                                ? `border-${role.color}-500 bg-${role.color}-50 shadow-lg shadow-${role.color}-500/10 scale-[1.02]`
                                 : "bg-white/40 border-slate-100 hover:border-slate-300 hover:bg-white"
                             }`}
                           >
-                            <role.icon className={`size-6 mb-1 transition-all ${
-                              registerData.role === role.id ? `text-${role.color}-600` : "text-slate-400 group-hover:text-slate-600"
-                            }`} />
-                            <span className={`text-[12px] font-extrabold ${
-                              registerData.role === role.id ? `text-${role.color}-900` : "text-slate-600"
-                            }`}>{role.label}</span>
-                            <span className="text-[10px] text-slate-400 font-medium">{role.desc}</span>
+                            <role.icon
+                              className={`size-6 mb-1 transition-all ${
+                                registerData.role === role.id
+                                  ? `text-${role.color}-600`
+                                  : "text-slate-400 group-hover:text-slate-600"
+                              }`}
+                            />
+                            <span
+                              className={`text-[12px] font-extrabold ${
+                                registerData.role === role.id
+                                  ? `text-${role.color}-900`
+                                  : "text-slate-600"
+                              }`}
+                            >
+                              {role.label}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {role.desc}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -454,7 +884,10 @@ export function LoginPage() {
                     <motion.div variants={itemVariants}>
                       <Button
                         type="submit"
-                        className="w-full h-15 bg-gradient-to-br from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-2xl shadow-emerald-500/20 rounded-[1.25rem]"
+                        disabled={
+                          !Object.values(registerErrors).every((err) => !err)
+                        }
+                        className="w-full h-15 bg-gradient-to-br from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-[800] text-lg shadow-2xl shadow-emerald-500/20 rounded-[1.25rem] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Đăng ký tài khoản
                       </Button>
@@ -466,12 +899,17 @@ export function LoginPage() {
                 <motion.div variants={itemVariants} className="pt-4 space-y-6">
                   <div className="relative flex items-center gap-4">
                     <div className="flex-1 h-px bg-slate-200" />
-                    <span className="text-[11px] font-[900] text-slate-400 uppercase tracking-widest whitespace-nowrap">Tiếp tục nhanh với</span>
+                    <span className="text-[11px] font-[900] text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      Tiếp tục nhanh với
+                    </span>
                     <div className="flex-1 h-px bg-slate-200" />
                   </div>
 
                   <div className="grid grid-cols-1 gap-4">
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                       <Button
                         type="button"
                         onClick={() => loginWithGoogle()}
@@ -480,10 +918,22 @@ export function LoginPage() {
                       >
                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
                           <svg className="size-5" viewBox="0 0 48 48">
-                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6.01c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z" />
-                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                            <path
+                              fill="#EA4335"
+                              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+                            />
+                            <path
+                              fill="#4285F4"
+                              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6.01c4.51-4.18 7.09-10.36 7.09-17.65z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                            />
                           </svg>
                         </div>
                         Tài khoản Google
@@ -501,10 +951,14 @@ export function LoginPage() {
                         className="group py-2"
                       >
                         <span className="text-slate-400 font-bold text-sm">
-                          {mode === "login" ? "Khám phá lần đầu?" : "Bạn đã có tài khoản?"}
+                          {mode === "login"
+                            ? "Khám phá lần đầu?"
+                            : "Bạn đã có tài khoản?"}
                         </span>
                         <span className="ml-2 text-emerald-600 group-hover:text-emerald-700 font-black text-sm underline-offset-8 decoration-2 underline">
-                          {mode === "login" ? "Tạo tài khoản ngay" : "Đăng nhập tại đây"}
+                          {mode === "login"
+                            ? "Tạo tài khoản ngay"
+                            : "Đăng nhập tại đây"}
                         </span>
                       </button>
                     </div>
@@ -529,4 +983,3 @@ export function LoginPage() {
     </div>
   );
 }
-
