@@ -1,8 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
-    /* Path Aliases */
+    /* Path Aliases - for Antigravity */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

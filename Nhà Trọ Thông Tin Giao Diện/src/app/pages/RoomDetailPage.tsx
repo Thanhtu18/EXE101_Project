@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { 
+  validateReviewRating, 
+  validateReviewComment 
+} from "@/app/utils/validationRules";
+import { AlertCircle } from "lucide-react";
 import { getAvatarUrl } from "@/app/utils/avatarUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -271,6 +277,7 @@ export function RoomDetailPage() {
   const [newReview, setNewReview] = useState("");
   const [newRating, setNewRating] = useState(5);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const { user } = useAuth();
   const { properties, loading: loadingProps } = useProperties();
@@ -354,10 +361,22 @@ export function RoomDetailPage() {
   };
 
   const handleSubmitReview = async () => {
-    if (!newReview.trim()) return;
-    if (!user) return;
+    const ratingValid = validateReviewRating(newRating);
+    const commentValid = validateReviewComment(newReview);
+
+    if (!ratingValid.valid || !commentValid.valid) {
+      setReviewError(ratingValid.error || commentValid.error || "");
+      toast.error(ratingValid.error || commentValid.error || "Vui lòng kiểm tra lại đánh giá! ❌");
+      return;
+    }
+
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để gửi đánh giá! 🔐");
+      return;
+    }
 
     setIsSubmittingReview(true);
+    setReviewError("");
 
     try {
       const res = await api.post("/api/reviews", {
@@ -800,10 +819,20 @@ export function RoomDetailPage() {
                         </div>
                         <textarea
                           placeholder="Chia sẻ trải nghiệm của bạn về căn phòng này..."
-                          className="w-full min-h-[120px] p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all resize-none text-sm"
+                          className={`w-full min-h-[120px] p-4 rounded-xl border focus:ring-2 outline-none transition-all resize-none text-sm ${
+                            reviewError ? "border-red-500 focus:ring-red-100" : "border-gray-200 focus:ring-green-500/20 focus:border-green-500"
+                          }`}
                           value={newReview}
-                          onChange={(e) => setNewReview(e.target.value)}
+                          onChange={(e) => {
+                            setNewReview(e.target.value);
+                            if (reviewError) setReviewError("");
+                          }}
                         />
+                        {reviewError && (
+                          <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                            <AlertCircle className="size-3" /> {reviewError}
+                          </p>
+                        )}
                         <div className="flex justify-end mt-4">
                           <Button
                             className="bg-green-600 hover:bg-green-700 h-10 px-6 font-medium"

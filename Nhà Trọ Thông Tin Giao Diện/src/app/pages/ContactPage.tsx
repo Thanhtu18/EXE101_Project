@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { 
+  validateFullName, 
+  validatePhone 
+} from "@/app/utils/validationRules";
 import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -45,10 +49,29 @@ export function ContactPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState({
+    name: "",
+    phone: "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const nameValid = validateFullName(formData.name);
+    const phoneValid = formData.phone ? validatePhone(formData.phone) : { valid: true };
+
+    const newErrors = {
+      name: nameValid.error || "",
+      phone: phoneValid.error || "",
+    };
+    setFieldErrors(newErrors);
+
+    if (!nameValid.valid || !phoneValid.valid) {
+      setError("Vui lòng kiểm tra lại thông tin trong biểu mẫu.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -63,6 +86,7 @@ export function ContactPage() {
           subject: "",
           message: "",
         });
+        setFieldErrors({ name: "", phone: "" });
         
         // Modal stays for 5 seconds then resets
         setTimeout(() => {
@@ -81,10 +105,18 @@ export function ContactPage() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    // Clear field error when user types
+    if (fieldErrors[name as keyof typeof fieldErrors]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: "",
+      });
+    }
   };
 
   return (
@@ -246,12 +278,17 @@ export function ContactPage() {
                           <Input
                             type="text"
                             name="name"
-                            className="h-12 rounded-xl focus:ring-green-500/20"
+                            className={`h-12 rounded-xl focus:ring-green-500/20 ${fieldErrors.name ? "border-red-500" : ""}`}
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="Nguyễn Văn A"
                             required
                           />
+                          {fieldErrors.name && (
+                            <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                              <AlertCircle className="size-3" /> {fieldErrors.name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -278,11 +315,16 @@ export function ContactPage() {
                           <Input
                             type="tel"
                             name="phone"
-                            className="h-12 rounded-xl focus:ring-green-500/20"
+                            className={`h-12 rounded-xl focus:ring-green-500/20 ${fieldErrors.phone ? "border-red-500" : ""}`}
                             value={formData.phone}
                             onChange={handleChange}
                             placeholder="0912 345 678"
                           />
+                          {fieldErrors.phone && (
+                            <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-bold">
+                              <AlertCircle className="size-3" /> {fieldErrors.phone}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">

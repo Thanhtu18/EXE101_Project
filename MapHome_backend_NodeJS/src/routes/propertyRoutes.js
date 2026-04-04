@@ -15,6 +15,14 @@ const {
   getPublicStats,
   getDistrictsStats,
 } = require("../controllers/propertyController");
+const { 
+  createPropertyRules, 
+  updatePropertyRules, 
+  searchPropertiesRules, 
+  nearbyPropertiesRules 
+} = require("../validators/propertyValidator");
+const validate = require("../middleware/validate");
+
 const {
   authMiddleware,
   requireAnyRole,
@@ -25,10 +33,12 @@ router.get("/stats/public", getPublicStats);
 router.get("/stats/districts", getDistrictsStats);
 
 // Search route (must come before /:id pattern)
-router.get("/search", searchProperties);
+router.get("/search", searchPropertiesRules, validate, searchProperties);
+
 
 // Nearby route
-router.get("/nearby", getNearbyProperties);
+router.get("/nearby", nearbyPropertiesRules, validate, getNearbyProperties);
+
 
 // Multiple location search (for workplace search)
 router.get("/search-multiple", searchByMultipleLocations);
@@ -39,13 +49,15 @@ router.get("/landlord/:landlordId", getPropertiesByLandlord);
 router
   .route("/")
   .get(getProperties)
-  .post(authMiddleware, requireAnyRole(["landlord"]), createProperty);
+  .post(authMiddleware, requireAnyRole(["landlord"]), createPropertyRules, validate, createProperty);
+
 
 router
   .route("/:id")
   .get(getPropertyById)
-  .put(authMiddleware, requireAnyRole(["landlord"]), updateProperty)
+  .put(authMiddleware, requireAnyRole(["landlord"]), updatePropertyRules, validate, updateProperty)
   .delete(authMiddleware, requireAnyRole(["landlord"]), deleteProperty);
+
 
 // Additional actions
 router.post("/:id/favorite", authMiddleware, toggleFavorite);
