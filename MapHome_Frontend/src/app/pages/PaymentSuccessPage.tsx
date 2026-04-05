@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import api from "@/app/utils/api";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
@@ -22,9 +23,10 @@ export function PaymentSuccessPage() {
 
   const [searchParams] = useSearchParams();
 
-  const checkoutType = location.state?.type || searchParams.get("type") || "subscription";
+  const checkoutType =
+    location.state?.type || searchParams.get("type") || "subscription";
   const isInspection = checkoutType === "inspection";
-  
+
   // Plan data reconstruction if coming from redirect
   const planIdFromUrl = searchParams.get("planId");
   const [availablePlans, setAvailablePlans] = useState<any[]>([]);
@@ -47,9 +49,14 @@ export function PaymentSuccessPage() {
     fetchPlans();
   }, []);
 
-  const tier = location.state?.tier || (planIdFromUrl ? availablePlans.find(p => p.planId === planIdFromUrl) : null);
+  const tier =
+    location.state?.tier ||
+    (planIdFromUrl
+      ? availablePlans.find((p) => p.planId === planIdFromUrl)
+      : null);
   const amountStr = searchParams.get("amount");
-  const amount = location.state?.amount || (amountStr ? Number(amountStr) : null);
+  const amount =
+    location.state?.amount || (amountStr ? Number(amountStr) : null);
   const orderId = location.state?.orderId || searchParams.get("orderId");
   const inspectionData = location.state?.inspectionData;
 
@@ -64,7 +71,9 @@ export function PaymentSuccessPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="size-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Đang tải thông tin giao dịch...</p>
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
+            Đang tải thông tin giao dịch...
+          </p>
         </div>
       </div>
     );
@@ -77,14 +86,6 @@ export function PaymentSuccessPage() {
   const today = new Date();
   const expiryDate = new Date(today);
   expiryDate.setDate(expiryDate.getDate() + 30);
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 relative overflow-hidden">
@@ -283,7 +284,7 @@ export function PaymentSuccessPage() {
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Ngày kích hoạt</span>
                     <span className="font-semibold text-gray-900">
-                      {formatDate(today)}
+                      {formatDateVietnamese(today)}
                     </span>
                   </div>
 
@@ -291,7 +292,7 @@ export function PaymentSuccessPage() {
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <span className="text-gray-600">Ngày hết hạn</span>
                     <span className="font-semibold text-gray-900">
-                      {formatDate(expiryDate)}
+                      {formatDateVietnamese(expiryDate)}
                     </span>
                   </div>
 

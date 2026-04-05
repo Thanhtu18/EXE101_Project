@@ -1222,6 +1222,25 @@ export function PostRoomPage() {
                   hidden: { opacity: 0, y: 15 },
                   show: { opacity: 1, y: 0 }
                 }}
+                className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4 mb-4"
+              >
+                <div className="p-2 bg-white rounded-lg shadow-sm">
+                  <CalendarDays className="size-5 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900 mb-1">Thời hạn đăng tin: 30 ngày</h4>
+                  <p className="text-xs text-amber-700 font-medium opacity-80 leading-relaxed">
+                    Sau khi được duyệt, tin đăng của bạn sẽ hiển thị trên bản đồ trong 30 ngày. 
+                    Bạn có thể gia hạn bất cứ lúc nào từ trang quản lý.
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  show: { opacity: 1, y: 0 }
+                }}
                 className="flex gap-3 pt-4"
               >
                 <Button variant="outline" onClick={handleBack} className="flex-1 h-12 rounded-lg font-semibold text-slate-700 border-slate-300">

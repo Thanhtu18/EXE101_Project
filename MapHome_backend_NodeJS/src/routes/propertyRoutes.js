@@ -14,6 +14,7 @@ const {
   searchByMultipleLocations,
   getPublicStats,
   getDistrictsStats,
+  renewProperty,
 } = require("../controllers/propertyController");
 const { 
   createPropertyRules, 
@@ -62,5 +63,6 @@ router
 // Additional actions
 router.post("/:id/favorite", authMiddleware, toggleFavorite);
 router.post("/:id/view", incrementView);
+router.put("/:id/renew", authMiddleware, requireAnyRole(["landlord"]), renewProperty);
 
 module.exports = router;

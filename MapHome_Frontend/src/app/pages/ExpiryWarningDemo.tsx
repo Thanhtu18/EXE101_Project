@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { ExpiryWarningModal } from "@/app/components/ExpiryWarningModal";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import {
   AlertCircle,
   X,
@@ -49,7 +50,7 @@ export function ExpiryWarningDemo() {
                 <div>
                   <p className="font-semibold text-amber-900 text-base">
                     Gói Standard của bạn sẽ hết hạn sau {daysRemaining} ngày (
-                    {new Date(expiryDate).toLocaleDateString("vi-VN")})
+                    {formatDateVietnamese(expiryDate)})
                   </p>
                   <p className="text-sm text-amber-800">
                     Gia hạn ngay để tiếp tục sử dụng dịch vụ và tránh tin đăng
@@ -173,7 +174,7 @@ export function ExpiryWarningDemo() {
               <p className="text-sm font-semibold text-orange-900">
                 ⚠️ Gói {planName} của bạn sẽ hết hạn vào{" "}
                 <span className="font-bold">
-                  {new Date(expiryDate).toLocaleDateString("vi-VN")}
+                  {formatDateVietnamese(expiryDate)}
                 </span>
               </p>
               <p className="text-xs text-orange-800 mt-1">

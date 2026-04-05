@@ -101,6 +101,10 @@ export interface RentalProperty {
   favorites?: number;
   description?: string;
   distance?: number; // Optional distance from search center
+  status?: 'pending' | 'approved' | 'rejected' | 'reported' | 'expired';
+  expiryDate?: string;
+  rating?: number;
+  ratingCount?: number;
 }
 
 export interface PropertyWithDistance extends RentalProperty {

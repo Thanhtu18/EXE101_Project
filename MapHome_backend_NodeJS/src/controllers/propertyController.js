@@ -43,11 +43,20 @@ const getProperties = async (req, res) => {
       query.area = { ...(query.area || {}), $gte: Number(req.query.minArea) };
     if (req.query.maxArea)
       query.area = { ...(query.area || {}), $lte: Number(req.query.maxArea) };
-    if (req.query.available) query.available = req.query.available === "true";
+    if (req.query.available) {
+      query.available = req.query.available === "true";
+    } else if (!req.query.all) {
+      // Default to only showing available properties for public users
+      query.available = true;
+    }
 
     // Add status and verified filters
     if (req.query.status) query.status = req.query.status;
-    else if (!req.query.all) query.status = "approved"; // Default to approved unless explicitly asking for all
+    else if (!req.query.all) {
+      query.status = "approved"; // Default to approved unless explicitly asking for all
+      // Also filter out expired if only approved are requested
+      query.status = { $eq: "approved" }; 
+    }
 
     if (req.query.verified === "true") query["greenBadge.level"] = "verified";
 
@@ -94,6 +103,11 @@ const createProperty = async (req, res) => {
         await landlord.save();
       }
     }
+
+    // Set default expiry date (30 days from now)
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    payload.expiryDate = expiryDate;
 
     const property = await Property.create(payload);
     res.status(201).json(property);
@@ -275,6 +289,13 @@ const searchProperties = async (req, res) => {
       query.status = status;
     } else {
       query.status = "approved"; // Default to approved for public search
+    }
+
+    // Default to only showing available properties for public search
+    if (req.query.available) {
+      query.available = req.query.available === "true";
+    } else {
+      query.available = true;
     }
 
     // Filter by verification
@@ -463,6 +484,43 @@ const getDistrictsStats = async (req, res) => {
   }
 };
 
+// @desc    Renew a property (extend expiry date by 30 days)
+// @route   PUT /api/properties/:id/renew
+const renewProperty = async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Authorization check
+    if (req.user && req.user.role === "landlord") {
+      const Landlord = require("../models/Landlord");
+      const landlord = await Landlord.findOne({ userId: req.user._id });
+      if (
+        !landlord ||
+        property.landlordId.toString() !== landlord._id.toString()
+      ) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to renew this property" });
+      }
+    }
+
+    // Set new expiry date (current date + 30 days)
+    const newExpiryDate = new Date();
+    newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+    
+    property.expiryDate = newExpiryDate;
+    property.status = "approved"; // Reset to approved if it was expired
+    
+    await property.save();
+    res.status(200).json(property);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -477,4 +535,5 @@ module.exports = {
   searchByMultipleLocations,
   getPublicStats,
   getDistrictsStats,
+  renewProperty,
 };

@@ -42,9 +42,10 @@ const PropertySchema = new mongoose.Schema(
     favorites: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "reported"],
+      enum: ["pending", "approved", "rejected", "reported", "expired"],
       default: "pending",
     },
+    expiryDate: { type: Date },
     rating: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
   },
