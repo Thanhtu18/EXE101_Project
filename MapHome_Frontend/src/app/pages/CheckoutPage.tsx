@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import {
   Card,
   CardContent,
@@ -41,8 +42,6 @@ interface PricingTier {
   badge?: string;
 }
 
-
-
 const inspectionTypeLabels: Record<string, string> = {
   standard: "Kiểm tra tiêu chuẩn",
   detailed: "Kiểm tra chi tiết",
@@ -79,7 +78,7 @@ export function CheckoutPage() {
 
   const selectedTierId = rawState?.selectedTier || "standard";
   const billingCycle = rawState?.billingCycle || "monthly";
-  const selectedTier = plans.find(p => p.planId === selectedTierId);
+  const selectedTier = plans.find((p) => p.planId === selectedTierId);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -112,7 +111,9 @@ export function CheckoutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <div className="size-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Đang tải cấu hình thanh toán...</p>
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">
+            Đang tải cấu hình thanh toán...
+          </p>
         </div>
       </div>
     );
@@ -166,14 +167,14 @@ export function CheckoutPage() {
 
     try {
       setIsProcessing(true);
-      
+
       // 1. Create payment on backend
       const res = await api.post("/api/payments/create", {
         amount: totalAmount,
-        description: isInspection 
-          ? `Thanh toán kiểm tra căn trọ: ${inspectionData.propertyName}` 
+        description: isInspection
+          ? `Thanh toán kiểm tra căn trọ: ${inspectionData.propertyName}`
           : `Nâng cấp gói: ${selectedTier.name} (${billingCycle})`,
-        planId: isInspection ? "inspection" : selectedTierId
+        planId: isInspection ? "inspection" : selectedTierId,
       });
 
       if (res.status === 200 && res.data.url) {
@@ -184,8 +185,9 @@ export function CheckoutPage() {
       }
     } catch (error: any) {
       console.error("Payment initiation failed:", error);
-      toast.error(error.response?.data?.message || "Không thể khởi tạo thanh toán.");
-
+      toast.error(
+        error.response?.data?.message || "Không thể khởi tạo thanh toán.",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -205,9 +207,7 @@ export function CheckoutPage() {
                   <Check className="size-5" strokeWidth={3} />
                 </div>
                 <span className="text-xs font-semibold text-green-600 mt-2 whitespace-nowrap">
-                  {isInspection
-                    ? "Đặt lịch"
-                    : "Chọn gói"}
+                  {isInspection ? "Đặt lịch" : "Chọn gói"}
                 </span>
               </div>
               <div className="h-0.5 w-20 bg-green-600 mx-2" />
@@ -247,9 +247,7 @@ export function CheckoutPage() {
               className="mb-4"
             >
               <ChevronLeft className="size-4 mr-2" />
-              {isInspection
-                ? "Quay lại Admin Dashboard"
-                : "Quay lại chọn gói"}
+              {isInspection ? "Quay lại Admin Dashboard" : "Quay lại chọn gói"}
             </Button>
 
             <div>
@@ -356,9 +354,7 @@ export function CheckoutPage() {
                       </h4>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <span className="text-gray-500">
-                            Họ tên:
-                          </span>
+                          <span className="text-gray-500">Họ tên:</span>
                           <span className="ml-2 font-medium text-gray-900">
                             {inspectionData.landlordName}
                           </span>
@@ -386,17 +382,13 @@ export function CheckoutPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-500">
-                            Số phòng:
-                          </span>
+                          <span className="text-gray-500">Số phòng:</span>
                           <span className="ml-2 font-medium text-gray-900">
                             {inspectionData.roomCount || "N/A"}
                           </span>
                         </div>
                         <div className="col-span-2">
-                          <span className="text-gray-500">
-                            Địa chỉ:
-                          </span>
+                          <span className="text-gray-500">Địa chỉ:</span>
                           <span className="ml-2 font-medium text-gray-900">
                             {inspectionData.propertyAddress}
                             {inspectionData.district
@@ -417,14 +409,10 @@ export function CheckoutPage() {
                         <div>
                           <span className="text-blue-600">Ngày:</span>
                           <span className="ml-2 font-semibold text-blue-900">
-                            {new Date(
+                            {formatDateVietnamese(
                               inspectionData.scheduledDate,
-                            ).toLocaleDateString("vi-VN", {
-                              weekday: "long",
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })}
+                              true,
+                            )}
                           </span>
                         </div>
                         <div>
@@ -516,8 +504,8 @@ export function CheckoutPage() {
                           Kích hoạt ngay sau thanh toán
                         </p>
                         <p className="text-xs text-blue-700">
-                          Gói dịch vụ sẽ được áp dụng tự động cho tin
-                          đăng của bạn
+                          Gói dịch vụ sẽ được áp dụng tự động cho tin đăng của
+                          bạn
                         </p>
                       </div>
                     </div>
@@ -539,41 +527,33 @@ export function CheckoutPage() {
                           Phòng trọ cao cấp gần trường
                         </p>
                         <p className="text-xs text-gray-500">
-                          123 Đường Láng, Phường Láng Thượng, Quận Đống
-                          Đa, Hà Nội
+                          123 Đường Láng, Phường Láng Thượng, Quận Đống Đa, Hà
+                          Nội
                         </p>
                       </div>
                     </div>
                     <Separator />
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-500">
-                          Loại hình:
-                        </span>
+                        <span className="text-gray-500">Loại hình:</span>
                         <span className="ml-2 font-medium text-gray-900">
                           Phòng trọ
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-500">
-                          Diện tích:
-                        </span>
+                        <span className="text-gray-500">Diện tích:</span>
                         <span className="ml-2 font-medium text-gray-900">
                           25m²
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-500">
-                          Giá thuê:
-                        </span>
+                        <span className="text-gray-500">Giá thuê:</span>
                         <span className="ml-2 font-medium text-gray-900">
                           3.000.000đ/tháng
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-500">
-                          Trạng thái:
-                        </span>
+                        <span className="text-gray-500">Trạng thái:</span>
                         <Badge
                           variant="outline"
                           className="ml-2 border-green-500 text-green-700"
@@ -620,8 +600,7 @@ export function CheckoutPage() {
                           tiền 100%
                         </li>
                         <li>
-                          MapHome cam kết bảo mật thông tin
-                          thanh toán của bạn
+                          MapHome cam kết bảo mật thông tin thanh toán của bạn
                         </li>
                       </>
                     ) : (
@@ -702,9 +681,7 @@ export function CheckoutPage() {
                             ? "Kiểm tra thực địa"
                             : selectedTier.name}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          × {duration}
-                        </p>
+                        <p className="text-xs text-gray-500">× {duration}</p>
                       </div>
                       <p className="font-semibold text-gray-900">
                         {totalAmount.toLocaleString("vi-VN")}đ
@@ -712,9 +689,7 @@ export function CheckoutPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
-                      <p className="text-gray-600">
-                        Phí dịch vụ
-                      </p>
+                      <p className="text-gray-600">Phí dịch vụ</p>
                       <p className="font-medium text-green-600">
                         {serviceFee === 0
                           ? "Miễn phí"
@@ -766,17 +741,15 @@ export function CheckoutPage() {
                   </div>
 
                   <p className="text-xs text-center text-gray-500 leading-relaxed">
-                    Bạn sẽ được chuyển
-                    đến cổng thanh toán VNPay an toàn
-                    để hoàn tất giao dịch
+                    Bạn sẽ được chuyển đến cổng thanh toán VNPay an toàn để hoàn
+                    tất giao dịch
                   </p>
 
                   <Separator />
 
                   <div>
                     <p className="text-xs font-semibold text-gray-700 mb-3 text-center">
-                      Phương thức thanh toán
-                      được chấp nhận
+                      Phương thức thanh toán được chấp nhận
                     </p>
                     <div className="grid grid-cols-4 gap-3">
                       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-center">
@@ -820,9 +793,8 @@ export function CheckoutPage() {
                   <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <Shield className="size-4 text-green-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-green-800 leading-relaxed">
-                      <strong>Bảo mật 100%.</strong> Mọi giao
-                      dịch được mã hóa SSL 256-bit. MapHome không lưu trữ thông
-                      tin thẻ của bạn.
+                      <strong>Bảo mật 100%.</strong> Mọi giao dịch được mã hóa
+                      SSL 256-bit. MapHome không lưu trữ thông tin thẻ của bạn.
                     </p>
                   </div>
 
@@ -830,10 +802,8 @@ export function CheckoutPage() {
                     <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <AlertCircle className="size-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-amber-800">
-                        Vui lòng đồng ý với
-                        điều khoản sử dụng ở
-                        phần bên trái để tiếp
-                        tục
+                        Vui lòng đồng ý với điều khoản sử dụng ở phần bên trái
+                        để tiếp tục
                       </p>
                     </div>
                   )}

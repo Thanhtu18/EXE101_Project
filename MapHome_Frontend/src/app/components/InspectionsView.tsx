@@ -8,6 +8,7 @@ import { useProperties } from "@/app/contexts/PropertiesContext";
 import { InspectionDialog } from "@/app/components/InspectionDialog";
 import { VerificationRequest } from "@/app/components/types";
 import { Button } from "@/app/components/ui/button";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import {
   Clock,
   CheckCircle,
@@ -381,8 +382,8 @@ function InspectionCard({
                   Thời gian
                 </p>
                 <p className="text-xs font-bold text-slate-600">
-                  {new Date(request.scheduledDate).toLocaleDateString("vi-VN")}{" "}
-                  • {request.scheduledTime}
+                  {formatDateVietnamese(request.scheduledDate)} •{" "}
+                  {request.scheduledTime}
                 </p>
               </div>
             </div>

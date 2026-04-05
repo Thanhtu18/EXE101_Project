@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import {
   getAvatarUrl,
   getInitials,
@@ -45,10 +46,10 @@ import { toast } from "sonner";
 import { amenityMeta } from "@/app/constants/amenities";
 import api from "@/app/utils/api";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
-import { 
-  validateFullName, 
-  validatePhone, 
-  validatePassword 
+import {
+  validateFullName,
+  validatePhone,
+  validatePassword,
 } from "@/app/utils/validationRules";
 
 // Define available views for the user dashboard
@@ -1115,9 +1116,7 @@ function AppointmentsView({
                       <p className="text-xs text-gray-500 mb-1">Ngày hẹn</p>
                       <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                         <Calendar className="size-4" />
-                        {new Date(appointment.bookingDate).toLocaleDateString(
-                          "vi-VN",
-                        )}
+                        {formatDateVietnamese(appointment.bookingDate)}
                       </p>
                     </div>
                     <div>
@@ -1444,7 +1443,7 @@ function InspectionsView({
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Ngày gửi</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {new Date(insp.createdAt).toLocaleDateString("vi-VN")}
+                        {formatDateVietnamese(insp.createdAt)}
                       </p>
                     </div>
                     <div>
@@ -1641,8 +1640,15 @@ function SettingsView() {
                 name="fullName"
                 defaultValue={user?.fullName || user?.username}
                 className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.fullName ? "border-red-500" : ""}`}
-                onChange={() => setFieldErrors({...fieldErrors, fullName: ""})}
-                onBlur={(e) => setFieldErrors({...fieldErrors, fullName: validateFullName(e.target.value).error || ""})}
+                onChange={() =>
+                  setFieldErrors({ ...fieldErrors, fullName: "" })
+                }
+                onBlur={(e) =>
+                  setFieldErrors({
+                    ...fieldErrors,
+                    fullName: validateFullName(e.target.value).error || "",
+                  })
+                }
                 required
               />
               {fieldErrors.fullName && (
@@ -1661,8 +1667,13 @@ function SettingsView() {
                 defaultValue={user?.phone || ""}
                 placeholder="Nhập số điện thoại của bạn"
                 className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.phone ? "border-red-500" : ""}`}
-                onChange={() => setFieldErrors({...fieldErrors, phone: ""})}
-                onBlur={(e) => setFieldErrors({...fieldErrors, phone: validatePhone(e.target.value).error || ""})}
+                onChange={() => setFieldErrors({ ...fieldErrors, phone: "" })}
+                onBlur={(e) =>
+                  setFieldErrors({
+                    ...fieldErrors,
+                    phone: validatePhone(e.target.value).error || "",
+                  })
+                }
                 required
               />
               {fieldErrors.phone && (
@@ -1714,14 +1725,16 @@ function SettingsView() {
               const newPassword = target.newPassword.value;
 
               const newPasswordValid = validatePassword(newPassword);
-              
+
               if (!newPasswordValid.valid) {
-                 setFieldErrors({
-                   ...fieldErrors,
-                   newPassword: newPasswordValid.error || ""
-                 });
-                 toast.error(newPasswordValid.error || "Mật khẩu không hợp lệ! ❌");
-                 return;
+                setFieldErrors({
+                  ...fieldErrors,
+                  newPassword: newPasswordValid.error || "",
+                });
+                toast.error(
+                  newPasswordValid.error || "Mật khẩu không hợp lệ! ❌",
+                );
+                return;
               }
 
               try {
@@ -1776,8 +1789,15 @@ function SettingsView() {
                 name="newPassword"
                 placeholder="••••••••"
                 className={`rounded-xl border-gray-100 bg-white/50 focus:bg-white transition-all h-12 ${fieldErrors.newPassword ? "border-red-500" : ""}`}
-                onChange={() => setFieldErrors({...fieldErrors, newPassword: ""})}
-                onBlur={(e) => setFieldErrors({...fieldErrors, newPassword: validatePassword(e.target.value).error || ""})}
+                onChange={() =>
+                  setFieldErrors({ ...fieldErrors, newPassword: "" })
+                }
+                onBlur={(e) =>
+                  setFieldErrors({
+                    ...fieldErrors,
+                    newPassword: validatePassword(e.target.value).error || "",
+                  })
+                }
                 required
               />
               {fieldErrors.newPassword && (

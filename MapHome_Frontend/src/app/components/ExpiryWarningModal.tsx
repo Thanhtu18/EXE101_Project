@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import { AlertCircle, Clock, X } from "lucide-react";
 
 interface ExpiryWarningModalProps {
@@ -199,7 +200,7 @@ export function ExpiryWarningModal({
               <div className="text-right">
                 <p className="text-sm text-amber-800 mb-1">Hết hạn</p>
                 <p className="font-bold text-amber-900">
-                  {new Date(expiryDate).toLocaleDateString("vi-VN")}
+                  {formatDateVietnamese(expiryDate)}
                 </p>
               </div>
             </div>

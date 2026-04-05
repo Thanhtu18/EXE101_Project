@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 const path = require("path");
+const { initCronJobs } = require("./utils/cronJobs");
 
 // Load env vars
 dotenv.config();
@@ -65,6 +66,10 @@ const PORT = process.env.PORT || 5000;
 (async function start() {
   try {
     await connectDB();
+    
+    // Initialize scheduled tasks
+    initCronJobs();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`📚 Swagger API Docs: http://localhost:${PORT}/api-docs`);

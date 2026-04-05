@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
 import api from "@/app/utils/api";
 import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import { useVerification } from "@/app/contexts/VerificationContext";
 import { useProperties } from "@/app/contexts/PropertiesContext";
 import { Button } from "@/app/components/ui/button";
@@ -45,6 +46,7 @@ import {
   Star,
   Send,
   Link as LinkIcon,
+  RefreshCw,
 } from "lucide-react";
 import { RevenueView } from "./RevenueView";
 import { InspectionsView } from "@/app/components/InspectionsView";
@@ -54,6 +56,7 @@ import { toast } from "sonner";
 type AdminView =
   | "dashboard"
   | "posts"
+  | "expired"
   | "users"
   | "verification"
   | "bookings"
@@ -285,6 +288,54 @@ export function AdminPage() {
     }
   };
 
+  const handleRejectVerification = async (id: string, reason: string) => {
+    try {
+      const res = await api.put(`/api/admin/verification/${id}/reject`, {
+        reason,
+      });
+      if (res.status === 200) {
+        setVerifications(
+          verifications.map((v) =>
+            v._id === id
+              ? {
+                  ...v,
+                  status: "rejected",
+                  rejectionReason: reason,
+                }
+              : v,
+          ),
+        );
+        toast.success("Đã từ chối yêu cầu kiểm tra! ❌");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi từ chối yêu cầu!");
+    }
+  };
+
+  const handleDeleteVerification = async (id: string) => {
+    setConfirmModal({
+      open: true,
+      title: "Xác nhận xóa yêu cầu kiểm tra",
+      description:
+        "Bạn có chắc muốn xóa yêu cầu kiểm tra này? Thao tác này không thể hoàn tác.",
+      onConfirm: async () => {
+        try {
+          const res = await api.delete(
+            `/api/admin/verification-requests/${id}`,
+          );
+          if (res.status === 200) {
+            setVerifications((prev) => prev.filter((v) => v._id !== id));
+            toast.success("Đã xóa yêu cầu kiểm tra thành công! ✅");
+          }
+        } catch (error) {
+          console.error(error);
+          toast.error("Lỗi khi xóa yêu cầu kiểm tra!");
+        }
+      },
+    });
+  };
+
   const handleDeleteBooking = async (id: string) => {
     setConfirmModal({
       open: true,
@@ -435,6 +486,13 @@ export function AdminPage() {
                   icon: FileText,
                   count: posts.length,
                   color: "blue",
+                },
+                {
+                  id: "expired",
+                  label: "Tin hết hạn",
+                  icon: Clock,
+                  count: posts.filter((p) => p.status === "expired").length,
+                  color: "amber",
                 },
                 { id: "users", label: "Người dùng", icon: Users },
                 {
@@ -708,6 +766,12 @@ export function AdminPage() {
                       onUpdateStatus={handleUpdatePropertyStatus}
                     />
                   )}
+                  {activeView === "expired" && (
+                    <ExpiredPostsView
+                      posts={posts}
+                      onUpdateStatus={handleUpdatePropertyStatus}
+                    />
+                  )}
                   {activeView === "users" && (
                     <UsersView
                       users={users}
@@ -720,6 +784,8 @@ export function AdminPage() {
                     <VerificationView
                       verifications={verifications}
                       onApprove={handleApproveVerification}
+                      onReject={handleRejectVerification}
+                      onDelete={handleDeleteVerification}
                       onComplete={handleCompleteVerification}
                       onOpenInspect={(v) => {
                         setSelectedVerification(v);
@@ -1245,6 +1311,249 @@ function KPICard({
   );
 }
 
+// Expired Posts View Component
+function ExpiredPostsView({
+  posts,
+  onUpdateStatus,
+}: {
+  posts: any[];
+  onUpdateStatus: (id: string, status: string) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const expiredPosts = (posts || []).filter((p) => p.status === "expired");
+
+  const filteredPosts = expiredPosts.filter((post) => {
+    const matchesSearch =
+      post.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.address?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+      }}
+      className="space-y-6"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-black bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            Quản lý Tin hết hạn
+          </h2>
+          <p className="text-xs text-slate-400 font-semibold mt-1">
+            Tái đăng hoặc xóa các tin đăng đã hết hạn ({expiredPosts.length}{" "}
+            tin)
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 group-focus-within:text-amber-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Tìm tên phòng, địa chỉ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-white border border-slate-100 rounded-2xl text-sm focus:border-amber-500 outline-none w-64 transition-all shadow-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">
+                Tin hết hạn
+              </p>
+              <p className="text-3xl font-black text-amber-700">
+                {expiredPosts.length}
+              </p>
+            </div>
+            <Clock className="size-12 text-amber-200" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
+                Có thể tái đăng
+              </p>
+              <p className="text-3xl font-black text-blue-700">
+                {expiredPosts.length}
+              </p>
+            </div>
+            <RefreshCw className="size-12 text-blue-200" />
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wider mb-1">
+                Xóa hết
+              </p>
+              <p className="text-sm font-bold text-red-600 mt-2">
+                <button className="px-3 py-1 bg-red-500 text-white rounded-lg text-[10px] font-black hover:bg-red-600 transition-all">
+                  Xóa tất cả
+                </button>
+              </p>
+            </div>
+            <Trash2 className="size-12 text-red-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* Grid of Cards */}
+      <div className="grid grid-cols-1 gap-4">
+        <AnimatePresence mode="popLayout">
+          {filteredPosts.map((post) => (
+            <motion.div
+              layout
+              key={post._id}
+              variants={{
+                hidden: { opacity: 0, y: 30 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: "spring", bounce: 0.2 },
+                },
+                exit: { opacity: 0, scale: 0.95 },
+              }}
+              whileHover={{
+                scale: 1.01,
+                y: -8,
+                transition: { type: "spring", stiffness: 400, damping: 10 },
+              }}
+              className="bg-white/70 backdrop-blur-xl border border-rose-200/50 rounded-[40px] p-8 hover:shadow-2xl hover:shadow-rose-200/50 transition-all group relative overflow-hidden"
+            >
+              <div className="flex items-center gap-6">
+                {/* Image / Thumbnail */}
+                <div className="w-24 h-24 rounded-2xl bg-slate-50 flex-shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform opacity-50">
+                  {post.images && post.images.length > 0 ? (
+                    <img
+                      src={post.images[0]}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">
+                      🏠
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <StatusPill status="expired" />
+                  </div>
+                </div>
+
+                {/* Info Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="text-[15px] font-black text-slate-800 tracking-tight opacity-75">
+                        {post.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <MapPin className="size-3 text-slate-300" />
+                        <span className="text-xs text-slate-400 font-medium truncate">
+                          {post.address}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-black text-orange-600 tracking-tighter">
+                        {post.price?.toLocaleString()}
+                        <span className="text-[10px] text-slate-400 tracking-normal ml-0.5 font-bold uppercase">
+                          /tháng
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end justify-end gap-1 mt-1">
+                        <span className="text-[10px] font-bold text-slate-300 uppercase">
+                          Đăng: {formatDateVietnamese(post.createdAt)}
+                        </span>
+                        {post.expiryDate && (
+                          <span className="text-[10px] font-bold text-red-500 uppercase">
+                            Hết hạn: {formatDateVietnamese(post.expiryDate)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
+                        <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[8px] font-black flex items-center justify-center shadow-sm">
+                          {post.landlordId?.name
+                            ?.substring(0, 2)
+                            .toUpperCase() || "LL"}
+                        </div>
+                        <span className="text-xs font-bold text-slate-600">
+                          {post.landlordId?.name || "Chưa có tên"}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-300 flex items-center gap-1">
+                        <User className="size-3" />
+                        {post.landlordId?.email}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onUpdateStatus(post._id, "approved")}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2"
+                      >
+                        <RefreshCw className="size-3" />
+                        Tái đăng
+                      </motion.button>
+                      <button
+                        onClick={() => onUpdateStatus(post._id, "rejected")}
+                        className="px-4 py-2 bg-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-300 transition-all"
+                      >
+                        Xóa
+                      </button>
+
+                      <button className="p-2 hover:bg-slate-50 text-slate-400 hover:text-blue-500 transition-all rounded-xl">
+                        <Eye className="size-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {filteredPosts.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-20 px-4 text-center bg-gradient-to-br from-emerald-50 to-green-50 rounded-[32px] border-2 border-dashed border-emerald-200"
+          >
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+              <CheckCircle className="size-10 text-emerald-500" />
+            </div>
+            <h3 className="text-lg font-black text-emerald-600 uppercase tracking-widest">
+              Tuyệt vời!
+            </h3>
+            <p className="text-sm text-slate-500 mt-2 max-w-[300px] font-semibold">
+              Không có tin đăng nào hết hạn. Tất cả các danh sách đều đang hoạt
+              động!
+            </p>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // Posts View Component
 function PostsView({
   posts,
@@ -1254,7 +1563,7 @@ function PostsView({
   onUpdateStatus: (id: string, status: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<
-    "all" | "pending" | "reported" | "approved"
+    "all" | "pending" | "reported" | "approved" | "expired"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -1304,12 +1613,13 @@ function PostsView({
       </div>
 
       {/* Tab Bar with layoutId */}
-      <div className="flex items-center p-1 bg-slate-100/50 rounded-2xl w-fit">
+      <div className="flex items-center p-1 bg-slate-100/50 rounded-2xl w-fit flex-wrap">
         {[
           { id: "all", label: "Tất cả", icon: null },
           { id: "pending", label: "Chờ duyệt", icon: "⏳", color: "amber" },
           { id: "reported", label: "Bị báo cáo", icon: "⚠️", color: "rose" },
           { id: "approved", label: "Hiển thị", icon: "✅", color: "emerald" },
+          { id: "expired", label: "Hết hạn", icon: "⏰", color: "slate" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -1328,11 +1638,14 @@ function PostsView({
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
+              {tab.icon && <span className="text-sm">{tab.icon}</span>}
               {tab.label}
               <span
                 className={`px-1.5 py-0.5 rounded-md text-[9px] ${
                   activeTab === tab.id
-                    ? "bg-emerald-100 text-emerald-600"
+                    ? tab.id === "expired"
+                      ? "bg-slate-300 text-slate-700"
+                      : "bg-emerald-100 text-emerald-600"
                     : "bg-slate-200 text-slate-500"
                 }`}
               >
@@ -1410,10 +1723,21 @@ function PostsView({
                           /tháng
                         </span>
                       </div>
-                      <div className="flex items-center justify-end gap-2 mt-1">
+                      <div className="flex flex-col items-end justify-end gap-1 mt-1">
                         <span className="text-[10px] font-bold text-slate-300 uppercase">
-                          {new Date(post.createdAt).toLocaleDateString()}
+                          Đăng: {formatDateVietnamese(post.createdAt)}
                         </span>
+                        {post.expiryDate && (
+                          <span
+                            className={`text-[10px] font-bold uppercase ${
+                              post.status === "expired"
+                                ? "text-red-500"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            Hết hạn: {formatDateVietnamese(post.expiryDate)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1471,6 +1795,25 @@ function PostsView({
                             className="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-black hover:bg-rose-600 transition-all shadow-lg shadow-rose-200"
                           >
                             Gỡ vĩnh viễn
+                          </button>
+                        </>
+                      )}
+
+                      {post.status === "expired" && (
+                        <>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => onUpdateStatus(post._id, "approved")}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all"
+                          >
+                            Tái đăng
+                          </motion.button>
+                          <button
+                            onClick={() => onUpdateStatus(post._id, "rejected")}
+                            className="px-4 py-2 bg-slate-200 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-300 transition-all"
+                          >
+                            Xóa
                           </button>
                         </>
                       )}
@@ -1708,7 +2051,7 @@ function UsersView({
                     <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
                       <Calendar className="size-3.5" />
                       {user.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString()
+                        ? formatDateVietnamese(user.createdAt)
                         : "N/A"}
                     </div>
                     {user.phone && (
@@ -1794,18 +2137,23 @@ const ModernEmptyState = forwardRef(function ModernEmptyState(
 function VerificationView({
   verifications,
   onApprove,
+  onReject,
+  onDelete,
   onComplete,
   onOpenInspect,
 }: {
   verifications: any[];
   onApprove: (id: string, date: string) => void;
+  onReject: (id: string, reason: string) => void;
+  onDelete: (id: string) => void;
   onComplete: (id: string, level: string, notes?: string) => void;
   onOpenInspect: (v: any) => void;
 }) {
   const [promptTarget, setPromptTarget] = useState<{
     id: string | null;
     open: boolean;
-  }>({ id: null, open: false });
+    type: "date" | "reject";
+  }>({ id: null, open: false, type: "date" });
   const [promptDefault, setPromptDefault] = useState<string>("");
   return (
     <motion.div
@@ -1964,42 +2312,93 @@ function VerificationView({
                   </div>
 
                   {/* Detailed Actions */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-end gap-2">
                     {item.status === "pending" && (
-                      <>
+                      <div className="flex items-center gap-2">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setPromptDefault("");
-                            setPromptTarget({ id: item._id, open: true });
+                            setPromptTarget({
+                              id: item._id,
+                              open: true,
+                              type: "date",
+                            });
                           }}
                           className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-blue-100 hover:opacity-90 transition-all flex items-center gap-2"
                         >
                           <Calendar className="size-3.5" /> Phân công
                         </motion.button>
-                      </>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setPromptDefault("");
+                            setPromptTarget({
+                              id: item._id,
+                              open: true,
+                              type: "reject",
+                            });
+                          }}
+                          className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-[11px] font-black hover:bg-rose-100 transition-all flex items-center gap-2"
+                        >
+                          <XCircle className="size-3.5" /> Từ chối
+                        </motion.button>
+                      </div>
                     )}
 
                     {item.status === "approved" && (
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => onOpenInspect(item)}
-                        className="px-5 py-2.5 bg-emerald-500 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all flex items-center gap-2"
-                      >
-                        ✓ Hoàn thành
-                      </motion.button>
+                      <div className="flex items-center gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onOpenInspect(item)}
+                          className="px-5 py-2.5 bg-emerald-500 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all flex items-center gap-2"
+                        >
+                          ✓ Hoàn thành
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onDelete(item._id)}
+                          className="px-4 py-2.5 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-xl"
+                        >
+                          <Trash2 className="size-4" />
+                        </motion.button>
+                      </div>
                     )}
 
-                    {item.status === "completed" ? (
-                      <div className="px-5 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl text-[11px] font-black flex items-center gap-2">
-                        <ShieldCheck className="size-3.5" /> Đã xác thực
+                    {item.status === "completed" && (
+                      <div className="flex items-center gap-2">
+                        <div className="px-5 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl text-[11px] font-black flex items-center gap-2">
+                          <ShieldCheck className="size-3.5" /> Đã xác thực
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onDelete(item._id)}
+                          className="px-4 py-2.5 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-xl"
+                        >
+                          <Trash2 className="size-4" />
+                        </motion.button>
                       </div>
-                    ) : (
-                      <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all rounded-xl">
-                        <Eye className="size-5" />
-                      </button>
+                    )}
+
+                    {item.status === "rejected" && (
+                      <div className="flex items-center gap-2">
+                        <div className="px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl text-[11px] font-black flex items-center gap-2">
+                          <XCircle className="size-3.5" /> Đã từ chối
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onDelete(item._id)}
+                          className="px-4 py-2.5 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-xl"
+                        >
+                          <Trash2 className="size-4" />
+                        </motion.button>
+                      </div>
                     )}
                   </div>
                 </motion.div>
@@ -2016,7 +2415,7 @@ function VerificationView({
         </AnimatePresence>
       </div>
       <PromptDialog
-        open={promptTarget.open}
+        open={promptTarget.open && promptTarget.type === "date"}
         title="Nhập ngày kiểm tra (YYYY-MM-DD):"
         placeholder="YYYY-MM-DD"
         defaultValue={promptDefault}
@@ -2024,9 +2423,26 @@ function VerificationView({
         cancelText="Huỷ"
         onSubmit={(val) => {
           if (promptTarget.id) onApprove(promptTarget.id, val);
-          setPromptTarget({ id: null, open: false });
+          setPromptTarget({ id: null, open: false, type: "date" });
         }}
-        onCancel={() => setPromptTarget({ id: null, open: false })}
+        onCancel={() =>
+          setPromptTarget({ id: null, open: false, type: "date" })
+        }
+      />
+      <PromptDialog
+        open={promptTarget.open && promptTarget.type === "reject"}
+        title="Nhập lý do từ chối:"
+        placeholder="Ví dụ: Hình ảnh không rõ, giấy tờ không đầy đủ..."
+        defaultValue={promptDefault}
+        submitText="Từ chối"
+        cancelText="Huỷ"
+        onSubmit={(val) => {
+          if (promptTarget.id && val) onReject(promptTarget.id, val);
+          setPromptTarget({ id: null, open: false, type: "date" });
+        }}
+        onCancel={() =>
+          setPromptTarget({ id: null, open: false, type: "date" })
+        }
       />
     </motion.div>
   );
@@ -2214,7 +2630,7 @@ function BookingsView({
                     </span>
                     <div className="flex items-center gap-2 text-xs font-black text-slate-700">
                       <Calendar className="size-3.5 text-blue-500" />
-                      {new Date(b.bookingDate).toLocaleDateString()}
+                      {formatDateVietnamese(b.bookingDate)}
                     </div>
                   </div>
                 </div>
@@ -2641,7 +3057,7 @@ function ReportsView({
                     </div>
                     <div className="flex items-center gap-2 text-slate-400">
                       <Clock className="size-3.5" />
-                      {new Date(report.createdAt).toLocaleDateString("vi-VN")}
+                      {formatDateVietnamese(report.createdAt)}
                     </div>
                   </div>
 

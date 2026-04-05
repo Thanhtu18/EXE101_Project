@@ -450,9 +450,18 @@ const updatePropertyStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
+    const updates = { status };
+    
+    // When status is approved, set/reset expiry date to 30 days from now
+    if (status === "approved") {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      updates.expiryDate = expiryDate;
+    }
+
     const property = await Property.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updates,
       { new: true },
     );
 

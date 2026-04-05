@@ -1,14 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
 import api from "@/app/utils/api";
 import { getAvatarUrl, getInitials } from "@/app/utils/avatarUtils";
+import { formatDateVietnamese } from "@/app/utils/dateUtils";
 import { RentalProperty, VerificationRequest } from "@/app/components/types";
 import { Button } from "@/app/components/ui/button";
 import { RequestVerificationDialog } from "@/app/components/RequestVerificationDialog";
 import { SubscriptionManagement } from "@/app/components/SubscriptionManagement";
 import { EditPropertyDialog } from "@/app/components/EditPropertyDialog";
+import { PropertyExpiryBadge } from "@/app/components/PropertyExpiryBadge";
+import { PropertyRenewalModal } from "@/app/components/PropertyRenewalModal";
 import {
   Home,
   LogOut,
@@ -38,6 +41,8 @@ import {
   MessageSquare,
   Sparkles,
   Bot,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
@@ -102,6 +107,74 @@ export function LandlordDashboardV2() {
     description?: string;
     onConfirm?: () => Promise<void> | void;
   }>({ open: false });
+  const [renewalModalOpen, setRenewalModalOpen] = useState(false);
+  const [selectedPropertyForRenewal, setSelectedPropertyForRenewal] =
+    useState<RentalProperty | null>(null);
+  const [isRenewing, setIsRenewing] = useState(false);
+
+  // Helper compute for expiration warnings
+  const { expiredCount, soonToExpireCount } = useMemo(() => {
+    const now = new Date();
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    let expired = 0;
+    let soon = 0;
+
+    landlordPosts.forEach((post) => {
+      if (post.status === "expired") {
+        expired++;
+      } else if (post.expiryDate) {
+        const expiry = new Date(post.expiryDate);
+        if (expiry < now) {
+          expired++;
+        } else if (expiry < threeDaysFromNow) {
+          soon++;
+        }
+      }
+    });
+
+    return { expiredCount: expired, soonToExpireCount: soon };
+  }, [landlordPosts]);
+
+  const ExpiryWarningBanner = () => {
+    if (expiredCount === 0 && soonToExpireCount === 0) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10 rounded-[32px] bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-100 p-6 shadow-sm overflow-hidden relative"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 rounded-full blur-3xl -mr-16 -mt-16" />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-200 animate-pulse">
+              <AlertTriangle className="size-7" />
+            </div>
+            <div>
+              <h4 className="text-xl font-black text-amber-900 leading-tight">
+                {expiredCount > 0
+                  ? `Bạn có ${expiredCount} tin đăng đã hết hạn!`
+                  : `Bạn có ${soonToExpireCount} tin đăng sắp hết hạn!`}
+              </h4>
+              <p className="text-amber-700 font-bold text-sm mt-1">
+                Gia hạn ngay để tiếp tục tiếp cận khách hàng và không bị gỡ khỏi
+                bản đồ.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setActiveTab("posts")}
+            className="whitespace-nowrap px-8 py-6 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-2xl shadow-xl shadow-amber-200/50 transition-all hover:scale-105 active:scale-95 border-none"
+          >
+            <Zap className="size-4 mr-2" />
+            Gia hạn ngay
+          </Button>
+        </div>
+      </motion.div>
+    );
+  };
 
   // Get active tab from URL params, default to 'overview'
   const activeTab = (searchParams.get("tab") as DashboardTab) || "overview";
@@ -154,6 +227,94 @@ export function LandlordDashboardV2() {
     fetchData();
   }, [isAuthenticated, user, navigate, activeTab]);
 
+  const handleToggleAvailability = async (property: RentalProperty) => {
+    const newStatus = !property.available;
+    const loadingToast = toast.loading("Đang cập nhật trạng thái...");
+    try {
+      const res = await api.put(
+        `/api/properties/${property._id || property.id}`,
+        {
+          available: newStatus,
+        },
+      );
+      if (res.status === 200) {
+        toast.success(
+          newStatus
+            ? "Đã chuyển sang trạng thái: Còn trống! ✅"
+            : "Đã chuyển sang trạng thái: Đã cho thuê! 🏠",
+          { id: loadingToast },
+        );
+        setLandlordPosts((prev) =>
+          prev.map((p) =>
+            (p._id || p.id) === (property._id || property.id)
+              ? { ...p, available: newStatus }
+              : p,
+          ),
+        );
+
+        // Update stats if we are on overview
+        if (activeTab === "overview") {
+          setStats((prev) => ({
+            ...prev,
+            approvedPosts: newStatus
+              ? prev.approvedPosts + 1
+              : prev.approvedPosts - 1,
+          }));
+        }
+      }
+    } catch (err) {
+      toast.error("Cập nhật thất bại! ❌", { id: loadingToast });
+    }
+  };
+
+  const handleRenewProperty = async (property: RentalProperty) => {
+    if (!property._id && !property.id) return;
+
+    setSelectedPropertyForRenewal(property);
+    setRenewalModalOpen(true);
+  };
+
+  const handleConfirmRenewal = async () => {
+    if (!selectedPropertyForRenewal || isRenewing) return;
+
+    setIsRenewing(true);
+    const loadingToast = toast.loading("Đang gia hạn tin đăng...");
+
+    try {
+      const res = await api.put(
+        `/api/properties/${selectedPropertyForRenewal._id || selectedPropertyForRenewal.id}/renew`,
+      );
+
+      if (res.status === 200) {
+        toast.success(
+          "Gia hạn tin đăng thành công! ✅ Tin của bạn sẽ hiển thị thêm 30 ngày.",
+          { id: loadingToast },
+        );
+
+        // Update the property in the list with the response from server
+        const updatedProperty = res.data;
+        setLandlordPosts((prev) =>
+          prev.map((p) =>
+            (p._id || p.id) === (updatedProperty._id || updatedProperty.id)
+              ? updatedProperty
+              : p,
+          ),
+        );
+
+        // Close modal
+        setRenewalModalOpen(false);
+        setSelectedPropertyForRenewal(null);
+      }
+    } catch (err) {
+      console.error("Renewal failed:", err);
+      toast.error("Gia hạn thất bại! ❌ Vui lòng thử lại.", {
+        id: loadingToast,
+      });
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -163,7 +324,9 @@ export function LandlordDashboardV2() {
     setSearchParams({ tab });
   };
 
-  const getStatusBadge = (status: "approved" | "pending" | "rejected") => {
+  const getStatusBadge = (
+    status: "approved" | "pending" | "rejected" | "reported" | "expired",
+  ) => {
     const badges = {
       approved: {
         label: "Đã duyệt",
@@ -175,20 +338,30 @@ export function LandlordDashboardV2() {
         color: "bg-orange-100 text-orange-800",
         icon: Clock,
       },
+      expired: {
+        label: "Hết hạn",
+        color: "bg-red-100 text-red-800",
+        icon: AlertTriangle,
+      },
       rejected: {
         label: "Từ chối",
         color: "bg-red-100 text-red-800",
         icon: XCircle,
       },
+      reported: {
+        label: "Bị báo cáo",
+        color: "bg-rose-100 text-rose-800",
+        icon: AlertTriangle,
+      },
     };
-    const badge = badges[status as keyof typeof badges];
+    const badge = badges[status as keyof typeof badges] || badges["pending"];
     const Icon = badge.icon;
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-medium ${badge.color} flex items-center gap-1 w-fit`}
+        className={`px-3 py-1 rounded-full text-xs font-black ${badge.color} flex items-center gap-1 w-fit shadow-sm`}
       >
         <Icon className="size-3" />
-        {badge.label}
+        {badge.label.toUpperCase()}
       </span>
     );
   };
@@ -337,9 +510,7 @@ export function LandlordDashboardV2() {
                           </h4>
                           <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest flex items-center gap-1">
                             <Clock size={10} />
-                            {new Date(lead.createdAt).toLocaleDateString(
-                              "vi-VN",
-                            )}
+                            {formatDateVietnamese(lead.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -611,10 +782,8 @@ export function LandlordDashboardV2() {
                         </p>
                         <p className="text-gray-900 font-black flex items-center gap-2">
                           <CalendarDays className="size-4 text-blue-600" />
-                          {new Date(req.scheduledDate).toLocaleDateString(
-                            "vi-VN",
-                          )}{" "}
-                          • {req.scheduledTime}
+                          {formatDateVietnamese(req.scheduledDate)} •{" "}
+                          {req.scheduledTime}
                         </p>
                       </div>
 
@@ -724,9 +893,7 @@ export function LandlordDashboardV2() {
                         <p className="font-black text-gray-900 flex items-center gap-2">
                           <Clock className="size-5 text-emerald-500" />
                           {booking.bookingTime} •{" "}
-                          {new Date(booking.bookingDate).toLocaleDateString(
-                            "vi-VN",
-                          )}
+                          {formatDateVietnamese(booking.bookingDate)}
                         </p>
                       </div>
                       <div className="space-y-1">
@@ -1146,6 +1313,9 @@ export function LandlordDashboardV2() {
             exit={{ opacity: 0 }}
             className="space-y-10"
           >
+            {/* Expiry Warning Banner */}
+            <ExpiryWarningBanner />
+
             {/* Page Header */}
             {activeTab === "overview" && (
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -1339,7 +1509,7 @@ export function LandlordDashboardV2() {
                   .map((post) => {
                     const greenBadgeLevel =
                       post.verificationLevel === "verified" ? 3 : 0;
-                    const status = post.available ? "approved" : "pending";
+                    const propertyStatus = post.status || "approved";
 
                     return (
                       <motion.div
@@ -1368,11 +1538,26 @@ export function LandlordDashboardV2() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-4 flex-wrap">
                                 <div className="scale-90 origin-left">
-                                  {getStatusBadge(status)}
+                                  {getStatusBadge(propertyStatus as any)}
                                 </div>
+                                {!post.available && (
+                                  <div className="scale-90 origin-left">
+                                    <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-500 text-white shadow-lg shadow-rose-200 flex items-center gap-1">
+                                      <XCircle className="size-3" />
+                                      ĐÃ THUÊ
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="scale-90 origin-left">
                                   {getVerificationBadge(greenBadgeLevel)}
                                 </div>
+                                {post.expiryDate && (
+                                  <PropertyExpiryBadge
+                                    expiryDate={post.expiryDate}
+                                    status={propertyStatus as any}
+                                    size="sm"
+                                  />
+                                )}
                               </div>
                               <h4 className="font-black text-2xl bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-indigo-700 transition-all duration-300 leading-tight tracking-tight">
                                 {post.name}
@@ -1420,6 +1605,40 @@ export function LandlordDashboardV2() {
                             </div>
 
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                className={`rounded-2xl font-black ${post.available ? "text-emerald-600 hover:bg-emerald-50" : "text-amber-600 hover:bg-amber-50"}`}
+                                onClick={() => handleToggleAvailability(post)}
+                                title={
+                                  post.available
+                                    ? "Đánh dấu đã cho thuê"
+                                    : "Đánh dấu còn trống"
+                                }
+                              >
+                                {post.available ? (
+                                  <>
+                                    <CheckCircle className="size-4 mr-2" />
+                                    Còn trống
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="size-4 mr-2" />
+                                    Đã thuê
+                                  </>
+                                )}
+                              </Button>
+                              {post.expiryDate &&
+                                new Date(post.expiryDate) < new Date() && (
+                                  <Button
+                                    variant="ghost"
+                                    className="rounded-2xl font-black text-red-600 hover:bg-red-50 px-4"
+                                    onClick={() => handleRenewProperty(post)}
+                                    title="Gia hạn tin đăng"
+                                  >
+                                    <Zap className="size-4 mr-2" />
+                                    Gia hạn
+                                  </Button>
+                                )}
                               <Button
                                 variant="ghost"
                                 className="rounded-2xl font-black text-blue-600 hover:bg-blue-50 px-5"
@@ -1664,6 +1883,23 @@ export function LandlordDashboardV2() {
             .catch(console.error);
         }}
       />
+
+      {/* Property Renewal Modal */}
+      {selectedPropertyForRenewal && (
+        <PropertyRenewalModal
+          isOpen={renewalModalOpen}
+          onClose={() => {
+            setRenewalModalOpen(false);
+            setSelectedPropertyForRenewal(null);
+          }}
+          onRenew={handleConfirmRenewal}
+          propertyName={selectedPropertyForRenewal.name}
+          currentExpiryDate={
+            selectedPropertyForRenewal.expiryDate || new Date().toISOString()
+          }
+          isLoading={isRenewing}
+        />
+      )}
     </div>
   );
 }
