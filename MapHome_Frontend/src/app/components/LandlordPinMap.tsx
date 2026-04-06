@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { Button } from '@/app/components/ui/button';
-import { MapPin, Navigation, RotateCcw, Check, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { getGoongTileUrl, getGoongAttribution } from "@/app/utils/goongApi";
+import { Button } from "@/app/components/ui/button";
+import { MapPin, Navigation, RotateCcw, Check, Loader2 } from "lucide-react";
 
 interface LandlordPinMapProps {
   onPinLocation: (lat: number, lng: number) => void;
@@ -49,7 +50,7 @@ const pinIcon = L.divIcon({
       }
     </style>
   `,
-  className: 'landlord-pin-marker',
+  className: "landlord-pin-marker",
   iconSize: [44, 44],
   iconAnchor: [22, 44],
   popupAnchor: [0, -44],
@@ -85,17 +86,20 @@ const crosshairIcon = L.divIcon({
       "></div>
     </div>
   `,
-  className: 'crosshair-marker',
+  className: "crosshair-marker",
   iconSize: [40, 40],
   iconAnchor: [20, 20],
 });
 
-export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMapProps) {
+export function LandlordPinMap({
+  onPinLocation,
+  initialLocation,
+}: LandlordPinMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const pinMarkerRef = useRef<L.Marker | null>(null);
   const [pinnedLocation, setPinnedLocation] = useState<[number, number] | null>(
-    initialLocation || null
+    initialLocation || null,
   );
   const [isLocating, setIsLocating] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -109,15 +113,15 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current).setView(
         initialLocation || defaultCenter,
-        14
+        14,
       );
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
+      L.tileLayer(getGoongTileUrl(), {
+        attribution: getGoongAttribution(),
       }).addTo(mapRef.current);
 
       // Add click handler to place pin
-      mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+      mapRef.current.on("click", (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         placePin(lat, lng);
       });
@@ -147,12 +151,15 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
     }
 
     // Add new pin
-    pinMarkerRef.current = L.marker([lat, lng], { icon: pinIcon, draggable: true })
-      .addTo(mapRef.current);
+    pinMarkerRef.current = L.marker([lat, lng], {
+      icon: pinIcon,
+      draggable: true,
+    }).addTo(mapRef.current);
 
     // Add popup
-    pinMarkerRef.current.bindPopup(
-      `<div style="text-align: center; min-width: 180px;">
+    pinMarkerRef.current
+      .bindPopup(
+        `<div style="text-align: center; min-width: 180px;">
         <h3 style="margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #ef4444;">
           📌 Vị trí ghim
         </h3>
@@ -163,11 +170,12 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
           Kéo ghim để điều chỉnh vị trí
         </p>
       </div>`,
-      { maxWidth: 200 }
-    ).openPopup();
+        { maxWidth: 200 },
+      )
+      .openPopup();
 
     // Handle drag end
-    pinMarkerRef.current.on('dragend', () => {
+    pinMarkerRef.current.on("dragend", () => {
       const pos = pinMarkerRef.current?.getLatLng();
       if (pos) {
         setPinnedLocation([pos.lat, pos.lng]);
@@ -184,7 +192,7 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
             <p style="margin: 4px 0 0; font-size: 11px; color: #999;">
               Kéo ghim để điều chỉnh vị trí
             </p>
-          </div>`
+          </div>`,
         );
       }
     });
@@ -198,7 +206,7 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
 
   const handleUseMyLocation = () => {
     setIsLocating(true);
-    if ('geolocation' in navigator) {
+    if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
@@ -214,7 +222,7 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
           mapRef.current?.setView([lat, lng], 16, { animate: true });
           setIsLocating(false);
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000 },
       );
     } else {
       setIsLocating(false);
@@ -237,10 +245,13 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
         <div className="flex items-start gap-3">
           <MapPin className="size-5 text-orange-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-orange-900 mb-1">Ghim vị trí trên bản đồ</h4>
+            <h4 className="font-semibold text-orange-900 mb-1">
+              Ghim vị trí trên bản đồ
+            </h4>
             <p className="text-sm text-orange-700">
-              Nhấn vào bản đồ để đặt ghim tại vị trí chính xác của phòng trọ. 
-              Bạn có thể <strong>kéo ghim</strong> để điều chỉnh hoặc dùng GPS để xác định vị trí hiện tại.
+              Nhấn vào bản đồ để đặt ghim tại vị trí chính xác của phòng trọ.
+              Bạn có thể <strong>kéo ghim</strong> để điều chỉnh hoặc dùng GPS
+              để xác định vị trí hiện tại.
             </p>
           </div>
         </div>
@@ -264,7 +275,7 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
             ) : (
               <Navigation className="size-4 mr-2" />
             )}
-            {isLocating ? 'Đang xác định...' : 'Vị trí GPS'}
+            {isLocating ? "Đang xác định..." : "Vị trí GPS"}
           </Button>
           {pinnedLocation && (
             <Button
@@ -296,9 +307,12 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
               <Check className="size-5 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-green-900">Đã ghim vị trí thành công!</p>
+              <p className="font-semibold text-green-900">
+                Đã ghim vị trí thành công!
+              </p>
               <p className="text-sm text-green-700">
-                Tọa độ: {pinnedLocation[0].toFixed(6)}, {pinnedLocation[1].toFixed(6)}
+                Tọa độ: {pinnedLocation[0].toFixed(6)},{" "}
+                {pinnedLocation[1].toFixed(6)}
               </p>
             </div>
           </div>
@@ -311,7 +325,9 @@ export function LandlordPinMap({ onPinLocation, initialLocation }: LandlordPinMa
             </div>
             <div>
               <p className="font-medium text-gray-600">Chưa ghim vị trí</p>
-              <p className="text-sm text-gray-500">Nhấn vào bản đồ hoặc dùng GPS để ghim</p>
+              <p className="text-sm text-gray-500">
+                Nhấn vào bản đồ hoặc dùng GPS để ghim
+              </p>
             </div>
           </div>
         </div>

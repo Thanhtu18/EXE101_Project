@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect, forwardRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
@@ -1252,7 +1252,7 @@ function KPICard({
   changeNegative,
   topGradient,
 }: {
-  icon: string;
+  icon: ReactNode;
   iconBg: string;
   label: string;
   value: string;
@@ -1261,6 +1261,40 @@ function KPICard({
   changeNegative?: boolean;
   topGradient: string;
 }) {
+  // small animated number renderer
+  function AnimatedNumber({
+    value,
+    duration = 900,
+  }: {
+    value: string | number;
+    duration?: number;
+  }) {
+    const [display, setDisplay] = useState<number>(0);
+    useEffect(() => {
+      const str = String(value || "0");
+      const match = str.match(/-?[\d,.]+/);
+      const raw = match ? match[0].replace(/,/g, "") : "0";
+      const target = Number(raw) || 0;
+      let raf = 0;
+      const start = performance.now();
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - start) / duration);
+        const current = Math.round(target * progress);
+        setDisplay(current);
+        if (progress < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [value, duration]);
+
+    const suffix = String(value).replace(/-?[\d,.]+/, "");
+    return (
+      <>
+        {display.toLocaleString()}
+        {suffix}
+      </>
+    );
+  }
   return (
     <motion.div
       variants={{
@@ -1272,21 +1306,39 @@ function KPICard({
         scale: 1.02,
         transition: { type: "spring", stiffness: 400, damping: 10 },
       }}
-      className="relative overflow-hidden rounded-[40px] p-8 transition-all group shadow-xl shadow-slate-200/30 bg-white/80 backdrop-blur-3xl border border-white/50"
+      className="relative overflow-hidden rounded-[28px] p-6 transition-all group shadow-2xl shadow-slate-200/30 bg-white/70 backdrop-blur-2xl border border-white/40"
     >
-      <div className="flex flex-col gap-6 relative z-10">
+      {/* decorative blurred blobs */}
+      <div
+        aria-hidden
+        className="absolute -top-8 -right-8 w-36 h-36 rounded-full opacity-30 blur-3xl"
+        style={{ background: topGradient }}
+      />
+      <div
+        aria-hidden
+        className="absolute -left-10 -bottom-6 w-44 h-44 rounded-full opacity-20 blur-2xl"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(255,255,255,0.08), transparent)",
+        }}
+      />
+
+      <div className="flex flex-col gap-4 relative z-10">
         <div className="flex items-center justify-between">
-          <div
-            className="w-14 h-14 rounded-[22px] flex items-center justify-center text-2xl shadow-lg shadow-slate-100 group-hover:scale-110 transition-transform duration-300 border border-white"
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-xl group-hover:scale-105 transition-transform duration-300 border border-white/60"
             style={{ background: topGradient, color: "white" }}
           >
             {icon}
-          </div>
+          </motion.div>
+
           {change && (
             <motion.div
               initial={{ x: 10, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              className="px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase bg-slate-50 text-slate-500 border border-slate-100 shadow-sm"
+              className="px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase bg-white/80 text-slate-600 border border-slate-100 shadow-sm"
             >
               {changePositive ? "＋" : "↓"} {change}
             </motion.div>
@@ -1294,19 +1346,34 @@ function KPICard({
         </div>
 
         <div className="space-y-1">
-          <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+          <div className="text-[11px] font-black text-slate-500 uppercase tracking-[0.18em]">
             {label}
           </div>
-          <div className="text-5xl font-black text-slate-900 tracking-tighter group-hover:tracking-tight transition-all duration-500 drop-shadow-sm">
-            {value}
+          <div className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 transition-all duration-500">
+            <AnimatedNumber value={value} />
           </div>
         </div>
       </div>
-      {/* Refined Bottom Accent */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-2 opacity-40 group-hover:opacity-100 transition-opacity"
-        style={{ background: topGradient }}
-      />
+
+      {/* Subtle angled accent at bottom */}
+      <svg
+        className="absolute bottom-0 left-0 right-0 pointer-events-none"
+        viewBox="0 0 100 10"
+        preserveAspectRatio="none"
+        style={{ height: 22 }}
+      >
+        <path
+          d="M0 10 C 20 0 80 0 100 10 L100 10 L0 10 Z"
+          fillOpacity={0.14}
+          fill="url(#g)"
+        />
+        <defs>
+          <linearGradient id="g" x1="0" x2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+      </svg>
     </motion.div>
   );
 }

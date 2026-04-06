@@ -16,7 +16,7 @@ import {
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleBadge } from "@/app/components/RoleBadge";
-
+import NotificationCenter from "@/app/components/NotificationCenter";
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -51,13 +51,13 @@ export function Navbar() {
   };
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? "bg-white/80 backdrop-blur-lg shadow-lg py-2" 
+        isScrolled
+          ? "bg-white/80 backdrop-blur-lg shadow-lg py-2"
           : "bg-white/90 backdrop-blur-md shadow-sm py-3 border-b"
       }`}
     >
@@ -71,8 +71,9 @@ export function Navbar() {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-600 to-blue-600 flex items-center justify-center shadow-md">
               <Home className="size-5 text-white" />
             </div>
-            <h1 className="text-xl font-black text-emerald-950 tracking-tight">MapHome</h1>
-
+            <h1 className="text-xl font-black text-emerald-950 tracking-tight">
+              MapHome
+            </h1>
           </div>
 
           {/* Navigation Buttons */}
@@ -141,8 +142,8 @@ export function Navbar() {
             {!isAuthenticated ? (
               <>
                 <motion.button
-                  whileHover={{ 
-                    scale: 1.05, 
+                  whileHover={{
+                    scale: 1.05,
                     boxShadow: "0 15px 30px -10px rgba(16, 185, 129, 0.4)",
                   }}
                   whileTap={{ scale: 0.95 }}
@@ -154,21 +155,20 @@ export function Navbar() {
                   <User className="size-4 shrink-0" />
                   <span className="hidden sm:inline">Đăng nhập</span>
                 </motion.button>
-
-
               </>
             ) : (
               <>
                 <div className="hidden sm:flex items-center gap-3">
-                  <div 
-                    className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-sm font-bold shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all" 
+                  <NotificationCenter />
+                  <div
+                    className="w-12 h-12 rounded-full border-2 border-white shadow-md overflow-hidden bg-gradient-to-br from-[#16a34a] to-[#0ea5e9] flex items-center justify-center text-white text-sm font-bold shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all"
                     onClick={handleUserAction}
                   >
                     {user?.avatar ? (
-                      <img 
-                        src={getAvatarUrl(user.avatar) || ""} 
-                        alt="Avatar" 
-                        className="w-full h-full object-cover rendering-pixelated" 
+                      <img
+                        src={getAvatarUrl(user.avatar) || ""}
+                        alt="Avatar"
+                        className="w-full h-full object-cover rendering-pixelated"
                         style={{ imageRendering: "-webkit-optimize-contrast" }}
                       />
                     ) : (
@@ -181,8 +181,8 @@ export function Navbar() {
                     </strong>
                   </span>
                   <div onClick={handleUserAction} className="cursor-pointer">
-                    <RoleBadge 
-                      role={(user?.role as any) || "user"} 
+                    <RoleBadge
+                      role={(user?.role as any) || "user"}
                       showIcon={true}
                     />
                   </div>

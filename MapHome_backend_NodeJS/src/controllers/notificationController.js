@@ -1,5 +1,16 @@
 const Notification = require("../models/Notification");
 
+// @desc    Get count of unread notifications
+// @route   GET /api/notifications/unread-count
+const getUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({ userId: req.user._id, isRead: false });
+    res.status(200).json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get all notifications for logged in user
 // @route   GET /api/notifications
 const getMyNotifications = async (req, res) => {
@@ -61,6 +72,7 @@ const deleteNotification = async (req, res) => {
 
 module.exports = {
   getMyNotifications,
+  getUnreadCount,
   markAsRead,
   markAllAsRead,
   deleteNotification,

@@ -7,6 +7,7 @@ import { RentalProperty, LandlordProfile } from './types';
 import { SearchLocation } from './SearchByWorkplace';
 import { Button } from '@/app/components/ui/button';
 import { Navigation } from 'lucide-react';
+import { getGoongTileUrl, getGoongAttribution } from '@/app/utils/goongApi';
 
 interface RentalMapViewProps {
   properties: RentalProperty[];
@@ -266,8 +267,8 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current).setView(effectiveCenter, 13);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      L.tileLayer(getGoongTileUrl(), {
+        attribution: getGoongAttribution(),
       }).addTo(mapRef.current);
     }
 

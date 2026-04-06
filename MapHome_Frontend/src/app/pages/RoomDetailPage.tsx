@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { 
-  validateReviewRating, 
-  validateReviewComment 
+import {
+  validateReviewRating,
+  validateReviewComment,
 } from "@/app/utils/validationRules";
 import { AlertCircle } from "lucide-react";
 import { getAvatarUrl } from "@/app/utils/avatarUtils";
@@ -10,6 +10,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { getGoongTileUrl, getGoongAttribution } from "@/app/utils/goongApi";
 import {
   MapPin,
   Star,
@@ -48,7 +49,12 @@ import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Separator } from "@/app/components/ui/separator";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/app/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -66,7 +72,12 @@ import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
 import { CompareFloatingBar } from "@/app/components/CompareFloatingBar";
 import { useProperties } from "@/app/contexts/PropertiesContext";
 import { useAuth } from "@/app/contexts/AuthContext";
-import { RentalProperty, LandlordProfile, Review } from "@/app/components/types";
+import {
+  RentalProperty,
+  LandlordProfile,
+  Review,
+} from "@/app/components/types";
+import { useRecentlyViewed } from "@/app/hooks/useRecentlyViewed";
 
 // === SUB-COMPONENTS ===
 
@@ -78,14 +89,18 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
     if (mapRef.current && !mapInstance.current) {
       mapInstance.current = L.map(mapRef.current).setView(
         [
-          Array.isArray(property.location) ? property.location[0] : (property.location as any).lat,
-          Array.isArray(property.location) ? property.location[1] : (property.location as any).lng
+          Array.isArray(property.location)
+            ? property.location[0]
+            : (property.location as any).lat,
+          Array.isArray(property.location)
+            ? property.location[1]
+            : (property.location as any).lng,
         ],
         16,
       );
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
+      L.tileLayer(getGoongTileUrl(), {
+        attribution: getGoongAttribution(),
       }).addTo(mapInstance.current);
 
       const customIcon = L.divIcon({
@@ -101,23 +116,37 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
         iconAnchor: [20, 20],
       });
 
-      L.marker([
-        Array.isArray(property.location) ? property.location[0] : (property.location as any).lat,
-        Array.isArray(property.location) ? property.location[1] : (property.location as any).lng
-      ], {
-        icon: customIcon,
-      }).addTo(mapInstance.current);
+      L.marker(
+        [
+          Array.isArray(property.location)
+            ? property.location[0]
+            : (property.location as any).lat,
+          Array.isArray(property.location)
+            ? property.location[1]
+            : (property.location as any).lng,
+        ],
+        {
+          icon: customIcon,
+        },
+      ).addTo(mapInstance.current);
 
       if (property.pinInfo) {
-        L.circle([
-          Array.isArray(property.location) ? property.location[0] : (property.location as any).lat,
-          Array.isArray(property.location) ? property.location[1] : (property.location as any).lng
-        ], {
-          color: "#f97316",
-          fillColor: "#f97316",
-          fillOpacity: 0.1,
-          radius: 100,
-        }).addTo(mapInstance.current);
+        L.circle(
+          [
+            Array.isArray(property.location)
+              ? property.location[0]
+              : (property.location as any).lat,
+            Array.isArray(property.location)
+              ? property.location[1]
+              : (property.location as any).lng,
+          ],
+          {
+            color: "#f97316",
+            fillColor: "#f97316",
+            fillOpacity: 0.1,
+            radius: 100,
+          },
+        ).addTo(mapInstance.current);
       }
     }
 
@@ -152,8 +181,12 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
         className="h-[400px] w-full rounded-2xl border-2 border-white shadow-xl overflow-hidden z-0"
       />
       <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-        <p className="text-sm text-blue-900 font-medium">Dữ liệu tiện ích lân cận đang được đồng bộ từ backend.</p>
-        <p className="text-xs text-blue-700 mt-1">Hiện chỉ hiển thị bản đồ vị trí chính xác của phòng trọ.</p>
+        <p className="text-sm text-blue-900 font-medium">
+          Dữ liệu tiện ích lân cận đang được đồng bộ từ backend.
+        </p>
+        <p className="text-xs text-blue-700 mt-1">
+          Hiện chỉ hiển thị bản đồ vị trí chính xác của phòng trọ.
+        </p>
       </div>
     </div>
   );
@@ -212,7 +245,9 @@ const FullscreenGallery = ({
           <div
             key={i}
             className={`w-16 h-12 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-              i === index ? "border-green-500 scale-110" : "border-transparent opacity-50"
+              i === index
+                ? "border-green-500 scale-110"
+                : "border-transparent opacity-50"
             }`}
             onClick={() => setIndex(i)}
           >
@@ -246,11 +281,14 @@ const LocationVerificationInfo = ({
     <ShieldCheck className="size-5 text-green-600 flex-shrink-0 mt-0.5" />
     <div>
       <p className="font-bold text-green-900 text-sm">
-        Vị trí đã xác thực GPS {typeof locationAccuracy === 'number' ? `±${locationAccuracy}m` : locationAccuracy}
+        Vị trí đã xác thực GPS{" "}
+        {typeof locationAccuracy === "number"
+          ? `±${locationAccuracy}m`
+          : locationAccuracy}
       </p>
       <p className="text-xs text-green-700 mt-1 leading-relaxed">
-        Chủ trọ đã ghim vị trí này trực tiếp tại nhà trọ. Tọa độ được MapHome xác
-        nhận là chính xác. Bạn có thể yên tâm sử dụng bản đồ để tìm đường.
+        Chủ trọ đã ghim vị trí này trực tiếp tại nhà trọ. Tọa độ được MapHome
+        xác nhận là chính xác. Bạn có thể yên tâm sử dụng bản đồ để tìm đường.
       </p>
     </div>
   </div>
@@ -281,7 +319,8 @@ export function RoomDetailPage() {
 
   const { user } = useAuth();
   const { properties, loading: loadingProps } = useProperties();
-  
+  const { trackView } = useRecentlyViewed();
+
   const property = useMemo(
     () => properties.find((p) => p.id === routeId || p._id === routeId),
     [routeId, properties],
@@ -290,30 +329,49 @@ export function RoomDetailPage() {
   const landlord = useMemo(() => {
     if (!property) return null;
     // Fallback to a default landlord profile if not found
-    return (typeof property.landlordId === 'object' ? property.landlordId : null) as LandlordProfile;
+    return (
+      typeof property.landlordId === "object" ? property.landlordId : null
+    ) as LandlordProfile;
   }, [property]);
 
   useEffect(() => {
     const fetchReviews = async () => {
       if (!property) return;
 
+      // Track this property as recently viewed
+      trackView({
+        id: property._id || property.id,
+        name: property.name,
+        address: property.address,
+        price: property.price,
+        area: property.area,
+        image: (property.images?.[0] || property.image) ?? "",
+        available: property.available,
+        viewedAt: new Date().toISOString(),
+      });
+
       try {
         const propertyKey = property._id || property.id;
         const res = await api.get(`/api/reviews/property/${propertyKey}`);
         if (res.status === 200) {
           const data = res.data;
-          const mapped: Review[] = (Array.isArray(data) ? data : []).map((item: any) => ({
-            id: item._id || item.id,
-            propertyId:
-              typeof item.propertyId === "object"
-                ? item.propertyId?._id || item.propertyId?.id || propertyKey
-                : item.propertyId || propertyKey,
-            userName: item.userId?.fullName || item.userId?.username || "Người dùng MapHome",
-            userAvatar: item.userId?.avatar || "/avatars/default.png",
-            rating: Number(item.rating) || 0,
-            content: item.comment || "",
-            createdAt: item.createdAt || new Date().toISOString(),
-          }));
+          const mapped: Review[] = (Array.isArray(data) ? data : []).map(
+            (item: any) => ({
+              id: item._id || item.id,
+              propertyId:
+                typeof item.propertyId === "object"
+                  ? item.propertyId?._id || item.propertyId?.id || propertyKey
+                  : item.propertyId || propertyKey,
+              userName:
+                item.userId?.fullName ||
+                item.userId?.username ||
+                "Người dùng MapHome",
+              userAvatar: item.userId?.avatar || "/avatars/default.png",
+              rating: Number(item.rating) || 0,
+              content: item.comment || "",
+              createdAt: item.createdAt || new Date().toISOString(),
+            }),
+          );
           setReviews(mapped);
         }
       } catch (err) {
@@ -341,12 +399,15 @@ export function RoomDetailPage() {
     );
   }
 
-  const galleryImages = property.images && property.images.length > 0 ? property.images : [property.image];
+  const galleryImages =
+    property.images && property.images.length > 0
+      ? property.images
+      : [property.image];
   const avgRating =
     reviews.length > 0
-      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(
-          1,
-        )
+      ? (
+          reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
+        ).toFixed(1)
       : "0.0";
 
   const handleShare = () => {
@@ -366,7 +427,11 @@ export function RoomDetailPage() {
 
     if (!ratingValid.valid || !commentValid.valid) {
       setReviewError(ratingValid.error || commentValid.error || "");
-      toast.error(ratingValid.error || commentValid.error || "Vui lòng kiểm tra lại đánh giá! ❌");
+      toast.error(
+        ratingValid.error ||
+          commentValid.error ||
+          "Vui lòng kiểm tra lại đánh giá! ❌",
+      );
       return;
     }
 
@@ -389,7 +454,7 @@ export function RoomDetailPage() {
         const created = res.data;
         const review: Review = {
           id: created._id || created.id,
-          propertyId: created.propertyId || (property._id || property.id),
+          propertyId: created.propertyId || property._id || property.id,
           userName: user.fullName || user.username || "Người dùng MapHome",
           userAvatar: user.avatar || "/avatars/default.png",
           rating: Number(created.rating) || newRating,
@@ -456,7 +521,7 @@ export function RoomDetailPage() {
       </div>
 
       <main className="flex-1">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
@@ -600,9 +665,9 @@ export function RoomDetailPage() {
                         <Share2 className="size-5 text-gray-500" />
                       )}
                     </Button>
-                    <ReportPropertyDialog 
-                      propertyId={property._id || property.id} 
-                      propertyName={property.name} 
+                    <ReportPropertyDialog
+                      propertyId={property._id || property.id}
+                      propertyName={property.name}
                     />
                   </div>
                 </div>
@@ -626,9 +691,9 @@ export function RoomDetailPage() {
                 <Separator orientation="vertical" className="h-12" />
                 <div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {Math.round(
-                      property.price / property.area,
-                    ).toLocaleString("vi-VN")}
+                    {Math.round(property.price / property.area).toLocaleString(
+                      "vi-VN",
+                    )}
                     đ
                   </p>
                   <p className="text-sm text-gray-500">/m²/tháng</p>
@@ -688,18 +753,29 @@ export function RoomDetailPage() {
                         Tiện nghi phòng
                       </h3>
                       {activeAmenities.map((key) => (
-                        <div key={key} className="flex items-center gap-3 text-sm text-gray-700">
+                        <div
+                          key={key}
+                          className="flex items-center gap-3 text-sm text-gray-700"
+                        >
                           <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
                             {key === "wifi" && <Wifi className="size-4" />}
                             {key === "parking" && <Car className="size-4" />}
                             {key === "ac" && <Wind className="size-4" />}
-                            {key === "airConditioner" && <Wind className="size-4" />}
+                            {key === "airConditioner" && (
+                              <Wind className="size-4" />
+                            )}
                             {key === "water" && <Droplets className="size-4" />}
                             {key === "tv" && <Tv className="size-4" />}
                             {key === "furniture" && <Sofa className="size-4" />}
-                            {key === "washingMachine" && <WashingMachine className="size-4" />}
-                            {key === "kitchen" && <Utensils className="size-4" />}
-                            {key === "refrigerator" && <Refrigerator className="size-4" />}
+                            {key === "washingMachine" && (
+                              <WashingMachine className="size-4" />
+                            )}
+                            {key === "kitchen" && (
+                              <Utensils className="size-4" />
+                            )}
+                            {key === "refrigerator" && (
+                              <Refrigerator className="size-4" />
+                            )}
                           </div>
                           <span>
                             {key === "wifi" && "Wifi miễn phí"}
@@ -761,10 +837,15 @@ export function RoomDetailPage() {
                             <div key={review.id} className="flex gap-4">
                               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                                 <img
-                                  src={getAvatarUrl(review.userAvatar) || "/avatars/default.png"}
+                                  src={
+                                    getAvatarUrl(review.userAvatar) ||
+                                    "/avatars/default.png"
+                                  }
                                   alt={review.userName}
                                   className="w-full h-full object-cover"
-                                  style={{ imageRendering: "-webkit-optimize-contrast" }}
+                                  style={{
+                                    imageRendering: "-webkit-optimize-contrast",
+                                  }}
                                 />
                               </div>
                               <div className="flex-1">
@@ -773,9 +854,9 @@ export function RoomDetailPage() {
                                     {review.userName}
                                   </h4>
                                   <span className="text-xs text-gray-400">
-                                    {new Date(review.createdAt).toLocaleDateString(
-                                      "vi-VN",
-                                    )}
+                                    {new Date(
+                                      review.createdAt,
+                                    ).toLocaleDateString("vi-VN")}
                                   </span>
                                 </div>
                                 <div className="flex gap-0.5 mb-2">
@@ -802,7 +883,9 @@ export function RoomDetailPage() {
                           Thêm đánh giá của bạn
                         </h3>
                         <div className="flex items-center gap-2 mb-4">
-                          <span className="text-sm text-gray-600">Đánh giá chung:</span>
+                          <span className="text-sm text-gray-600">
+                            Đánh giá chung:
+                          </span>
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <button
@@ -820,7 +903,9 @@ export function RoomDetailPage() {
                         <textarea
                           placeholder="Chia sẻ trải nghiệm của bạn về căn phòng này..."
                           className={`w-full min-h-[120px] p-4 rounded-xl border focus:ring-2 outline-none transition-all resize-none text-sm ${
-                            reviewError ? "border-red-500 focus:ring-red-100" : "border-gray-200 focus:ring-green-500/20 focus:border-green-500"
+                            reviewError
+                              ? "border-red-500 focus:ring-red-100"
+                              : "border-gray-200 focus:ring-green-500/20 focus:border-green-500"
                           }`}
                           value={newReview}
                           onChange={(e) => {
@@ -839,7 +924,9 @@ export function RoomDetailPage() {
                             disabled={!newReview.trim() || isSubmittingReview}
                             onClick={handleSubmitReview}
                           >
-                            {isSubmittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+                            {isSubmittingReview
+                              ? "Đang gửi..."
+                              : "Gửi đánh giá"}
                           </Button>
                         </div>
                       </div>
@@ -995,7 +1082,9 @@ export function RoomDetailPage() {
                 <h2 className="text-2xl font-bold text-gray-900">
                   Phòng trọ tương tự gần đây
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">Gợi ý dành riêng cho bạn dựa trên vị trí</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Gợi ý dành riêng cho bạn dựa trên vị trí
+                </p>
               </div>
               <Button
                 variant="outline"
@@ -1032,7 +1121,9 @@ export function RoomDetailPage() {
                     </h3>
                     <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
                       <MapPin className="size-3 flex-shrink-0" />
-                      <span className="truncate">{sp.address.split(",").slice(-2).join(", ")}</span>
+                      <span className="truncate">
+                        {sp.address.split(",").slice(-2).join(", ")}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between border-t pt-3">
                       <p className="text-base font-bold text-green-600">
