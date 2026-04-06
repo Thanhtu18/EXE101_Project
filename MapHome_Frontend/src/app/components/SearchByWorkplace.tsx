@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, X, Plus, Target, Search, Sparkles, Building2, School } from 'lucide-react';
+import { MapPin, X, Plus, Target, Search, Sparkles, Building2, School, Loader2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Badge } from '@/app/components/ui/badge';
+import {
+  autocompletePlaces,
+  geocodeByPlaceId,
+  isGoongConfigured,
+  type GoongPrediction,
+} from '@/app/utils/goongApi';
 
 
 export interface SearchLocation {
@@ -38,11 +44,51 @@ export function SearchByWorkplace({ onSearch, currentLocations }: SearchByWorkpl
   const [customLocation, setCustomLocation] = useState({ name: '', address: '' });
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ─── Goong Autocomplete State ───────────────────────────────────────────
+  const [autocompleteQuery, setAutocompleteQuery] = useState('');
+  const [predictions, setPredictions] = useState<GoongPrediction[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const filteredPopularLocations = popularLocations.filter(
     loc =>
       loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loc.address.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // ─── Goong Autocomplete Handler ─────────────────────────────────────────
+  const handleAutocompleteInput = (value: string) => {
+    setAutocompleteQuery(value);
+    setPredictions([]);
+    if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
+    if (!value.trim() || !isGoongConfigured()) return;
+
+    autocompleteTimerRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      const results = await autocompletePlaces(value);
+      setPredictions(results);
+      setIsSearching(false);
+    }, 400); // debounce 400ms
+  };
+
+  const handleSelectPrediction = async (prediction: GoongPrediction) => {
+    setIsGeocoding(true);
+    setPredictions([]);
+    const coords = await geocodeByPlaceId(prediction.place_id);
+    setIsGeocoding(false);
+
+    if (coords) {
+      const newLocation: SearchLocation = {
+        id: prediction.place_id,
+        name: prediction.structured_formatting.main_text,
+        address: prediction.structured_formatting.secondary_text || prediction.description,
+        coordinates: coords,
+      };
+      addLocation(newLocation);
+      setAutocompleteQuery('');
+    }
+  };
 
   const addLocation = (location: SearchLocation) => {
     if (!selectedLocations.find(l => l.id === location.id)) {
@@ -203,44 +249,102 @@ export function SearchByWorkplace({ onSearch, currentLocations }: SearchByWorkpl
           </div>
 
 
-          {/* Custom Location Input */}
+          {/* Custom Location Input — Goong Autocomplete */}
           <div className="pt-6 border-t border-emerald-900/5 space-y-4">
             <Label className="text-[10px] font-black text-emerald-950 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Plus className="size-3 text-emerald-600" /> Hoặc thêm địa chỉ tùy chỉnh
+              <Plus className="size-3 text-emerald-600" />
+              {isGoongConfigured() ? 'Tìm địa điểm bất kỳ (Goong AI)' : 'Hoặc thêm địa chỉ tùy chỉnh'}
             </Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                placeholder="Tên địa điểm (VD: Nhà của tôi)"
-                value={customLocation.name}
-                onChange={(e) => setCustomLocation({ ...customLocation, name: e.target.value })}
-                className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
-              />
-              <Input
-                placeholder="Địa chỉ cụ thể tại TP.HCM"
-                value={customLocation.address}
-                onChange={(e) => setCustomLocation({ ...customLocation, address: e.target.value })}
-                className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-12 rounded-2xl border-emerald-950/10 text-emerald-950 font-black text-xs uppercase tracking-widest hover:bg-emerald-950 hover:text-white hover:border-transparent transition-all"
-              disabled={!customLocation.name || !customLocation.address}
-              onClick={() => {
-                const newLocation: SearchLocation = {
-                  id: `custom-${Date.now()}`,
-                  name: customLocation.name,
-                  address: customLocation.address,
-                  coordinates: [10.7769, 106.7009],
-                };
-                addLocation(newLocation);
-                setCustomLocation({ name: '', address: '' });
-              }}
-            >
-              <Plus className="size-4 mr-2" />
-              Thêm địa điểm của tôi
-            </Button>
+
+            {isGoongConfigured() ? (
+              /* ── Goong Autocomplete Input ── */
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-emerald-600/50" />
+                  <Input
+                    placeholder="Nhập địa chỉ, tên đường, công ty... (Goong AI)"
+                    value={autocompleteQuery}
+                    onChange={(e) => handleAutocompleteInput(e.target.value)}
+                    className="h-12 pl-10 pr-10 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
+                  />
+                  {(isSearching || isGeocoding) && (
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-emerald-600 animate-spin" />
+                  )}
+                </div>
+
+                {/* Predictions Dropdown */}
+                <AnimatePresence>
+                  {predictions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl shadow-emerald-900/10 border border-emerald-900/5 overflow-hidden z-50"
+                    >
+                      {predictions.map((p) => (
+                        <button
+                          key={p.place_id}
+                          onClick={() => handleSelectPrediction(p)}
+                          className="w-full text-left px-4 py-3 hover:bg-emerald-50 flex items-start gap-3 transition-colors border-b border-emerald-900/5 last:border-0"
+                        >
+                          <MapPin className="size-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-bold text-emerald-950">{p.structured_formatting.main_text}</p>
+                            <p className="text-xs text-emerald-900/50">{p.structured_formatting.secondary_text}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {!isGoongConfigured() && (
+                  <p className="text-[10px] text-amber-600 font-bold mt-1">
+                    ⚠️ Chưa có Goong API Key — tính năng tìm kiếm địa chỉ chưa khả dụng.
+                  </p>
+                )}
+              </div>
+            ) : (
+              /* ── Fallback: Manual Input (no Goong key yet) ── */
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Tên địa điểm (VD: Nhà của tôi)"
+                    value={customLocation.name}
+                    onChange={(e) => setCustomLocation({ ...customLocation, name: e.target.value })}
+                    className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
+                  />
+                  <Input
+                    placeholder="Địa chỉ cụ thể tại TP.HCM"
+                    value={customLocation.address}
+                    onChange={(e) => setCustomLocation({ ...customLocation, address: e.target.value })}
+                    className="h-12 rounded-xl bg-emerald-950/5 border-transparent focus:bg-white focus:border-emerald-600/30"
+                  />
+                </div>
+                <p className="text-[10px] text-amber-600 font-bold">
+                  ⚠️ Chưa có Goong API Key — tọa độ sẽ được đặt mặc định tại Quận 1, TP.HCM.
+                </p>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full h-12 rounded-2xl border-emerald-950/10 text-emerald-950 font-black text-xs uppercase tracking-widest hover:bg-emerald-950 hover:text-white hover:border-transparent transition-all"
+                  disabled={!customLocation.name || !customLocation.address}
+                  onClick={() => {
+                    const newLocation: SearchLocation = {
+                      id: `custom-${Date.now()}`,
+                      name: customLocation.name,
+                      address: customLocation.address,
+                      coordinates: [10.7769, 106.7009], // Default HCM until Goong key is set
+                    };
+                    addLocation(newLocation);
+                    setCustomLocation({ name: '', address: '' });
+                  }}
+                >
+                  <Plus className="size-4 mr-2" />
+                  Thêm địa điểm của tôi
+                </Button>
+              </>
+            )}
           </div>
 
 

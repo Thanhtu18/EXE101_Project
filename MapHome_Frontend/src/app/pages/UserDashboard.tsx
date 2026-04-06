@@ -46,6 +46,8 @@ import { toast } from "sonner";
 import { amenityMeta } from "@/app/constants/amenities";
 import api from "@/app/utils/api";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
+import NotificationCenter from "@/app/components/NotificationCenter";
+import { useRecentlyViewed } from "@/app/hooks/useRecentlyViewed";
 import {
   validateFullName,
   validatePhone,
@@ -58,6 +60,7 @@ type UserView =
   | "search"
   | "appointments"
   | "inspections"
+  | "history"
   | "book"
   | "settings";
 
@@ -178,6 +181,9 @@ export function UserDashboard() {
               </div>
             </div>
             <div className="h-8 w-[1px] bg-gray-200 hidden md:block mx-4" />
+            {/* Notification Bell — polls every 8s for new booking updates */}
+            <NotificationCenter pollIntervalMs={8000} />
+            <div className="h-8 w-[1px] bg-gray-200 hidden md:block mx-1" />
             <Button
               variant="ghost"
               onClick={handleLogout}
@@ -277,6 +283,7 @@ export function UserDashboard() {
             { id: "search", label: "Tìm kiếm thông minh", icon: Search },
             { id: "appointments", label: "Lịch hẹn của tôi", icon: Calendar },
             { id: "inspections", label: "Yêu cầu kiểm tra", icon: ShieldCheck },
+            { id: "history", label: "Lịch sử đã xem", icon: Eye },
             { id: "settings", label: "Cài đặt", icon: Settings },
           ].map((tab) => {
             const isActive = activeView === tab.id;
@@ -339,6 +346,7 @@ export function UserDashboard() {
                 setConfirmModal={setConfirmModal}
               />
             )}
+            {activeView === "history" && <RecentlyViewedView />}
             {activeView === "settings" && <SettingsView />}
           </motion.div>
         </AnimatePresence>
@@ -1824,6 +1832,162 @@ function SettingsView() {
           </form>
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+// ─── Recently Viewed View ─────────────────────────────────────────────────────
+function RecentlyViewedView() {
+  const navigate = useNavigate();
+  const { history, removeItem, clearHistory } = useRecentlyViewed();
+
+  if (history.length === 0) {
+    return (
+      <EmptyState
+        icon={Eye}
+        title="Chưa có lịch sử xem"
+        description="Những phòng trọ bạn đã xem sẽ xuất hiện tại đây để bạn dễ dàng quay lại."
+        action={
+          <Button
+            onClick={() => navigate("/map")}
+            className="px-8 h-14 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-2xl font-black shadow-xl shadow-green-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
+          >
+            <Search className="size-5 group-hover:rotate-12 transition-transform" />
+            Khám phá phòng trọ
+          </Button>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">
+            {history.length} phòng đã xem gần đây
+          </h3>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Lưu cục bộ trên trình duyệt này
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/map")}
+            className="border-green-300 text-green-700"
+          >
+            <Search className="size-4 mr-2" />
+            Tìm thêm trọ
+          </Button>
+          <Button
+            variant="outline"
+            onClick={clearHistory}
+            className="border-red-200 text-red-500 hover:bg-red-50"
+          >
+            <Trash2 className="size-4 mr-2" />
+            Xóa tất cả
+          </Button>
+        </div>
+      </div>
+
+      {/* Property Cards */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0 },
+          show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+        }}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-4"
+      >
+        {history.map((item) => (
+          <motion.div
+            key={item.id}
+            variants={{ hidden: { opacity: 0, x: -20 }, show: { opacity: 1, x: 0 } }}
+            whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+            className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-4"
+          >
+            <div className="flex items-start gap-5">
+              {/* Thumbnail */}
+              <div
+                className="w-28 h-28 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                onClick={() => navigate(`/room/${item.id}`)}
+              >
+                <img
+                  src={item.image || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400"}
+                  alt={item.name}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400";
+                  }}
+                />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h4
+                      className="text-base font-bold text-gray-900 truncate cursor-pointer hover:text-green-700 transition-colors"
+                      onClick={() => navigate(`/room/${item.id}`)}
+                    >
+                      {item.name}
+                    </h4>
+                    <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                      <MapPin className="size-3.5 text-green-600 flex-shrink-0" />
+                      <span className="truncate">{item.address}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 p-1"
+                    title="Xóa khỏi lịch sử"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <span className="text-green-600 font-bold">
+                    {item.price.toLocaleString("vi-VN")}đ/tháng
+                  </span>
+                  <span className="text-gray-400 flex items-center gap-1">
+                    <Maximize className="size-3.5" />
+                    {item.area}m²
+                  </span>
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      item.available
+                        ? "bg-green-50 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {item.available ? "🟢 Còn phòng" : "🔴 Hết phòng"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-[11px] text-gray-400">
+                    Đã xem: {new Date(item.viewedAt).toLocaleString("vi-VN")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs"
+                    onClick={() => navigate(`/room/${item.id}`)}
+                  >
+                    <Calendar className="size-3.5 mr-1.5" />
+                    Đặt lịch xem
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
     </div>
   );
 }
