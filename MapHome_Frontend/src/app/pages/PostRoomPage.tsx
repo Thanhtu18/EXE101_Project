@@ -358,7 +358,7 @@ export function PostRoomPage() {
       name: formData.name,
       address: fullAddress,
       price: Number(formData.price) || 0,
-      location: [pinnedLocation.lat, pinnedLocation.lng] as [number, number],
+      location: [pinnedLocation.lng, pinnedLocation.lat] as [number, number],
       amenities: amenities,
       image: uploadedImages[0] || "",
       images: uploadedImages,

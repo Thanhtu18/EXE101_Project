@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { getGoongTileUrl, getGoongAttribution } from "@/app/utils/goongApi";
+import goongjs from '@goongmaps/goong-js';
+import '@goongmaps/goong-js/dist/goong-js.css';
+import { getGoongStyleUrl, getGoongAttribution, GOONG_API_KEY, GOONG_MAPTILES_KEY, getGoongTransformRequest } from "@/app/utils/goongApi";
 import { Button } from "@/app/components/ui/button";
-import { MapPin, Navigation, RotateCcw, Check, Loader2 } from "lucide-react";
+import { MapPin, RotateCcw, Check, Loader2, Navigation as NavIcon } from "lucide-react";
 
 interface LandlordPinMapProps {
   onPinLocation: (lat: number, lng: number) => void;
   initialLocation?: [number, number];
 }
 
-const pinIcon = L.divIcon({
-  html: `
+const createPinElement = () => {
+  const el = document.createElement('div');
+  el.className = 'landlord-pin-marker';
+  el.innerHTML = `
     <div style="position: relative;">
       <div style="
         background: linear-gradient(135deg, #f97316, #ef4444);
@@ -49,55 +51,17 @@ const pinIcon = L.divIcon({
         100% { transform: rotate(-45deg) translateY(0); }
       }
     </style>
-  `,
-  className: "landlord-pin-marker",
-  iconSize: [44, 44],
-  iconAnchor: [22, 44],
-  popupAnchor: [0, -44],
-});
-
-const crosshairIcon = L.divIcon({
-  html: `
-    <div style="
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">
-      <div style="
-        width: 2px;
-        height: 40px;
-        background: rgba(239,68,68,0.5);
-        position: absolute;
-      "></div>
-      <div style="
-        width: 40px;
-        height: 2px;
-        background: rgba(239,68,68,0.5);
-        position: absolute;
-      "></div>
-      <div style="
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        border: 2px solid #ef4444;
-        background: rgba(239,68,68,0.2);
-      "></div>
-    </div>
-  `,
-  className: "crosshair-marker",
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-});
+  `;
+  return el;
+};
 
 export function LandlordPinMap({
   onPinLocation,
   initialLocation,
 }: LandlordPinMapProps) {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<goongjs.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const pinMarkerRef = useRef<L.Marker | null>(null);
+  const pinMarkerRef = useRef<goongjs.Marker | null>(null);
   const [pinnedLocation, setPinnedLocation] = useState<[number, number] | null>(
     initialLocation || null,
   );
@@ -110,87 +74,82 @@ export function LandlordPinMap({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    if (!mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current).setView(
-        initialLocation || defaultCenter,
-        14,
-      );
+    goongjs.accessToken = GOONG_MAPTILES_KEY;
+    
+    const map = new goongjs.Map({
+      container: mapContainerRef.current,
+      style: getGoongStyleUrl('light'),
+      center: initialLocation ? [initialLocation[1], initialLocation[0]] : [defaultCenter[1], defaultCenter[0]],
+      zoom: 14,
+      attributionControl: false,
+      transformRequest: getGoongTransformRequest
+    });
 
-      L.tileLayer(getGoongTileUrl(), {
-        attribution: getGoongAttribution(),
-      }).addTo(mapRef.current);
+    map.addControl(new goongjs.NavigationControl(), 'top-right');
+    mapRef.current = map;
 
-      // Add click handler to place pin
-      mapRef.current.on("click", (e: L.LeafletMouseEvent) => {
-        const { lat, lng } = e.latlng;
-        placePin(lat, lng);
-      });
-
+    map.on('load', () => {
       setMapReady(true);
-
-      // If initial location, place pin
       if (initialLocation) {
-        setTimeout(() => placePin(initialLocation[0], initialLocation[1]), 300);
+        placePin(initialLocation[0], initialLocation[1], false);
       }
-    }
+    });
+
+    map.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      placePin(lat, lng);
+    });
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      map.remove();
+      mapRef.current = null;
     };
   }, []);
 
   const placePin = (lat: number, lng: number, notifyParent: boolean = true) => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
-    // Remove existing pin
     if (pinMarkerRef.current) {
       pinMarkerRef.current.remove();
     }
 
-    // Add new pin
-    pinMarkerRef.current = L.marker([lat, lng], {
-      icon: pinIcon,
+    const el = createPinElement();
+    const marker = new goongjs.Marker({
+      element: el,
       draggable: true,
-    }).addTo(mapRef.current);
+      offset: [0, -22]
+    })
+      .setLngLat([lng, lat])
+      .addTo(map);
 
-    // Add popup
-    const popupContent = (lt: number, lg: number) => `
-      <div style="text-align: center; min-width: 180px;">
-        <h3 style="margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #ef4444;">
-          📌 Vị trí ghim
-        </h3>
-        <p style="margin: 0 0 4px; font-size: 13px; color: #666;">
-          Lat: ${lt.toFixed(6)}<br/>Lng: ${lg.toFixed(6)}
-        </p>
-        <p style="margin: 4px 0 0; font-size: 11px; color: #999;">
-          Kéo ghim để điều chỉnh vị trí
-        </p>
-      </div>`;
+    const popupHTML = (lt: number, lg: number) => `
+      <div style="text-align: center; min-width: 180px; font-family: sans-serif;">
+        <h3 style="margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #ef4444;">📌 Vị trí ghim</h3>
+        <p style="margin: 0 0 4px; font-size: 12px; color: #666;">Lat: ${lt.toFixed(6)}<br/>Lng: ${lg.toFixed(6)}</p>
+        <p style="margin: 4px 0 0; font-size: 10px; color: #999;">Kéo ghim để vi chỉnh</p>
+      </div>
+    `;
 
-    pinMarkerRef.current.bindPopup(popupContent(lat, lng), { maxWidth: 200 }).openPopup();
+    const popup = new goongjs.Popup({ offset: 25 }).setHTML(popupHTML(lat, lng));
+    marker.setPopup(popup);
+    marker.togglePopup();
 
-    // Handle drag end
-    pinMarkerRef.current.on("dragend", () => {
-      const pos = pinMarkerRef.current?.getLatLng();
-      if (pos) {
-        setPinnedLocation([pos.lat, pos.lng]);
-        onPinLocation(pos.lat, pos.lng);
-        pinMarkerRef.current?.setPopupContent(popupContent(pos.lat, pos.lng));
-      }
+    marker.on('dragend', () => {
+      const pos = marker.getLngLat();
+      setPinnedLocation([pos.lat, pos.lng]);
+      onPinLocation(pos.lat, pos.lng);
+      popup.setHTML(popupHTML(pos.lat, pos.lng));
     });
 
+    pinMarkerRef.current = marker;
     setPinnedLocation([lat, lng]);
-    
-    // ONLY notify parent if this is a user click, NOT a prop sync
+
     if (notifyParent) {
       onPinLocation(lat, lng);
     }
 
-    // Pan to pin
-    mapRef.current.panTo([lat, lng], { animate: true });
+    map.flyTo({ center: [lng, lat], zoom: 16 });
   };
 
   const handleUseMyLocation = () => {
@@ -199,16 +158,14 @@ export function LandlordPinMap({
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          placePin(latitude, longitude); // This will notify parent
-          mapRef.current?.setView([latitude, longitude], 16, { animate: true });
+          placePin(latitude, longitude);
           setIsLocating(false);
         },
         () => {
-          // Fallback: use default HCM center with a simulated offset
-          const lat = 10.7769 + (Math.random() - 0.5) * 0.01;
-          const lng = 106.7009 + (Math.random() - 0.5) * 0.01;
+          // Fallback
+          const lat = defaultCenter[0] + (Math.random() - 0.5) * 0.01;
+          const lng = defaultCenter[1] + (Math.random() - 0.5) * 0.01;
           placePin(lat, lng);
-          mapRef.current?.setView([lat, lng], 16, { animate: true });
           setIsLocating(false);
         },
         { enableHighAccuracy: true, timeout: 10000 },
@@ -218,57 +175,46 @@ export function LandlordPinMap({
     }
   };
 
-  // Handle manual resets or external coordinate updates
   const handleReset = () => {
     if (pinMarkerRef.current) {
       pinMarkerRef.current.remove();
       pinMarkerRef.current = null;
     }
     setPinnedLocation(null);
-    mapRef.current?.setView(defaultCenter, 14, { animate: true });
+    mapRef.current?.flyTo({ center: [defaultCenter[1], defaultCenter[0]], zoom: 14 });
   };
 
-  // Update map when initialLocation changes from outside (e.g., Geocoding)
+  // Sync with external updates
   useEffect(() => {
     if (mapRef.current && initialLocation && mapReady) {
-      // Check if the current pinned location is already close to the initialLocation to avoid redundant updates
       const isAlreadyAtLocation = pinnedLocation && 
         Math.abs(pinnedLocation[0] - initialLocation[0]) < 0.0001 && 
         Math.abs(pinnedLocation[1] - initialLocation[1]) < 0.0001;
 
       if (!isAlreadyAtLocation) {
-        console.log("[LandlordPinMap] Initial location updated from outside:", initialLocation);
-        placePin(initialLocation[0], initialLocation[1], false); // Don't notify parent back
-        mapRef.current.setView(initialLocation, 16, { animate: true });
+        placePin(initialLocation[0], initialLocation[1], false);
       }
     }
   }, [initialLocation, mapReady]);
 
   return (
     <div className="space-y-4">
-      {/* Instructions */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <MapPin className="size-5 text-orange-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-orange-900 mb-1">
-              Ghim vị trí trên bản đồ
-            </h4>
+            <h4 className="font-semibold text-orange-900 mb-1">Ghim vị trí trên bản đồ</h4>
             <p className="text-sm text-orange-700">
-              Nhấn vào bản đồ để đặt ghim tại vị trí chính xác của phòng trọ.
-              Bạn có thể <strong>kéo ghim</strong> để điều chỉnh hoặc dùng GPS
-              để xác định vị trí hiện tại.
+              Nhấn vào bản đồ để ghim vị trí phòng trọ. Bạn có thể <strong>kéo ghim</strong> để điều chỉnh tọa độ chính xác nhất.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Map Container */}
       <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg">
         <div ref={mapContainerRef} className="h-[400px] w-full" />
 
-        {/* Floating controls */}
-        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <div className="absolute top-4 right-4 z-[10] flex flex-col gap-2">
           <Button
             type="button"
             onClick={handleUseMyLocation}
@@ -276,36 +222,23 @@ export function LandlordPinMap({
             className="bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-500 shadow-lg"
             size="sm"
           >
-            {isLocating ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Navigation className="size-4 mr-2" />
-            )}
+            {isLocating ? <Loader2 className="size-4 mr-2 animate-spin" /> : <NavIcon className="size-4 mr-2" />}
             {isLocating ? "Đang xác định..." : "Vị trí GPS"}
           </Button>
           {pinnedLocation && (
-            <Button
-              type="button"
-              onClick={handleReset}
-              variant="outline"
-              className="bg-white shadow-lg"
-              size="sm"
-            >
-              <RotateCcw className="size-4 mr-2" />
-              Đặt lại
+            <Button type="button" onClick={handleReset} variant="outline" className="bg-white shadow-lg" size="sm">
+              <RotateCcw className="size-4 mr-2" /> Đặt lại
             </Button>
           )}
         </div>
 
-        {/* No pin instruction overlay */}
         {!pinnedLocation && mapReady && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm pointer-events-none">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[10] bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm pointer-events-none">
             👆 Nhấn vào bản đồ để ghim vị trí
           </div>
         )}
       </div>
 
-      {/* Pin Status */}
       {pinnedLocation ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-3">
@@ -313,28 +246,16 @@ export function LandlordPinMap({
               <Check className="size-5 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-green-900">
-                Đã ghim vị trí thành công!
-              </p>
-              <p className="text-sm text-green-700">
-                Tọa độ: {pinnedLocation[0].toFixed(6)},{" "}
-                {pinnedLocation[1].toFixed(6)}
-              </p>
+              <p className="font-semibold text-green-900">Đã ghim vị trí thành công!</p>
+              <p className="text-sm text-green-700">Tọa độ: {pinnedLocation[0].toFixed(6)}, {pinnedLocation[1].toFixed(6)}</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-500">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <MapPin className="size-5 text-gray-400" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-600">Chưa ghim vị trí</p>
-              <p className="text-sm text-gray-500">
-                Nhấn vào bản đồ hoặc dùng GPS để ghim
-              </p>
-            </div>
+            <MapPin className="size-5" />
+            <span className="text-sm">Chưa ghim vị trí. Nhấn vào bản đồ để bắt đầu.</span>
           </div>
         </div>
       )}

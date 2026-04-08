@@ -7,7 +7,7 @@ const PropertySchema = new mongoose.Schema(
     address: { type: String, required: true },
     district: { type: String }, // Quận/Huyện
     price: { type: Number, required: true },
-    location: { type: [Number], required: true }, // [latitude, longitude]
+    location: { type: [Number], required: true }, // [longitude, latitude] (GeoJSON standard)
     amenities: {
       type: Map,
       of: Boolean,
@@ -53,5 +53,7 @@ const PropertySchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+PropertySchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("Property", PropertySchema);

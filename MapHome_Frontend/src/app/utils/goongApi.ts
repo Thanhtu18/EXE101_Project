@@ -8,8 +8,8 @@
  *    VITE_GOONG_MAPTILES_KEY=your_maptiles_key_here (for map tiles display)
  */
 
-const GOONG_API_KEY = import.meta.env.VITE_GOONG_API_KEY || "";
-const GOONG_MAPTILES_KEY = import.meta.env.VITE_GOONG_MAPTILES_KEY || "";
+export const GOONG_API_KEY = (import.meta.env.VITE_GOONG_API_KEY || "").trim();
+export const GOONG_MAPTILES_KEY = (import.meta.env.VITE_GOONG_MAPTILES_KEY || "").trim();
 
 const GOONG_BASE_URL = "https://rsapi.goong.io";
 
@@ -47,19 +47,69 @@ export const GOONG_MAP_STYLES: Record<GoongMapStyle, { label: string; emoji: str
 };
 
 /**
- * Returns the Goong raster tile URL for Leaflet TileLayer.
- * @param style - One of 'light' | 'dark' | 'gray' | 'satellite' (default: 'light')
+ * Returns the Goong Style JSON URL for Goong JS SDK (Vector Tiles)
  */
-export const getGoongTileUrl = (style: GoongMapStyle = 'light'): string => {
-  console.log("[GoongAPI] Style:", style, "Key:", GOONG_MAPTILES_KEY.substring(0, 5) + "...");
-  if (!GOONG_MAPTILES_KEY) {
-    console.warn("[GoongAPI] VITE_GOONG_MAPTILES_KEY is not set.");
+export const getGoongStyleUrl = (style: GoongMapStyle = 'light'): string => {
+  const maptilesKey = (GOONG_MAPTILES_KEY || "").trim();
+  const apiKey = (GOONG_API_KEY || "").trim();
+  
+  // Choose the best available key for tiles
+  // If MAPTILES_KEY looks like a geocoding key (starts with 9), warn the user
+  let finalKey = maptilesKey;
+  
+  if (finalKey.startsWith('9')) {
+    console.warn("[GoongAPI Warning] Your MAPTILES_KEY looks like an API Key. Map tiles might fail with 403.");
+  }
+
+  if (!finalKey && apiKey) {
+    console.info("[GoongAPI] MAPTILES_KEY is missing, trying with API_KEY as fallback (might not work).");
+    finalKey = apiKey;
+  }
+
+  if (!finalKey) {
+    console.error("[GoongAPI] No Goong keys found in environment variables.");
     return ""; 
   }
+
   const { assetName } = GOONG_MAP_STYLES[style];
-  const url = `https://tiles.goong.io/assets/${assetName}/{z}/{x}/{y}.png?api_key=${GOONG_MAPTILES_KEY}`;
-  console.log("[GoongAPI] Tile URL generated:", url.replace(GOONG_MAPTILES_KEY, "HIDDEN"));
+  const url = `https://tiles.goong.io/assets/${assetName}.json?api_key=${finalKey}`;
   return url;
+};
+
+/**
+ * A transformRequest helper for Goong JS SDK to ensure all sub-resources
+ * (tiles, sprites, glyphs) are loaded with the correct API key.
+ */
+export const getGoongTransformRequest = (url: string, resourceType?: string) => {
+  const isGoongRequest = url.includes('goong.io');
+  
+  if (isGoongRequest) {
+    let finalUrl = url;
+
+    // 1. Fix relative or root-level sprite URLs
+    // According to research, sprites often need to be forced to the tiles.goong.io root
+    if (resourceType === 'SpriteJSON' || resourceType === 'SpriteImage') {
+      if (!finalUrl.includes('tiles.goong.io/')) {
+        // If it's a relative URL, prepend the base
+        finalUrl = `https://tiles.goong.io/${finalUrl.replace(/^\/+/, '')}`;
+      }
+    }
+
+    // 2. Ensure API Key is present
+    if (!finalUrl.includes('api_key=')) {
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${separator}api_key=${GOONG_MAPTILES_KEY || GOONG_API_KEY}`;
+    }
+    
+    // Log for debugging (only for failing types if needed)
+    // if (resourceType?.includes('Sprite')) console.log(`[GoongTransform] ${resourceType}: ${finalUrl}`);
+
+    return {
+      url: finalUrl
+    };
+  }
+
+  return { url };
 };
 
 export const getGoongAttribution = (): string => '&copy; <a href="https://goong.io">Goong Maps</a>';
