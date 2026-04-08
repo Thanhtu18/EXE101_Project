@@ -105,6 +105,12 @@ export interface RentalProperty {
   expiryDate?: string;
   rating?: number;
   ratingCount?: number;
+  nearbyLandmarks?: {
+    name: string;
+    distanceKm: number;
+    distanceText: string;
+  }[];
+  distanceToCenter?: number;
 }
 
 export interface PropertyWithDistance extends RentalProperty {

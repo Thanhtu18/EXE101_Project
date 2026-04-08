@@ -1,6 +1,7 @@
 const Property = require("../models/Property");
 const User = require("../models/User");
 const Review = require("../models/Review");
+const axios = require("axios");
 
 const haversineKm = (lat1, lon1, lat2, lon2) => {
   const toRad = (v) => (v * Math.PI) / 180;
@@ -15,6 +16,45 @@ const haversineKm = (lat1, lon1, lat2, lon2) => {
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+/**
+ * Helper to fetch real-time nearby landmarks from Goong API
+ * @param {Array} propertyLocation [lng, lat]
+ */
+const getNearbyLandmarks = async (propertyLocation) => {
+  if (!Array.isArray(propertyLocation) || propertyLocation.length < 2) return [];
+  const [lng, lat] = propertyLocation;
+  
+  const GOONG_API_KEY = process.env.GOONG_API_KEY || "9Xau7e646cReoQa17uHw6Dp1KLPG7ahl9iDGy8V1";
+  
+  try {
+    // Types to search for near the property
+    const types = "university,school,hospital,park";
+    const radius = 3000; // 3km radius
+    
+    const url = `https://rsapi.goong.io/Place/NearbySearch?location=${lat},${lng}&radius=${radius}&type=${types}&api_key=${GOONG_API_KEY}`;
+    
+    const response = await axios.get(url);
+    const places = response.data.results || [];
+
+    return places.slice(0, 10).map(place => {
+      // Calculate distance manually if API doesn't provide it in the results directly in a way we want
+      // Actually Goong NearbySearch doesn't always provide distance in the main results array
+      const distance = haversineKm(lat, lng, place.geometry.location.lat, place.geometry.location.lng);
+      
+      return {
+        name: place.name,
+        distanceKm: Number(distance.toFixed(2)),
+        distanceText: distance < 1 
+          ? `${Math.round(distance * 1000)}m` 
+          : `${distance.toFixed(1)}km`
+      };
+    }).sort((a, b) => a.distanceKm - b.distanceKm);
+  } catch (error) {
+    console.error("Goong API Error:", error.message);
+    return []; // Return empty array on failure to avoid breaking the whole response
+  }
 };
 
 // @desc    Get all properties
@@ -64,7 +104,17 @@ const getProperties = async (req, res) => {
       "landlordId",
       "name phone email avatar rating",
     );
-    res.status(200).json(properties);
+
+    // Augment with proximity info (Processing sequentially or with Promise.all)
+    // For many properties, calling API for each one is slow. 
+    // We'll only augment if there are few results or it's specifically requested.
+    const augmentedProperties = await Promise.all(properties.map(async p => {
+      const pObj = p.toObject();
+      pObj.nearbyLandmarks = await getNearbyLandmarks(p.location);
+      return pObj;
+    }));
+
+    res.status(200).json(augmentedProperties);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -81,7 +131,11 @@ const getPropertyById = async (req, res) => {
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
-    res.status(200).json(property);
+    
+    const propertyObj = property.toObject();
+    propertyObj.nearbyLandmarks = await getNearbyLandmarks(property.location);
+    
+    res.status(200).json(propertyObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -129,18 +183,31 @@ const getNearbyProperties = async (req, res) => {
         .json({ message: "lat and lng are required numbers" });
     }
 
-    const properties = await Property.find().populate(
-      "landlordId",
-      "name phone email avatar rating",
-    );
+    // Use MongoDB native geospatial search ($nearSphere)
+    const properties = await Property.find({
+      location: {
+        $nearSphere: {
+          $geometry: {
+            type: "Point",
+            coordinates: [lng, lat], // [lng, lat] format
+          },
+          $maxDistance: radiusKm * 1000, // convert km to meters
+        },
+      },
+      status: "approved",
+      available: true,
+    }).populate("landlordId", "name phone email avatar rating");
 
-    const result = properties.filter((item) => {
-      if (!Array.isArray(item.location) || item.location.length < 2)
-        return false;
-      const [itemLat, itemLng] = item.location;
-      const distance = haversineKm(lat, lng, Number(itemLat), Number(itemLng));
-      return distance <= radiusKm;
-    });
+    // Augment with proximity info
+    const result = await Promise.all(properties.map(async (p) => {
+      const pObj = p.toObject();
+      pObj.nearbyLandmarks = await getNearbyLandmarks(p.location);
+      // Actual distance from search center
+      if (p.location && p.location.length >= 2) {
+        pObj.distanceToCenter = Number(haversineKm(lat, lng, p.location[1], p.location[0]).toFixed(2));
+      }
+      return pObj;
+    }));
 
     res.status(200).json(result);
   } catch (error) {
@@ -346,16 +413,40 @@ const searchProperties = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
+    
+    // Check if location-based search is requested within search
+    if (req.query.lat && req.query.lng) {
+      const lat = Number(req.query.lat);
+      const lng = Number(req.query.lng);
+      const radius = Number(req.query.radius || 5);
+      
+      query.location = {
+        $nearSphere: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: radius * 1000
+        }
+      };
+    }
+
     const properties = await Property.find(query)
       .populate("landlordId", "name phone email avatar rating")
       .skip(skip)
       .limit(Number(limit))
-      .sort({ createdAt: -1 });
+      .sort(req.query.lat ? {} : { createdAt: -1 }); // $near performs its own sorting by distance
 
     const total = await Property.countDocuments(query);
 
+    const augmentedProperties = await Promise.all(properties.map(async p => {
+      const pObj = p.toObject();
+      pObj.nearbyLandmarks = await getNearbyLandmarks(p.location);
+      if (req.query.lat) {
+        pObj.distanceToCenter = Number(haversineKm(Number(req.query.lat), Number(req.query.lng), p.location[1], p.location[0]).toFixed(2));
+      }
+      return pObj;
+    }));
+
     res.status(200).json({
-      properties,
+      properties: augmentedProperties,
       pagination: {
         total,
         page: Number(page),
@@ -376,26 +467,30 @@ const searchByMultipleLocations = async (req, res) => {
       return res.status(400).json({ message: "locations query is required" });
 
     const searchPoints = JSON.parse(locations);
-    const properties = await Property.find().populate(
+    
+    // For multiple locations, we can use $or with $centerSphere for native efficiency
+    const geoQuery = {
+      $or: searchPoints.map(point => ({
+        location: {
+          $geoWithin: {
+            $centerSphere: [[Number(point.lng), Number(point.lat)], (Number(point.radius) || 2) / 6371]
+          }
+        }
+      })),
+      status: "approved",
+      available: true
+    };
+
+    const properties = await Property.find(geoQuery).populate(
       "landlordId",
       "name phone email avatar rating",
     );
 
-    const result = properties.filter((item) => {
-      if (!Array.isArray(item.location) || item.location.length < 2)
-        return false;
-      const [itemLat, itemLng] = item.location;
-
-      return searchPoints.some((point) => {
-        const distance = haversineKm(
-          Number(point.lat),
-          Number(point.lng),
-          Number(itemLat),
-          Number(itemLng),
-        );
-        return distance <= (Number(point.radius) || 2);
-      });
-    });
+    const result = await Promise.all(properties.map(async (p) => {
+      const pObj = p.toObject();
+      pObj.nearbyLandmarks = await getNearbyLandmarks(p.location);
+      return pObj;
+    }));
 
     res.status(200).json(result);
   } catch (error) {

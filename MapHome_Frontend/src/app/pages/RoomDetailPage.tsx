@@ -8,9 +8,9 @@ import { getAvatarUrl } from "@/app/utils/avatarUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { getGoongTileUrl, getGoongAttribution } from "@/app/utils/goongApi";
+import goongjs from '@goongmaps/goong-js';
+import '@goongmaps/goong-js/dist/goong-js.css';
+import { getGoongStyleUrl, getGoongAttribution, GOONG_API_KEY, GOONG_MAPTILES_KEY, getGoongTransformRequest } from "@/app/utils/goongApi";
 import {
   MapPin,
   Star,
@@ -43,6 +43,7 @@ import {
   Utensils,
   Refrigerator,
   Car,
+  GraduationCap,
 } from "lucide-react";
 
 import { Button } from "@/app/components/ui/button";
@@ -83,70 +84,54 @@ import { useRecentlyViewed } from "@/app/hooks/useRecentlyViewed";
 
 const MiniMap = ({ property }: { property: RentalProperty }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
+  const mapInstance = useRef<goongjs.Map | null>(null);
 
   useEffect(() => {
     if (mapRef.current && !mapInstance.current) {
-      mapInstance.current = L.map(mapRef.current).setView(
-        [
-          Array.isArray(property.location)
-            ? property.location[0]
-            : (property.location as any).lat,
-          Array.isArray(property.location)
-            ? property.location[1]
-            : (property.location as any).lng,
-        ],
-        16,
-      );
+      goongjs.accessToken = GOONG_MAPTILES_KEY;
+      
+      const coords: [number, number] = Array.isArray(property.location)
+        ? [property.location[0], property.location[1]] // [lng, lat]
+        : [(property.location as any).lng, (property.location as any).lat];
 
-      L.tileLayer(getGoongTileUrl(), {
-        attribution: getGoongAttribution(),
-      }).addTo(mapInstance.current);
-
-      const customIcon = L.divIcon({
-        className: "custom-div-icon",
-        html: `
-          <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-lg border-2 border-green-600">
-            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-          </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+      mapInstance.current = new goongjs.Map({
+        container: mapRef.current,
+        style: getGoongStyleUrl('light'),
+        center: coords,
+        zoom: 15,
+        attributionControl: false,
+        transformRequest: getGoongTransformRequest
       });
 
-      L.marker(
-        [
-          Array.isArray(property.location)
-            ? property.location[0]
-            : (property.location as any).lat,
-          Array.isArray(property.location)
-            ? property.location[1]
-            : (property.location as any).lng,
-        ],
-        {
-          icon: customIcon,
-        },
-      ).addTo(mapInstance.current);
+      mapInstance.current.addControl(new goongjs.NavigationControl(), 'top-right');
 
+      // Create marker element
+      const el = document.createElement('div');
+      el.className = 'custom-mini-marker';
+      el.innerHTML = `
+        <div class="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-lg border-2 border-green-600">
+          <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+        </div>
+      `;
+
+      new goongjs.Marker(el)
+        .setLngLat(coords)
+        .addTo(mapInstance.current);
+
+      // If pinned, we can add a simple circle highlight using a marker with CSS scale or a layer
       if (property.pinInfo) {
-        L.circle(
-          [
-            Array.isArray(property.location)
-              ? property.location[0]
-              : (property.location as any).lat,
-            Array.isArray(property.location)
-              ? property.location[1]
-              : (property.location as any).lng,
-          ],
-          {
-            color: "#f97316",
-            fillColor: "#f97316",
-            fillOpacity: 0.1,
-            radius: 100,
-          },
-        ).addTo(mapInstance.current);
+        const circleEl = document.createElement('div');
+        circleEl.style.width = '100px';
+        circleEl.style.height = '100px';
+        circleEl.style.borderRadius = '50%';
+        circleEl.style.backgroundColor = 'rgba(249, 115, 22, 0.1)';
+        circleEl.style.border = '2px solid rgba(249, 115, 22, 0.3)';
+        
+        new goongjs.Marker(circleEl)
+          .setLngLat(coords)
+          .addTo(mapInstance.current);
       }
     }
 
@@ -168,7 +153,7 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
           className="text-blue-600 hover:text-blue-700"
           onClick={() =>
             window.open(
-              `https://www.google.com/maps/search/?api=1&query=${Array.isArray(property.location) ? property.location[0] : (property.location as any).lat},${Array.isArray(property.location) ? property.location[1] : (property.location as any).lng}`,
+              `https://www.google.com/maps/search/?api=1&query=${Array.isArray(property.location) ? property.location[1] : (property.location as any).lat},${Array.isArray(property.location) ? property.location[0] : (property.location as any).lng}`,
               "_blank",
             )
           }
@@ -180,12 +165,12 @@ const MiniMap = ({ property }: { property: RentalProperty }) => {
         ref={mapRef}
         className="h-[400px] w-full rounded-2xl border-2 border-white shadow-xl overflow-hidden z-0"
       />
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-        <p className="text-sm text-blue-900 font-medium">
-          Dữ liệu tiện ích lân cận đang được đồng bộ từ backend.
+      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl">
+        <p className="text-sm text-orange-900 font-medium">
+          Vị trí chính xác đã ghim
         </p>
-        <p className="text-xs text-blue-700 mt-1">
-          Hiện chỉ hiển thị bản đồ vị trí chính xác của phòng trọ.
+        <p className="text-xs text-orange-700 mt-1">
+          Bản đồ hiển thị vị trí được chủ trọ xác thực trực tiếp.
         </p>
       </div>
     </div>
@@ -935,8 +920,49 @@ export function RoomDetailPage() {
                 )}
 
                 {activeTab === "nearby" && (
-                  <div className="bg-white p-6 rounded-2xl border shadow-sm min-h-[500px]">
-                    <MiniMap property={property} />
+                  <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                      <MiniMap property={property} />
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                      <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <GraduationCap className="size-5 text-indigo-600" />
+                        Trường học & Địa danh lân cận
+                      </h3>
+                      
+                      {property.nearbyLandmarks && property.nearbyLandmarks.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {property.nearbyLandmarks.map((landmark, idx) => (
+                            <div 
+                              key={idx} 
+                              className="group p-4 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                                  {landmark.name.includes("ĐH") || landmark.name.includes("Trường") ? (
+                                    <GraduationCap className="size-5" />
+                                  ) : (
+                                    <MapPin className="size-5" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900">{landmark.name}</p>
+                                  <p className="text-xs text-slate-500">Khu vực lân cận</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-black text-indigo-600">{landmark.distanceText}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                          <p className="text-sm text-slate-500">Đang cập nhật dữ liệu tiện ích lân cận...</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

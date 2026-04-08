@@ -11,10 +11,6 @@ declare module "slick-carousel/slick/slick-theme.css" {
   export default content;
 }
 
-declare module "leaflet/dist/leaflet.css" {
-  const content: string;
-  export default content;
-}
 
 declare module "./styles/index.css" {
   const content: string;
