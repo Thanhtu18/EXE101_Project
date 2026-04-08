@@ -75,15 +75,15 @@ export function SearchByWorkplace({ onSearch, currentLocations }: SearchByWorkpl
   const handleSelectPrediction = async (prediction: GoongPrediction) => {
     setIsGeocoding(true);
     setPredictions([]);
-    const coords = await geocodeByPlaceId(prediction.place_id);
+    const result = await geocodeByPlaceId(prediction.place_id);
     setIsGeocoding(false);
 
-    if (coords) {
+    if (result) {
       const newLocation: SearchLocation = {
         id: prediction.place_id,
         name: prediction.structured_formatting.main_text,
         address: prediction.structured_formatting.secondary_text || prediction.description,
-        coordinates: coords,
+        coordinates: [result.lat, result.lng],
       };
       addLocation(newLocation);
       setAutocompleteQuery('');

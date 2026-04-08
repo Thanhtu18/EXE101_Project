@@ -142,7 +142,7 @@ export function LandlordPinMap({
     };
   }, []);
 
-  const placePin = (lat: number, lng: number) => {
+  const placePin = (lat: number, lng: number, notifyParent: boolean = true) => {
     if (!mapRef.current) return;
 
     // Remove existing pin
@@ -157,22 +157,20 @@ export function LandlordPinMap({
     }).addTo(mapRef.current);
 
     // Add popup
-    pinMarkerRef.current
-      .bindPopup(
-        `<div style="text-align: center; min-width: 180px;">
+    const popupContent = (lt: number, lg: number) => `
+      <div style="text-align: center; min-width: 180px;">
         <h3 style="margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #ef4444;">
           📌 Vị trí ghim
         </h3>
         <p style="margin: 0 0 4px; font-size: 13px; color: #666;">
-          Lat: ${lat.toFixed(6)}<br/>Lng: ${lng.toFixed(6)}
+          Lat: ${lt.toFixed(6)}<br/>Lng: ${lg.toFixed(6)}
         </p>
         <p style="margin: 4px 0 0; font-size: 11px; color: #999;">
           Kéo ghim để điều chỉnh vị trí
         </p>
-      </div>`,
-        { maxWidth: 200 },
-      )
-      .openPopup();
+      </div>`;
+
+    pinMarkerRef.current.bindPopup(popupContent(lat, lng), { maxWidth: 200 }).openPopup();
 
     // Handle drag end
     pinMarkerRef.current.on("dragend", () => {
@@ -180,25 +178,16 @@ export function LandlordPinMap({
       if (pos) {
         setPinnedLocation([pos.lat, pos.lng]);
         onPinLocation(pos.lat, pos.lng);
-        // Update popup
-        pinMarkerRef.current?.setPopupContent(
-          `<div style="text-align: center; min-width: 180px;">
-            <h3 style="margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #ef4444;">
-              📌 Vị trí ghim
-            </h3>
-            <p style="margin: 0 0 4px; font-size: 13px; color: #666;">
-              Lat: ${pos.lat.toFixed(6)}<br/>Lng: ${pos.lng.toFixed(6)}
-            </p>
-            <p style="margin: 4px 0 0; font-size: 11px; color: #999;">
-              Kéo ghim để điều chỉnh vị trí
-            </p>
-          </div>`,
-        );
+        pinMarkerRef.current?.setPopupContent(popupContent(pos.lat, pos.lng));
       }
     });
 
     setPinnedLocation([lat, lng]);
-    onPinLocation(lat, lng);
+    
+    // ONLY notify parent if this is a user click, NOT a prop sync
+    if (notifyParent) {
+      onPinLocation(lat, lng);
+    }
 
     // Pan to pin
     mapRef.current.panTo([lat, lng], { animate: true });
@@ -210,7 +199,7 @@ export function LandlordPinMap({
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          placePin(latitude, longitude);
+          placePin(latitude, longitude); // This will notify parent
           mapRef.current?.setView([latitude, longitude], 16, { animate: true });
           setIsLocating(false);
         },
@@ -229,6 +218,7 @@ export function LandlordPinMap({
     }
   };
 
+  // Handle manual resets or external coordinate updates
   const handleReset = () => {
     if (pinMarkerRef.current) {
       pinMarkerRef.current.remove();
@@ -237,6 +227,22 @@ export function LandlordPinMap({
     setPinnedLocation(null);
     mapRef.current?.setView(defaultCenter, 14, { animate: true });
   };
+
+  // Update map when initialLocation changes from outside (e.g., Geocoding)
+  useEffect(() => {
+    if (mapRef.current && initialLocation && mapReady) {
+      // Check if the current pinned location is already close to the initialLocation to avoid redundant updates
+      const isAlreadyAtLocation = pinnedLocation && 
+        Math.abs(pinnedLocation[0] - initialLocation[0]) < 0.0001 && 
+        Math.abs(pinnedLocation[1] - initialLocation[1]) < 0.0001;
+
+      if (!isAlreadyAtLocation) {
+        console.log("[LandlordPinMap] Initial location updated from outside:", initialLocation);
+        placePin(initialLocation[0], initialLocation[1], false); // Don't notify parent back
+        mapRef.current.setView(initialLocation, 16, { animate: true });
+      }
+    }
+  }, [initialLocation, mapReady]);
 
   return (
     <div className="space-y-4">

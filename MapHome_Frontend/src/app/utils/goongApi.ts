@@ -37,24 +37,32 @@ export interface GoongGeocodeResult {
 
 // ─── Map Tile URL ─────────────────────────────────────────────────────────────
 
-/**
- * Returns the Goong raster tile URL for Leaflet TileLayer.
- * Usage in RentalMapView.tsx:
- *   L.tileLayer(getGoongTileUrl(), { attribution: '© Goong Maps' }).addTo(map);
- */
-export const getGoongTileUrl = (): string => {
-  if (!GOONG_MAPTILES_KEY) {
-    console.warn("[GoongAPI] VITE_GOONG_MAPTILES_KEY is not set. Falling back to OpenStreetMap.");
-    return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  }
-  // Goong raster tile — compatible with Leaflet L.tileLayer
-  return `https://tiles.goong.io/assets/goong_map_web.png/{z}/{x}/{y}?api_key=${GOONG_MAPTILES_KEY}`;
+export type GoongMapStyle = 'light' | 'dark' | 'gray' | 'satellite';
+
+export const GOONG_MAP_STYLES: Record<GoongMapStyle, { label: string; emoji: string; assetName: string }> = {
+  light:     { label: 'Tiêu chuẩn',   emoji: '🗺️',  assetName: 'goong_map_web' },
+  dark:      { label: 'Tối (Dark)',    emoji: '🌙',  assetName: 'goong_map_dark' },
+  gray:      { label: 'Xám',          emoji: '⬜',  assetName: 'goong_map_gray' },
+  satellite: { label: 'Vệ tinh',      emoji: '🛰️',  assetName: 'goong_map' },
 };
 
-export const getGoongAttribution = (): string =>
-  GOONG_MAPTILES_KEY
-    ? '&copy; <a href="https://goong.io">Goong Maps</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+/**
+ * Returns the Goong raster tile URL for Leaflet TileLayer.
+ * @param style - One of 'light' | 'dark' | 'gray' | 'satellite' (default: 'light')
+ */
+export const getGoongTileUrl = (style: GoongMapStyle = 'light'): string => {
+  console.log("[GoongAPI] Style:", style, "Key:", GOONG_MAPTILES_KEY.substring(0, 5) + "...");
+  if (!GOONG_MAPTILES_KEY) {
+    console.warn("[GoongAPI] VITE_GOONG_MAPTILES_KEY is not set.");
+    return ""; 
+  }
+  const { assetName } = GOONG_MAP_STYLES[style];
+  const url = `https://tiles.goong.io/assets/${assetName}/{z}/{x}/{y}.png?api_key=${GOONG_MAPTILES_KEY}`;
+  console.log("[GoongAPI] Tile URL generated:", url.replace(GOONG_MAPTILES_KEY, "HIDDEN"));
+  return url;
+};
+
+export const getGoongAttribution = (): string => '&copy; <a href="https://goong.io">Goong Maps</a>';
 
 // ─── Places Autocomplete ──────────────────────────────────────────────────────
 
@@ -90,15 +98,24 @@ export const autocompletePlaces = async (
 // ─── Geocoding (Address → Coordinates) ───────────────────────────────────────
 
 /**
- * Convert a place_id (from autocomplete) to coordinates.
- * This is the recommended 2-step approach: autocomplete → geocode by place_id.
+ * Convert a place_id (from autocomplete) to coordinates and details.
  *
  * @param placeId - The place_id from a GoongPrediction
- * @returns [lat, lng] or null if not found
+ * @returns Object with lat, lng and full result or null if not found
  */
+export interface GeocodeResult {
+  lat: number;
+  lng: number;
+  address_components: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
+}
+
 export const geocodeByPlaceId = async (
   placeId: string
-): Promise<[number, number] | null> => {
+): Promise<GeocodeResult | null> => {
   if (!placeId || !GOONG_API_KEY) return null;
 
   try {
@@ -108,7 +125,11 @@ export const geocodeByPlaceId = async (
 
     const location = data.result?.geometry?.location;
     if (location) {
-      return [location.lat, location.lng];
+      return {
+        lat: location.lat,
+        lng: location.lng,
+        address_components: data.result.address_components || []
+      };
     }
     return null;
   } catch (err) {

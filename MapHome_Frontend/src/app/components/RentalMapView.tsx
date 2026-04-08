@@ -6,8 +6,8 @@ import 'leaflet/dist/leaflet.css';
 import { RentalProperty, LandlordProfile } from './types';
 import { SearchLocation } from './SearchByWorkplace';
 import { Button } from '@/app/components/ui/button';
-import { Navigation } from 'lucide-react';
-import { getGoongTileUrl, getGoongAttribution } from '@/app/utils/goongApi';
+import { Layers, Navigation, Globe } from 'lucide-react';
+import { getGoongTileUrl, getGoongAttribution, GoongMapStyle, GOONG_MAP_STYLES } from '@/app/utils/goongApi';
 
 interface RentalMapViewProps {
   properties: RentalProperty[];
@@ -253,6 +253,11 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
   const userMarkerRef = useRef<L.Marker | null>(null);
   const userCircleRef = useRef<L.Circle | null>(null);
   const [showLegend, setShowLegend] = useState(true);
+  const [mapStyle, setMapStyle] = useState<GoongMapStyle>('light');
+  const [showStyleSwitcher, setShowStyleSwitcher] = useState(false);
+  
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  
   // Shared drag position for legend button + legend panel
   const legendX = useMotionValue(16);
   const legendY = useMotionValue(16);
@@ -265,10 +270,16 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
     if (!mapContainerRef.current) return;
 
     if (!mapRef.current) {
+      // Create map instance
       mapRef.current = L.map(mapContainerRef.current).setView(effectiveCenter, 13);
-
-      L.tileLayer(getGoongTileUrl(), {
-        attribution: getGoongAttribution(),
+      
+      // Initialize with default style
+      const initialUrl = getGoongTileUrl(mapStyle);
+      const initialAttr = getGoongAttribution();
+      
+      tileLayerRef.current = L.tileLayer(initialUrl, {
+        attribution: initialAttr,
+        maxZoom: 18,
       }).addTo(mapRef.current);
     }
 
@@ -490,6 +501,35 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
     };
   }, [properties, onPropertySelect, searchLocations]);
 
+  // Update map tiles when style changes - SAFE SWITCHING
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove existing tile layer explicitly
+    if (tileLayerRef.current) {
+      mapRef.current.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
+    }
+
+    // Also scan for any other tile layers that might have leaked
+    mapRef.current.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) {
+        mapRef.current?.removeLayer(layer);
+      }
+    });
+
+    // Create and add new layer
+    const newUrl = getGoongTileUrl(mapStyle);
+    const newAttr = getGoongAttribution();
+
+    tileLayerRef.current = L.tileLayer(newUrl, {
+      attribution: newAttr,
+      maxZoom: 18,
+    }).addTo(mapRef.current);
+
+    console.log(`[RentalMapView] Switched to style: ${mapStyle}`);
+  }, [mapStyle]);
+
   // Handle selected property
   useEffect(() => {
     if (selectedProperty && mapRef.current) {
@@ -653,6 +693,51 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
       >
         <Navigation className="size-6" />
       </motion.button>
+
+      {/* Map Style Switcher */}
+      <div className="absolute bottom-52 right-8 z-[1000] flex flex-col items-end gap-3">
+        <AnimatePresence>
+          {showStyleSwitcher && (
+            <motion.div
+              initial={{ opacity: 0, x: 20, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 20, scale: 0.8 }}
+              className="bg-emerald-950/90 backdrop-blur-md rounded-2xl p-2 shadow-2xl border border-emerald-800/50 flex flex-col gap-1 min-w-[150px]"
+            >
+              {(Object.keys(GOONG_MAP_STYLES) as GoongMapStyle[]).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => {
+                    setMapStyle(style);
+                    setShowStyleSwitcher(false);
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                    mapStyle === style 
+                      ? 'bg-emerald-500 text-white font-bold' 
+                      : 'text-emerald-300/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg group-hover:scale-125 transition-transform">{GOONG_MAP_STYLES[style].emoji}</span>
+                  <span className="text-xs uppercase tracking-wider">{GOONG_MAP_STYLES[style].label}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowStyleSwitcher(!showStyleSwitcher)}
+          className={`size-14 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
+            showStyleSwitcher 
+              ? 'bg-white text-emerald-950 rotate-180' 
+              : 'bg-emerald-950/90 backdrop-blur-md text-emerald-400 border border-emerald-800/50'
+          }`}
+        >
+          {showStyleSwitcher ? <span className="text-xl">✕</span> : <Layers className="size-6" />}
+        </motion.button>
+      </div>
 
     </div>
   );

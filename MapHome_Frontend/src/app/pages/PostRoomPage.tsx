@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/app/utils/api";
 import { Button } from "@/app/components/ui/button";
@@ -38,6 +38,8 @@ import {
   Armchair,
   Waves,
   Tv,
+  Search,
+  Building2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LandlordPinMap } from "@/app/components/LandlordPinMap";
@@ -56,6 +58,12 @@ import {
   validatePhone 
 } from "@/app/utils/validationRules";
 import { AlertCircle } from "lucide-react";
+import { 
+  autocompletePlaces, 
+  geocodeByPlaceId, 
+  isGoongConfigured, 
+  type GoongPrediction 
+} from "@/app/utils/goongApi";
 
 
 type Step = "info" | "pin-map" | "verify" | "upload-photos" | "preview";
@@ -95,6 +103,12 @@ export function PostRoomPage() {
     description: "",
     phone: "",
   });
+
+  // ─── Goong Search State ─────────────────────────────────────────────────────
+  const [addressSearchQuery, setAddressSearchQuery] = useState("");
+  const [addressPredictions, setAddressPredictions] = useState<GoongPrediction[]>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState({
     name: "",
@@ -159,6 +173,76 @@ export function PostRoomPage() {
     { key: "upload-photos", label: "Tải ảnh", icon: Camera },
     { key: "preview", label: "Xem trước", icon: Sparkles },
   ];
+
+  const handleAddressSearch = (value: string) => {
+    setAddressSearchQuery(value);
+    setAddressPredictions([]);
+    
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!value.trim() || !isGoongConfigured()) return;
+
+    searchTimerRef.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      const results = await autocompletePlaces(value);
+      setAddressPredictions(results);
+      setIsSearchingAddress(false);
+    }, 400);
+  };
+
+  const handleSelectAddress = async (prediction: GoongPrediction) => {
+    const result = await geocodeByPlaceId(prediction.place_id);
+    if (result) {
+      // 1. Set Coordinates
+      setPinnedLocation({ lat: result.lat, lng: result.lng });
+      
+      // 2. Set Street Name (Main Text)
+      setFormData(prev => ({ ...prev, street: prediction.structured_formatting.main_text }));
+      
+      // 3. Clear predictions
+      setAddressPredictions([]);
+      setAddressSearchQuery(prediction.description);
+
+      // 4. Try to auto-populate Province/District/Ward
+      // This is a naive heuristic: map Goong's address components to our codes
+      const components = result.address_components;
+      
+      // Find Province (City)
+      const cityComp = components.find(c => c.types.includes("administrative_area_level_1"));
+      if (cityComp) {
+        const province = vietnamLocations.find(p => 
+          p.name.toLowerCase().includes(cityComp.long_name.toLowerCase()) ||
+          cityComp.long_name.toLowerCase().includes(p.name.toLowerCase())
+        );
+        if (province) {
+          setSelectedProvince(province.code);
+          
+          // Find District
+          const distComp = components.find(c => c.types.includes("administrative_area_level_2") || c.types.includes("locality"));
+          if (distComp) {
+            const district = province.districts.find(d => 
+              d.name.toLowerCase().includes(distComp.long_name.toLowerCase()) ||
+              distComp.long_name.toLowerCase().includes(d.name.toLowerCase())
+            );
+            if (district) {
+              setSelectedDistrict(district.code);
+              
+              // Find Ward
+              const wardComp = components.find(c => c.types.includes("sublocality_level_1") || c.types.includes("ward"));
+              if (wardComp) {
+                const ward = district.wards.find(w => 
+                  w.name.toLowerCase().includes(wardComp.long_name.toLowerCase()) ||
+                  wardComp.long_name.toLowerCase().includes(w.name.toLowerCase())
+                );
+                if (ward) setSelectedWard(ward.code);
+              }
+            }
+          }
+        }
+      }
+      
+      toast.success("Đã tự động xác định vị trí & địa chỉ! 📍");
+    }
+  };
 
   const currentStepIndex = steps.findIndex((s) => s.key === step);
 
@@ -612,6 +696,50 @@ export function PostRoomPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                          Tìm nhanh địa chỉ (Goong AI)
+                        </Label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                          <Input
+                            placeholder="Gõ địa chỉ để tìm nhanh..."
+                            value={addressSearchQuery}
+                            onChange={(e) => handleAddressSearch(e.target.value)}
+                            className="h-11 pl-10 rounded-lg border border-indigo-200 bg-indigo-50/30 focus:bg-white transition-all font-medium"
+                          />
+                          {isSearchingAddress && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-indigo-500 animate-spin" />
+                          )}
+                          
+                          {/* Autocomplete Results */}
+                          <AnimatePresence>
+                            {addressPredictions.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 z-[100] overflow-hidden"
+                              >
+                                {addressPredictions.map((p) => (
+                                  <button
+                                    key={p.place_id}
+                                    onClick={() => handleSelectAddress(p)}
+                                    className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-start gap-3 transition-colors border-b border-slate-100 last:border-0"
+                                  >
+                                    <MapPin className="size-4 text-indigo-500 mt-1 flex-shrink-0" />
+                                    <div>
+                                      <p className="text-sm font-bold text-slate-900">{p.structured_formatting.main_text}</p>
+                                      <p className="text-[11px] text-slate-500">{p.structured_formatting.secondary_text}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
