@@ -92,8 +92,8 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-full sm:w-[420px] overflow-y-auto bg-white/80 backdrop-blur-3xl border-r border-emerald-900/10 p-0 shadow-[24px_0_80px_-20px_rgba(6,78,59,0.15)]">
-        <div className="p-8 space-y-8 will-change-transform">
+      <SheetContent side="left" className="w-full sm:w-[380px] overflow-y-auto bg-white/80 backdrop-blur-3xl border-r border-emerald-900/10 p-0 shadow-[24px_0_80px_-20px_rgba(6,78,59,0.15)]">
+        <div className="p-6 space-y-8 will-change-transform">
           <SheetHeader className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="size-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-900 flex items-center justify-center text-white shadow-lg shadow-emerald-900/20">

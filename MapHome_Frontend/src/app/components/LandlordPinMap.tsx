@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import goongjs from '@goongmaps/goong-js';
 import '@goongmaps/goong-js/dist/goong-js.css';
-import { getGoongStyleUrl, getGoongAttribution, GOONG_API_KEY, GOONG_MAPTILES_KEY, getGoongTransformRequest } from "@/app/utils/goongApi";
+import { getGoongStyleUrl, getGoongAttribution, GOONG_MAPTILES_KEY, getGoongTransformRequest, reverseGeocode, type GeocodeResult } from "@/app/utils/goongApi";
 import { Button } from "@/app/components/ui/button";
-import { MapPin, RotateCcw, Check, Loader2, Navigation as NavIcon } from "lucide-react";
+import { MapPin, RotateCcw, Check, Loader2, Navigation as NavIcon, Map as MapIcon } from "lucide-react";
 
 interface LandlordPinMapProps {
-  onPinLocation: (lat: number, lng: number) => void;
+  onPinLocation: (lat: number, lng: number, address?: string, geocodeResult?: GeocodeResult) => void;
   initialLocation?: [number, number];
 }
 
@@ -65,7 +65,9 @@ export function LandlordPinMap({
   const [pinnedLocation, setPinnedLocation] = useState<[number, number] | null>(
     initialLocation || null,
   );
+  const [pinnedAddress, setPinnedAddress] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
   // Default center: TP.HCM
@@ -106,7 +108,7 @@ export function LandlordPinMap({
     };
   }, []);
 
-  const placePin = (lat: number, lng: number, notifyParent: boolean = true) => {
+  const placePin = async (lat: number, lng: number, notifyParent: boolean = true) => {
     const map = mapRef.current;
     if (!map) return;
 
@@ -123,30 +125,57 @@ export function LandlordPinMap({
       .setLngLat([lng, lat])
       .addTo(map);
 
-    const popupHTML = (lt: number, lg: number) => `
-      <div style="text-align: center; min-width: 180px; font-family: sans-serif;">
-        <h3 style="margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #ef4444;">📌 Vị trí ghim</h3>
-        <p style="margin: 0 0 4px; font-size: 12px; color: #666;">Lat: ${lt.toFixed(6)}<br/>Lng: ${lg.toFixed(6)}</p>
-        <p style="margin: 4px 0 0; font-size: 10px; color: #999;">Kéo ghim để vi chỉnh</p>
+    // Initial popup while loading address
+    const popup = new goongjs.Popup({ offset: 25 }).setHTML(`
+      <div style="padding: 10px; text-align: center;">
+        <div class="animate-spin inline-block w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full mb-2"></div>
+        <p style="font-size: 11px; color: #666; margin: 0;">Đang lấy địa chỉ...</p>
       </div>
-    `;
-
-    const popup = new goongjs.Popup({ offset: 25 }).setHTML(popupHTML(lat, lng));
+    `);
     marker.setPopup(popup);
     marker.togglePopup();
-
-    marker.on('dragend', () => {
-      const pos = marker.getLngLat();
-      setPinnedLocation([pos.lat, pos.lng]);
-      onPinLocation(pos.lat, pos.lng);
-      popup.setHTML(popupHTML(pos.lat, pos.lng));
-    });
 
     pinMarkerRef.current = marker;
     setPinnedLocation([lat, lng]);
 
+    // Fetch address from Backend Proxy
+    setIsGeocoding(true);
+    const result = await reverseGeocode(lat, lng);
+    const address = result?.formatted_address || null;
+    setPinnedAddress(address);
+    setIsGeocoding(false);
+
+    const popupHTML = (lt: number, lg: number, addr: string | null) => `
+      <div style="text-align: center; min-width: 200px; font-family: sans-serif; padding: 4px;">
+        <h3 style="margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #ef4444;">📌 Vị trí ghim</h3>
+        ${addr ? `<p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; color: #333; line-height: 1.4;">${addr}</p>` : ''}
+        <p style="margin: 0 0 4px; font-size: 11px; color: #666;">Tọa độ: ${lt.toFixed(5)}, ${lg.toFixed(5)}</p>
+        <p style="margin: 6px 0 0; font-size: 10px; color: #999; border-top: 1px solid #eee; pt-2;">Kéo ghim để điều chỉnh</p>
+      </div>
+    `;
+
+    popup.setHTML(popupHTML(lat, lng, address));
+
+    marker.on('dragend', async () => {
+      const pos = marker.getLngLat();
+      setPinnedLocation([pos.lat, pos.lng]);
+      
+      popup.setHTML(`
+        <div style="padding: 10px; text-align: center;">
+          <div class="animate-spin inline-block w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full mb-2"></div>
+          <p style="font-size: 11px; color: #666; margin: 0;">Đang cập nhật địa chỉ...</p>
+        </div>
+      `);
+      
+      const result = await reverseGeocode(pos.lat, pos.lng);
+      const newAddr = result?.formatted_address || null;
+      setPinnedAddress(newAddr);
+      popup.setHTML(popupHTML(pos.lat, pos.lng, newAddr));
+      onPinLocation(pos.lat, pos.lng, newAddr || undefined, result || undefined);
+    });
+
     if (notifyParent) {
-      onPinLocation(lat, lng);
+      onPinLocation(lat, lng, address || undefined, result || undefined);
     }
 
     map.flyTo({ center: [lng, lat], zoom: 16 });
@@ -162,7 +191,7 @@ export function LandlordPinMap({
           setIsLocating(false);
         },
         () => {
-          // Fallback
+          // Fallback if denied or error
           const lat = defaultCenter[0] + (Math.random() - 0.5) * 0.01;
           const lng = defaultCenter[1] + (Math.random() - 0.5) * 0.01;
           placePin(lat, lng);
@@ -181,6 +210,7 @@ export function LandlordPinMap({
       pinMarkerRef.current = null;
     }
     setPinnedLocation(null);
+    setPinnedAddress(null);
     mapRef.current?.flyTo({ center: [defaultCenter[1], defaultCenter[0]], zoom: 14 });
   };
 
@@ -203,60 +233,78 @@ export function LandlordPinMap({
         <div className="flex items-start gap-3">
           <MapPin className="size-5 text-orange-600 mt-0.5 flex-shrink-0" />
           <div>
-            <h4 className="font-semibold text-orange-900 mb-1">Ghim vị trí trên bản đồ</h4>
+            <h4 className="font-semibold text-orange-900 mb-1">Ghim vị trí chính xác</h4>
             <p className="text-sm text-orange-700">
-              Nhấn vào bản đồ để ghim vị trí phòng trọ. Bạn có thể <strong>kéo ghim</strong> để điều chỉnh tọa độ chính xác nhất.
+              Sử dụng <strong>Vị trí GPS</strong> hoặc nhấn vào bản đồ để ghim. Tọa độ chính xác giúp khách hàng dễ dàng tìm đến phòng trọ của bạn hơn.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 shadow-lg">
-        <div ref={mapContainerRef} className="h-[400px] w-full" />
+      <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 shadow-xl group">
+        <div ref={mapContainerRef} className="h-[450px] w-full" />
 
         <div className="absolute top-4 right-4 z-[10] flex flex-col gap-2">
           <Button
             type="button"
             onClick={handleUseMyLocation}
             disabled={isLocating}
-            className="bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-500 shadow-lg"
+            className="bg-white text-indigo-600 hover:bg-indigo-50 border-2 border-indigo-500 shadow-xl transition-all hover:scale-105"
             size="sm"
           >
             {isLocating ? <Loader2 className="size-4 mr-2 animate-spin" /> : <NavIcon className="size-4 mr-2" />}
             {isLocating ? "Đang xác định..." : "Vị trí GPS"}
           </Button>
           {pinnedLocation && (
-            <Button type="button" onClick={handleReset} variant="outline" className="bg-white shadow-lg" size="sm">
+            <Button type="button" onClick={handleReset} variant="outline" className="bg-white shadow-xl hover:bg-red-50 hover:text-red-600 border-gray-200" size="sm">
               <RotateCcw className="size-4 mr-2" /> Đặt lại
             </Button>
           )}
         </div>
 
         {!pinnedLocation && mapReady && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[10] bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm pointer-events-none">
-            👆 Nhấn vào bản đồ để ghim vị trí
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/5">
+            <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border border-orange-200 shadow-lg text-orange-600 font-medium flex items-center gap-2 animate-bounce">
+              <MapIcon className="size-4" /> 👆 Nhấn để ghim vị trí
+            </div>
+          </div>
+        )}
+
+        {isGeocoding && (
+          <div className="absolute bottom-4 left-4 z-[10]">
+             <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-indigo-100">
+                <Loader2 className="size-3.5 animate-spin text-indigo-500" />
+                <span className="text-xs font-medium text-indigo-600">Đang dịch tọa độ...</span>
+             </div>
           </div>
         )}
       </div>
 
       {pinnedLocation ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-              <Check className="size-5 text-green-600" />
+        <div className="bg-white border-2 border-green-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+              <Check className="size-6 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-green-900">Đã ghim vị trí thành công!</p>
-              <p className="text-sm text-green-700">Tọa độ: {pinnedLocation[0].toFixed(6)}, {pinnedLocation[1].toFixed(6)}</p>
+              <p className="font-bold text-gray-900 text-lg mb-1">Vị trí đã chọn</p>
+              {pinnedAddress && (
+                <p className="text-gray-700 font-medium mb-2 leading-relaxed">
+                  {pinnedAddress}
+                </p>
+              )}
+              <div className="flex gap-4 text-xs font-mono text-gray-500">
+                 <span>Lat: {pinnedLocation[0].toFixed(6)}</span>
+                 <span>Lng: {pinnedLocation[1].toFixed(6)}</span>
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-500">
-          <div className="flex items-center gap-3">
-            <MapPin className="size-5" />
-            <span className="text-sm">Chưa ghim vị trí. Nhấn vào bản đồ để bắt đầu.</span>
-          </div>
+        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <MapPin className="size-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">Bạn chưa ghim vị trí phòng trọ</p>
+            <p className="text-gray-400 text-sm">Vui lòng chọn một điểm trên bản đồ</p>
         </div>
       )}
     </div>

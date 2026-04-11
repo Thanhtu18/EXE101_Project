@@ -1,58 +1,6 @@
 @import "./fonts.css";
 @import "./theme.css";
 @import "./tailwind.css";
-@import "leaflet/dist/leaflet.css";
-
-/* Ensure Leaflet map stays below dialogs */
-.leaflet-container {
-  z-index: 1 !important;
-}
-
-.leaflet-pane {
-  z-index: auto !important;
-}
-
-.leaflet-top,
-.leaflet-bottom {
-  z-index: 1000 !important;
-}
-
-.leaflet-control {
-  z-index: 1000 !important;
-}
-
-/* Leaflet popups should be above map but below dialogs */
-.leaflet-popup-pane {
-  z-index: 1100 !important;
-}
-
-/* Custom Leaflet popup styles */
-.leaflet-popup-content-wrapper {
-  border-radius: 0.75rem;
-  padding: 0;
-  overflow: hidden;
-}
-
-.leaflet-popup-content {
-  margin: 0;
-  width: auto !important;
-}
-
-.custom-popup .leaflet-popup-content-wrapper {
-  box-shadow:
-    0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
-}
-
-.leaflet-popup-close-button {
-  color: #374151 !important;
-  font-size: 24px !important;
-  padding: 4px 8px !important;
-}
-
-.leaflet-popup-close-button:hover {
-  color: #111827 !important;
-}
 
 /* Hero Carousel Styles */
 .hero-carousel-wrapper .slick-slider {

@@ -175,7 +175,7 @@ const getNearbyProperties = async (req, res) => {
   try {
     const lat = Number(req.query.lat);
     const lng = Number(req.query.lng);
-    const radiusKm = Number(req.query.radiusKm || 5);
+    const radius = Number(req.query.radius || 5);
 
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
       return res
@@ -191,7 +191,7 @@ const getNearbyProperties = async (req, res) => {
             type: "Point",
             coordinates: [lng, lat], // [lng, lat] format
           },
-          $maxDistance: radiusKm * 1000, // convert km to meters
+          $maxDistance: radius * 1000, // convert km to meters
         },
       },
       status: "approved",

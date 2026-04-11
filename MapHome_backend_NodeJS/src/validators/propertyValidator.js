@@ -60,14 +60,14 @@ const updatePropertyRules = [
 
 const nearbyPropertiesRules = [
   query("lat")
-    .notEmpty().withMessage("Latitude is required")
+    .optional()
     .isFloat({ min: -90, max: 90 }).withMessage("Invalid latitude"),
     
   query("lng")
-    .notEmpty().withMessage("Longitude is required")
+    .optional()
     .isFloat({ min: -180, max: 180 }).withMessage("Invalid longitude"),
     
-  query("radiusKm")
+  query("radius")
     .optional()
     .isFloat({ min: 0 }).withMessage("Radius must be a positive number"),
 ];
@@ -79,6 +79,9 @@ const searchPropertiesRules = [
   query("maxPrice").optional().isNumeric(),
   query("minArea").optional().isNumeric(),
   query("maxArea").optional().isNumeric(),
+  query("lat").optional().isFloat({ min: -90, max: 90 }),
+  query("lng").optional().isFloat({ min: -180, max: 180 }),
+  query("radius").optional().isFloat({ min: 0 }),
 ];
 
 module.exports = {
