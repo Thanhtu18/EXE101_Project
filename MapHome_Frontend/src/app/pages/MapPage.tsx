@@ -39,8 +39,30 @@ export function MapPage() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const { isFavorite, favoritesCount } = useFavorites();
 
-  // User location (simulated - near Nhà thờ Đức Bà, TP.HCM)
-  const userLocation: [number, number] = [10.7769, 106.7009];
+  // User location (Initial fallback: HCM Opera House area)
+  const [userLocation, setUserLocation] = useState<[number, number]>([10.7769, 106.7009]);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Get real-time location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation([latitude, longitude]);
+          setIsLocating(false);
+          console.log("GPS Location updated:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setIsLocating(false);
+          // Keep using fallback
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, []);
 
   // Calculate optimal center point for multi-location search
   const searchCenter: [number, number] = useMemo(() => {
@@ -65,12 +87,15 @@ export function MapPage() {
         minArea: filters.areaRange[0],
         maxArea: filters.areaRange[1],
         amenities: selectedAmenities,
-        verified: filters.verificationLevel === "verified" ? "true" : undefined
+        verified: filters.verificationLevel === "verified" ? "true" : undefined,
+        lat: userLocation[0],
+        lng: userLocation[1],
+        radius: filters.radius
       });
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters, userLocation]);
 
   // Add distances to all properties
 

@@ -59,10 +59,11 @@ import {
 } from "@/app/utils/validationRules";
 import { AlertCircle } from "lucide-react";
 import { 
-  autocompletePlaces, 
+  autocompletePlaces,
   geocodeByPlaceId, 
   isGoongConfigured, 
-  type GoongPrediction 
+  type GoongPrediction,
+  type GeocodeResult
 } from "@/app/utils/goongApi";
 
 
@@ -189,6 +190,44 @@ export function PostRoomPage() {
     }, 400);
   };
 
+  const autoPopulateLocation = (result: GeocodeResult) => {
+    const components = result.address_components;
+    
+    // Find Province (City)
+    const cityComp = components.find(c => c.types.includes("administrative_area_level_1"));
+    if (cityComp) {
+      const province = vietnamLocations.find(p => 
+        p.name.toLowerCase().includes(cityComp.long_name.toLowerCase()) ||
+        cityComp.long_name.toLowerCase().includes(p.name.toLowerCase())
+      );
+      if (province) {
+        setSelectedProvince(province.code);
+        
+        // Find District
+        const distComp = components.find(c => c.types.includes("administrative_area_level_2") || c.types.includes("locality"));
+        if (distComp) {
+          const district = province.districts.find(d => 
+            d.name.toLowerCase().includes(distComp.long_name.toLowerCase()) ||
+            distComp.long_name.toLowerCase().includes(d.name.toLowerCase())
+          );
+          if (district) {
+            setSelectedDistrict(district.code);
+            
+            // Find Ward
+            const wardComp = components.find(c => c.types.includes("sublocality_level_1") || c.types.includes("ward"));
+            if (wardComp) {
+              const ward = district.wards.find(w => 
+                w.name.toLowerCase().includes(wardComp.long_name.toLowerCase()) ||
+                wardComp.long_name.toLowerCase().includes(w.name.toLowerCase())
+              );
+              if (ward) setSelectedWard(ward.code);
+            }
+          }
+        }
+      }
+    }
+  };
+
   const handleSelectAddress = async (prediction: GoongPrediction) => {
     const result = await geocodeByPlaceId(prediction.place_id);
     if (result) {
@@ -203,44 +242,29 @@ export function PostRoomPage() {
       setAddressSearchQuery(prediction.description);
 
       // 4. Try to auto-populate Province/District/Ward
-      // This is a naive heuristic: map Goong's address components to our codes
-      const components = result.address_components;
+      autoPopulateLocation(result);
       
-      // Find Province (City)
-      const cityComp = components.find(c => c.types.includes("administrative_area_level_1"));
-      if (cityComp) {
-        const province = vietnamLocations.find(p => 
-          p.name.toLowerCase().includes(cityComp.long_name.toLowerCase()) ||
-          cityComp.long_name.toLowerCase().includes(p.name.toLowerCase())
-        );
-        if (province) {
-          setSelectedProvince(province.code);
-          
-          // Find District
-          const distComp = components.find(c => c.types.includes("administrative_area_level_2") || c.types.includes("locality"));
-          if (distComp) {
-            const district = province.districts.find(d => 
-              d.name.toLowerCase().includes(distComp.long_name.toLowerCase()) ||
-              distComp.long_name.toLowerCase().includes(d.name.toLowerCase())
-            );
-            if (district) {
-              setSelectedDistrict(district.code);
-              
-              // Find Ward
-              const wardComp = components.find(c => c.types.includes("sublocality_level_1") || c.types.includes("ward"));
-              if (wardComp) {
-                const ward = district.wards.find(w => 
-                  w.name.toLowerCase().includes(wardComp.long_name.toLowerCase()) ||
-                  wardComp.long_name.toLowerCase().includes(w.name.toLowerCase())
-                );
-                if (ward) setSelectedWard(ward.code);
-              }
-            }
-          }
+      toast.success("Đã tự động xác định vị trí & địa chỉ! 📍");
+    }
+  };
+
+  const handlePinMapUpdate = (lat: number, lng: number, address?: string, result?: GeocodeResult) => {
+    setPinnedLocation({ lat, lng });
+    
+    if (result) {
+      // Auto-populate form fields when pin is moved/placed
+      autoPopulateLocation(result);
+      
+      // Update street if possible (use main_text if available, otherwise guess from formatted_address)
+      if (result.formatted_address) {
+        // Simple heuristic: street is usually the first part of address
+        const streetPart = result.formatted_address.split(',')[0];
+        if (streetPart && !formData.street) {
+          setFormData(prev => ({ ...prev, street: streetPart }));
         }
       }
       
-      toast.success("Đã tự động xác định vị trí & địa chỉ! 📍");
+      toast.success("Đã cập nhật thông tin địa chỉ từ bản đồ! ✨");
     }
   };
 
@@ -931,7 +955,7 @@ export function PostRoomPage() {
 
               <div className="relative rounded-lg overflow-hidden border-4 border-white shadow-lg h-[400px]">
                 <LandlordPinMap
-                  onPinLocation={(lat, lng) => setPinnedLocation({ lat, lng })}
+                  onPinLocation={handlePinMapUpdate}
                   initialLocation={
                     pinnedLocation
                       ? [pinnedLocation.lat, pinnedLocation.lng]

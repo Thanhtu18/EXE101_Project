@@ -42,6 +42,7 @@ app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/blogs", require("./routes/blogRoutes"));
 app.use("/api/contacts", require("./routes/contactRoutes"));
 app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/map", require("./routes/mapRoutes"));
 
 
 

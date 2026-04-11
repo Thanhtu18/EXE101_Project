@@ -56,44 +56,387 @@ router.use(authMiddleware, requireAnyRole(["admin"]));
  *         description: Dashboard statistics
  */
 router.get("/stats", getDashboardStats);
+/**
+ * @swagger
+ * /api/admin/stats/revenue:
+ *   get:
+ *     summary: Get revenue statistics
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Revenue statistics data
+ */
 router.get("/stats/revenue", getRevenueStats);
+
+/**
+ * @swagger
+ * /api/admin/stats/top-rooms:
+ *   get:
+ *     summary: Get top performing rooms
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of top performing rooms
+ */
 router.get("/stats/top-rooms", getTopRooms);
+
+/**
+ * @swagger
+ * /api/admin/stats/weekly-search:
+ *   get:
+ *     summary: Get weekly search trends
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Weekly search statistics
+ */
 router.get("/stats/weekly-search", getWeeklySearchStats);
 
 // User Management
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all users
+ */
 router.get("/users", getAllUsers);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   get:
+ *     summary: Get detailed user info
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User details
+ */
 router.get("/users/:id", getUserDetail);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/status:
+ *   put:
+ *     summary: Toggle user active status
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User status toggled
+ */
 router.put("/users/:id/status", toggleUserStatus);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User deleted
+ */
 router.delete("/users/:id", deleteUser);
 
 // Landlord Management
+/**
+ * @swagger
+ * /api/admin/landlords:
+ *   get:
+ *     summary: Get all landlords
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all landlords
+ */
 router.get("/landlords", getAllLandlords);
+
+/**
+ * @swagger
+ * /api/admin/landlords/{id}:
+ *   delete:
+ *     summary: Delete a landlord profile
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Landlord deleted
+ */
 router.delete("/landlords/:id", deleteLandlord);
 
 // Property Management
+/**
+ * @swagger
+ * /api/admin/properties:
+ *   get:
+ *     summary: Get all properties (for management)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all properties
+ */
 router.get("/properties", getAllProperties);
+
+/**
+ * @swagger
+ * /api/admin/properties/{id}/status:
+ *   put:
+ *     summary: Update property status
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, approved, rejected]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Status updated
+ */
 router.put("/properties/:id/status", updatePropertyStatus);
 
 // Notification Management
+/**
+ * @swagger
+ * /api/admin/notifications:
+ *   get:
+ *     summary: Get admin notifications
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of admin-only notifications
+ */
 router.get("/notifications", getAdminNotifications);
+
+/**
+ * @swagger
+ * /api/admin/notifications/broadcast:
+ *   post:
+ *     summary: Send notification to all users
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: { type: string }
+ *               message: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification broadcasted
+ */
 router.post("/notifications/broadcast", broadcastNotification);
 
 // Booking Management
+/**
+ * @swagger
+ * /api/admin/bookings:
+ *   get:
+ *     summary: Get all system bookings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of all bookings
+ */
 router.get("/bookings", getAllBookings);
+
+/**
+ * @swagger
+ * /api/admin/bookings/{id}:
+ *   delete:
+ *     summary: Delete a booking
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Booking removed
+ */
 router.delete("/bookings/:id", deleteBooking);
 
 // Review Management
+/**
+ * @swagger
+ * /api/admin/reviews:
+ *   get:
+ *     summary: Get all system reviews
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all reviews
+ */
 router.get("/reviews", getAllReviews);
+
+/**
+ * @swagger
+ * /api/admin/reviews/{id}:
+ *   delete:
+ *     summary: Delete a review
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Review deleted
+ */
 router.delete("/reviews/:id", deleteReview);
 
 // System Settings Management
+/**
+ * @swagger
+ * /api/admin/settings:
+ *   get:
+ *     summary: Get system settings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current system settings
+ */
 router.get("/settings", getSettings);
+
+/**
+ * @swagger
+ * /api/admin/settings:
+ *   put:
+ *     summary: Update system settings
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings updated
+ */
 router.put("/settings", updateSettings);
 
 // Subscription Plan Management
+/**
+ * @swagger
+ * /api/admin/subscriptions/plans:
+ *   post:
+ *     summary: Create new subscription plan
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Plan created
+ */
 router.post("/subscriptions/plans", createSubscriptionPlan);
+
+/**
+ * @swagger
+ * /api/admin/subscriptions/plans/{id}:
+ *   put:
+ *     summary: Update subscription plan
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Plan updated
+ */
 router.put("/subscriptions/plans/:id", updateSubscriptionPlan);
+
+/**
+ * @swagger
+ * /api/admin/subscriptions/plans/{id}:
+ *   delete:
+ *     summary: Delete subscription plan
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Plan removed
+ */
 router.delete("/subscriptions/plans/:id", deleteSubscriptionPlan);
+
+/**
+ * @swagger
+ * /api/admin/subscriptions/reset:
+ *   post:
+ *     summary: Reset system default subscription plans
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Plans reset to defaults
+ */
 router.post("/subscriptions/reset", resetSubscriptionPlans);
 
 /**

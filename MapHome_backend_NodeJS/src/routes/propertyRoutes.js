@@ -29,40 +29,269 @@ const {
   requireAnyRole,
 } = require("../middleware/authMiddleware");
 
-// Public statistics and district aggregates
+/**
+ * @swagger
+ * /api/properties/stats/public:
+ *   get:
+ *     summary: Get public stats for homepage
+ *     tags: [Properties]
+ *     responses:
+ *       200:
+ *         description: Public statistics
+ */
 router.get("/stats/public", getPublicStats);
+
+/**
+ * @swagger
+ * /api/properties/stats/districts:
+ *   get:
+ *     summary: Get stats by district for homepage
+ *     tags: [Properties]
+ *     responses:
+ *       200:
+ *         description: Property counts by district
+ */
 router.get("/stats/districts", getDistrictsStats);
 
-// Search route (must come before /:id pattern)
+/**
+ * @swagger
+ * /api/properties/search:
+ *   get:
+ *     summary: Search and filter properties
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: string }
+ *         description: Keywords for name or address
+ *       - in: query
+ *         name: location
+ *         schema: { type: string }
+ *         description: District or area
+ *       - in: query
+ *         name: minPrice
+ *         schema: { type: number }
+ *       - in: query
+ *         name: maxPrice
+ *         schema: { type: number }
+ *       - in: query
+ *         name: lat
+ *         schema: { type: number }
+ *         description: User's current latitude for proximity search
+ *       - in: query
+ *         name: lng
+ *         schema: { type: number }
+ *         description: User's current longitude for proximity search
+ *       - in: query
+ *         name: radius
+ *         schema: { type: number }
+ *         description: Search radius in KM
+ *         default: 5
+ *     responses:
+ *       200:
+ *         description: Search results
+ */
 router.get("/search", searchPropertiesRules, validate, searchProperties);
 
-
-// Nearby route
+/**
+ * @swagger
+ * /api/properties/nearby:
+ *   get:
+ *     summary: Find properties near coordinates
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         schema: { type: number }
+ *         required: true
+ *       - in: query
+ *         name: lng
+ *         schema: { type: number }
+ *         required: true
+ *       - in: query
+ *         name: radius
+ *         schema: { type: number }
+ *         default: 5
+ *     responses:
+ *       200:
+ *         description: Nearby properties
+ */
 router.get("/nearby", nearbyPropertiesRules, validate, getNearbyProperties);
 
-
-// Multiple location search (for workplace search)
+/**
+ * @swagger
+ * /api/properties/search-multiple:
+ *   get:
+ *     summary: Search properties near multiple workplace locations
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: query
+ *         name: locations
+ *         schema: { type: string }
+ *         description: JSON string of points [{"lat":10.7,"lng":106.6,"radius":2},...]
+ *     responses:
+ *       200:
+ *         description: Matching properties
+ */
 router.get("/search-multiple", searchByMultipleLocations);
 
-// By landlord route
+/**
+ * @swagger
+ * /api/properties/landlord/{landlordId}:
+ *   get:
+ *     summary: Get properties by landlord ID
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: landlordId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Landlord's properties
+ */
 router.get("/landlord/:landlordId", getPropertiesByLandlord);
 
+/**
+ * @swagger
+ * /api/properties:
+ *   get:
+ *     summary: Get all approved properties with basic filters
+ *     tags: [Properties]
+ *     responses:
+ *       200:
+ *         description: List of properties
+ *   post:
+ *     summary: Create a new property listing
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, price, area, address, location]
+ *     responses:
+ *       201:
+ *         description: Property created successfully
+ */
 router
   .route("/")
   .get(getProperties)
   .post(authMiddleware, requireAnyRole(["landlord"]), createPropertyRules, validate, createProperty);
 
-
+/**
+ * @swagger
+ * /api/properties/{id}:
+ *   get:
+ *     summary: Get single property details by ID
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Detailed property info
+ *   put:
+ *     summary: Update an existing propertylisting
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Property updated
+ *   delete:
+ *     summary: Delete a propertylisting
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Property removed
+ */
 router
   .route("/:id")
   .get(getPropertyById)
   .put(authMiddleware, requireAnyRole(["landlord"]), updatePropertyRules, validate, updateProperty)
   .delete(authMiddleware, requireAnyRole(["landlord"]), deleteProperty);
 
-
-// Additional actions
+/**
+ * @swagger
+ * /api/properties/{id}/favorite:
+ *   post:
+ *     summary: Toggle favorite status for a property
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [add, remove]
+ *     responses:
+ *       200:
+ *         description: Updated favorite count
+ */
 router.post("/:id/favorite", authMiddleware, toggleFavorite);
+
+/**
+ * @swagger
+ * /api/properties/{id}/view:
+ *   post:
+ *     summary: Increment view count for a property
+ *     tags: [Properties]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Updated view count
+ */
 router.post("/:id/view", incrementView);
+
+/**
+ * @swagger
+ * /api/properties/{id}/renew:
+ *   put:
+ *     summary: Renew an expired propertylisting
+ *     tags: [Properties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Property renewed with new expiry date
+ */
 router.put("/:id/renew", authMiddleware, requireAnyRole(["landlord"]), renewProperty);
 
 module.exports = router;
