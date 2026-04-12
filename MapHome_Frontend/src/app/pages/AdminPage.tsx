@@ -1,5 +1,5 @@
 import { useState, useEffect, forwardRef, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
 import api from "@/app/utils/api";
@@ -47,6 +47,12 @@ import {
   Send,
   Link as LinkIcon,
   RefreshCw,
+  CreditCard,
+  BarChart3,
+  Ticket,
+  Newspaper,
+  Plus,
+  Edit,
 } from "lucide-react";
 import { RevenueView } from "./RevenueView";
 import { InspectionsView } from "@/app/components/InspectionsView";
@@ -65,14 +71,21 @@ type AdminView =
   | "inspections"
   | "reports"
   | "notifications"
+  | "transactions"
+  | "analytics"
+  | "subscriptions"
+  | "blog"
   | "settings";
 
 // Note: Mock data constants removed. Data is now fetched from the backend.
 
 export function AdminPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, logout, isAuthenticated } = useAuth();
-  const [activeView, setActiveView] = useState<AdminView>("dashboard");
+  const [activeView, setActiveView] = useState<AdminView>(
+    (searchParams.get("view") as AdminView) || "dashboard"
+  );
   const [stats, setStats] = useState<any>(null);
   const [weeklySearchData, setWeeklySearchData] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -83,6 +96,9 @@ export function AdminPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
+  const [blogs, setBlogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<any>(null);
   const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
@@ -103,6 +119,9 @@ export function AdminPage() {
     onConfirm?: () => Promise<void> | void;
   }>({ open: false });
 
+  const [isBlogDialogOpen, setIsBlogDialogOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<any>(null);
+
   const fetchData = async (showRefresh = false) => {
     try {
       if (showRefresh) setIsRefreshing(true);
@@ -120,6 +139,9 @@ export function AdminPage() {
         reviewsRes,
         reportsRes,
         notifRes,
+        transRes,
+        plansRes,
+        blogsRes,
       ] = await Promise.all([
         api.get(`/api/admin/stats?month=${selectedMonth}&year=${selectedYear}`),
         api.get("/api/admin/stats/weekly-search"),
@@ -131,6 +153,9 @@ export function AdminPage() {
         api.get("/api/admin/reviews"),
         api.get("/api/reports"),
         api.get("/api/admin/notifications"),
+        api.get("/api/admin/transactions"),
+        api.get("/api/subscriptions/plans"),
+        api.get("/api/blogs"),
       ]);
 
       const stats = statsRes.data;
@@ -143,6 +168,9 @@ export function AdminPage() {
       const reviewsData = reviewsRes.data || [];
       const reportsData = reportsRes.data || [];
       const notifsData = notifRes.data || [];
+      const transData = transRes.data?.transactions || [];
+      const plansData = plansRes.data || [];
+      const blogsData = blogsRes.data || [];
 
       if (stats) setStats(stats);
       setAdminNotifications(notifsData);
@@ -161,6 +189,9 @@ export function AdminPage() {
       setBookings(bookingsData);
       setReviews(reviewsData);
       setReports(reportsData);
+      setTransactions(transData);
+      setSubscriptionPlans(plansData);
+      setBlogs(blogsData);
 
       const activities = [
         ...verificationsData.slice(0, 2).map((v: any) => ({
@@ -309,8 +340,49 @@ export function AdminPage() {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Lỗi khi từ chối yêu cầu!");
+      toast.error("Lỗi khi phát thông báo!");
     }
+  };
+
+  const handleSaveBlog = async (blogData: any) => {
+    try {
+      if (editingBlog?._id) {
+        await api.put(`/api/blogs/${editingBlog._id}`, blogData);
+        toast.success("Cập nhật bài viết thành công! ✨");
+      } else {
+        await api.post("/api/blogs", blogData);
+        toast.success("Tạo bài viết mới thành công! 🖋️");
+      }
+      setIsBlogDialogOpen(false);
+      setEditingBlog(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể lưu bài viết. Vui lòng kiểm tra lại! ❌");
+    }
+  };
+
+  const handleDeleteBlog = (id: string) => {
+    setConfirmModal({
+      open: true,
+      title: "Xác nhận xóa bài viết",
+      description: "Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa bài viết này không?",
+      onConfirm: async () => {
+        try {
+          await api.delete(`/api/blogs/${id}`);
+          toast.success("Đã xóa bài viết thành công!");
+          fetchData();
+        } catch (error) {
+          console.error(error);
+          toast.error("Lỗi khi xóa bài viết!");
+        }
+      }
+    });
+  };
+
+  const handleOpenBlogEditor = (blog: any = null) => {
+    setEditingBlog(blog);
+    setIsBlogDialogOpen(true);
   };
 
   const handleDeleteVerification = async (id: string) => {
@@ -519,11 +591,17 @@ export function AdminPage() {
                   icon: ShieldCheck,
                 },
                 { id: "revenue", label: "Doanh thu", icon: TrendingUp },
+                { id: "transactions", label: "Giao dịch", icon: CreditCard },
+                { id: "blog", label: "Quản lý Blog", icon: Newspaper },
+                { id: "analytics", label: "Phân tích hệ thống", icon: BarChart3 },
               ],
             },
             {
               title: "Hệ thống",
-              items: [{ id: "settings", label: "Cài đặt", icon: Settings }],
+              items: [
+                { id: "subscriptions", label: "Gói dịch vụ", icon: Ticket },
+                { id: "settings", label: "Cài đặt", icon: Settings },
+              ],
             },
           ].map((section, sIdx) => (
             <div key={section.title}>
@@ -639,6 +717,10 @@ export function AdminPage() {
                 {activeView === "reviews" && "Quản lý Đánh giá"}
                 {activeView === "reports" && "Quản lý Báo cáo"}
                 {activeView === "notifications" && "Trung tâm Thông báo"}
+                {activeView === "transactions" && "Lịch sử Giao dịch"}
+                {activeView === "analytics" && "Phân tích & Thống kê"}
+                {activeView === "subscriptions" && "Gói dịch vụ hệ thống"}
+                {activeView === "blog" && "Kiểm duyệt Blog"}
                 {activeView === "revenue" && "Báo cáo Doanh Thu"}
                 {activeView === "inspections" && "Kiểm tra thực địa"}
                 {activeView === "settings" && "Cấu hình hệ thống"}
@@ -813,9 +895,27 @@ export function AdminPage() {
                   )}
                   {activeView === "notifications" && (
                     <NotificationsManagementView
+                      notifications={adminNotifications}
                       onSendBroadcast={handleBroadcastNotification}
                     />
                   )}
+                  {activeView === "transactions" && (
+                    <TransactionsView transactions={transactions} />
+                  )}
+                  {activeView === "analytics" && (
+                    <AdvancedAnalyticsView stats={stats} />
+                  )}
+                  {activeView === "subscriptions" && (
+                    <SubscriptionsAdminView plans={subscriptionPlans} />
+                  )}
+                   {activeView === "blog" && (
+                     <BlogAdminView 
+                       blogs={blogs} 
+                       onAdd={() => handleOpenBlogEditor()}
+                       onEdit={(blog: any) => handleOpenBlogEditor(blog)}
+                       onDelete={(id: string) => handleDeleteBlog(id)}
+                     />
+                   )}
                   {activeView === "revenue" && <RevenueView />}
                   {activeView === "inspections" && <InspectionsView />}
                   {activeView === "settings" && <SettingsView />}
@@ -874,6 +974,17 @@ export function AdminPage() {
           setConfirmModal({ open: false });
         }}
         onCancel={() => setConfirmModal({ open: false })}
+      />
+
+      {/* Blog Editor Dialog */}
+      <BlogEditorDialog
+        isOpen={isBlogDialogOpen}
+        onClose={() => {
+          setIsBlogDialogOpen(false);
+          setEditingBlog(null);
+        }}
+        onSave={handleSaveBlog}
+        initialData={editingBlog}
       />
     </div>
   );
@@ -3208,8 +3319,10 @@ function ReportsView({
 
 // Notifications Management View Component
 function NotificationsManagementView({
+  notifications,
   onSendBroadcast,
 }: {
+  notifications: any[];
   onSendBroadcast: (data: any) => Promise<void>;
 }) {
   const [formData, setFormData] = useState({
@@ -3256,10 +3369,51 @@ function NotificationsManagementView({
             Trung tâm Thông báo Hệ thống
           </h3>
           <p className="text-xs text-slate-400 font-bold mt-1">
-            Gửi thông báo quan trọng đến cộng đồng MapHome
+            Gửi và quản lý thông báo quan trọng của hệ thống
           </p>
         </div>
       </div>
+
+      {/* Admin System Notifications List */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, y: 20 },
+          show: { opacity: 1, y: 0 },
+        }}
+        className="bg-white border border-slate-100 rounded-[40px] p-10 shadow-sm"
+      >
+        <h4 className="text-lg font-black text-slate-800 mb-6">Thông báo chuyên trang Admin</h4>
+        <div className="space-y-3">
+          {notifications.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 font-medium">Không có thông báo hệ thống nào.</div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className="flex gap-4 p-5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+                    n.type === "user"
+                      ? "bg-blue-100/50"
+                      : n.type === "property"
+                        ? "bg-emerald-100/50"
+                        : n.type === "verification"
+                          ? "bg-amber-100/50"
+                          : "bg-indigo-100/50"
+                  }`}
+                >
+                  {n.icon}
+                </div>
+                <div>
+                  <div className="font-black text-sm text-slate-800">{n.title}</div>
+                  <div className="text-xs text-slate-500 mt-1">{n.message}</div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-2">
+                    {new Date(n.time).toLocaleString("vi-VN")}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Composition Form */}
@@ -3479,3 +3633,472 @@ function NotificationsManagementView({
     </motion.div>
   );
 }
+
+// --- NEW ADMIN VIEWS ---
+
+// 1. Transactions View
+const TransactionsView = ({ transactions }: { transactions: any[] }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[35px] shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black text-slate-800 tracking-tight">Lịch sử Giao dịch VNPay</h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">Quản lý và đối soát các giao dịch thanh toán trên hệ thống</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-5 py-3 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-1">Tổng doanh thu</span>
+              <span className="text-lg font-black text-emerald-700">
+                {transactions
+                  .filter(t => t.status === "success")
+                  .reduce((sum, t) => sum + t.amount, 0)
+                  .toLocaleString("vi-VN")}đ
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã GD</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Người dùng</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Số tiền</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Nội dung</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Thời gian</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {transactions.map((t) => (
+                <tr key={t._id} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="px-8 py-5 font-black text-slate-700 text-sm whitespace-nowrap">{t.invoiceId || t._id.slice(-8)}</td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-600">
+                        {getInitials(t.userId?.fullName || "User", t.userId?.username)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-slate-800 truncate">{t.userId?.fullName}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{t.userId?.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 font-black text-slate-800 text-sm">{t.amount.toLocaleString("vi-VN")}đ</td>
+                  <td className="px-8 py-5 text-xs text-slate-500 max-w-xs truncate">{t.description}</td>
+                  <td className="px-8 py-5">
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      t.status === "success" ? "bg-emerald-50 text-emerald-600" : 
+                      t.status === "pending" ? "bg-amber-50 text-amber-600" : "bg-rose-50 text-rose-600"
+                    }`}>
+                      {t.status === "success" ? "Thành công" : t.status === "pending" ? "Chờ xử lý" : "Thất bại"}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-xs text-slate-400 whitespace-nowrap">
+                    {formatDateVietnamese(t.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {transactions.length === 0 && (
+            <div className="p-20 text-center">
+              <CreditCard className="size-12 mx-auto text-slate-200 mb-4" />
+              <p className="text-sm font-bold text-slate-400">Chưa có giao dịch nào được ghi nhận</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// 2. Advanced Analytics View
+const AdvancedAnalyticsView = ({ stats }: { stats: any }) => {
+  const contactRate = stats?.totalViews > 0 
+    ? Math.round((stats.totalBookings / stats.totalViews) * 100) 
+    : 0;
+  
+  const successRate = stats?.totalViews > 0 
+    ? Math.round((stats.totalTransactionsSuccess / stats.totalViews) * 100) 
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+    >
+      {/* Conversion Rate Card */}
+      <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[35px] p-8 shadow-sm col-span-2">
+        <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
+          <BarChart3 className="size-5 text-indigo-600" />
+          Tỷ lệ chuyển đổi hệ thống
+        </h3>
+        <div className="flex items-end gap-12 h-64 px-10">
+          <div className="flex-1 flex flex-col items-center gap-4">
+             <div className="w-full bg-slate-50 rounded-2xl relative overflow-hidden h-48">
+                <motion.div 
+                   initial={{ height: 0 }} 
+                   animate={{ height: "100%" }} 
+                   className="absolute bottom-0 inset-x-0 bg-blue-500/10 border-t-2 border-blue-500"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                   <div className="font-black text-blue-600 text-xl">{stats?.totalViews?.toLocaleString()}</div>
+                   <div className="text-[8px] font-black text-blue-400 uppercase">100%</div>
+                </div>
+             </div>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Lượt xem tin</span>
+          </div>
+          <div className="flex-1 flex flex-col items-center gap-4">
+             <div className="w-full bg-slate-50 rounded-2xl relative overflow-hidden h-48">
+                <motion.div 
+                   initial={{ height: 0 }} 
+                   animate={{ height: `${Math.max(contactRate, 5)}%` }} 
+                   className="absolute bottom-0 inset-x-0 bg-indigo-500/10 border-t-2 border-indigo-500"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                   <div className="font-black text-indigo-600 text-xl">{stats?.totalBookings?.toLocaleString()}</div>
+                   <div className="text-[8px] font-black text-indigo-400 uppercase">{contactRate}%</div>
+                </div>
+             </div>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Liên hệ / Đặt lịch</span>
+          </div>
+          <div className="flex-1 flex flex-col items-center gap-4">
+             <div className="w-full bg-slate-50 rounded-2xl relative overflow-hidden h-48">
+                <motion.div 
+                   initial={{ height: 0 }} 
+                   animate={{ height: `${Math.max(successRate, 5)}%` }} 
+                   className="absolute bottom-0 inset-x-0 bg-emerald-500/10 border-t-2 border-emerald-500"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                   <div className="font-black text-emerald-600 text-xl">{stats?.totalTransactionsSuccess?.toLocaleString()}</div>
+                   <div className="text-[8px] font-black text-emerald-400 uppercase">{successRate}%</div>
+                </div>
+             </div>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Giao dịch thành công</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[35px] p-8 text-white shadow-xl shadow-indigo-100 flex flex-col justify-between">
+        <div>
+          <h3 className="text-indigo-100 font-bold text-sm uppercase tracking-widest mb-2">Đăng ký mới</h3>
+          <div className="text-4xl font-black">{stats?.newUsers?.toLocaleString() || 0}</div>
+          <p className="text-xs text-indigo-200 mt-2 font-medium">Người dùng mới gia nhập trong tháng này</p>
+        </div>
+        <div className="pt-8 border-t border-white/10 mt-8">
+           <div className="flex items-center justify-between text-xs font-bold text-indigo-200 mb-2">
+              <span>Mục tiêu tháng</span>
+              <span>{Math.min(Math.round(((stats?.newUsers || 0) / 100) * 100), 100)}%</span>
+           </div>
+           <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(((stats?.newUsers || 0) / 100) * 100), 100}%` }}
+                className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" 
+              />
+           </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// 3. Subscriptions Admin View
+const SubscriptionsAdminView = ({ plans }: { plans: any[] }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="space-y-8"
+    >
+      <div className="flex items-center justify-between">
+         <div>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Gói dịch vụ hệ thống</h3>
+            <p className="text-sm text-slate-500 font-medium">Cấu hình các gói Listing dành cho Landlord</p>
+         </div>
+         <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl gap-2 h-12 px-6">
+            <Plus className="size-5" /> Thêm gói mới
+         </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {plans.map((plan) => (
+          <div key={plan._id} className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[35px] p-8 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <div className={`p-3 rounded-2xl bg-${plan.name === 'Premium' ? 'indigo' : 'slate'}-50`}>
+                <Ticket className={`size-6 text-${plan.name === 'Premium' ? 'indigo' : 'slate'}-600`} />
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100">
+                <Edit className="size-4 text-slate-400" />
+              </Button>
+            </div>
+            <h4 className="text-lg font-black text-slate-800">{plan.name}</h4>
+            <div className="text-2xl font-black text-indigo-600 mt-1 mb-6">
+               {plan.price.toLocaleString("vi-VN")}đ
+               <span className="text-xs text-slate-400 font-bold"> / tháng</span>
+            </div>
+            <div className="space-y-3 flex-1">
+               {plan.features.map((f: string, idx: number) => (
+                 <div key={idx} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                   <div className="size-1 bg-emerald-500 rounded-full" />
+                   {f}
+                 </div>
+               ))}
+            </div>
+            <div className="mt-8 pt-8 border-t border-slate-50">
+               <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <span>Landlord đang dùng</span>
+                  <span className="text-slate-800 font-black">{plan.activeUsers || 0}</span>
+               </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+// 4. Blog Admin View
+const BlogAdminView = ({ blogs, onAdd, onEdit, onDelete }: any) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-6"
+    >
+      <div className="flex items-center justify-between">
+         <div>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Kiểm duyệt Blog & Tin tức</h3>
+            <p className="text-sm text-slate-500 font-medium">Quản lý nội dung bài viết và truyền thông trên MapHome</p>
+         </div>
+         <Button 
+            onClick={() => onAdd()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100"
+          >
+            <Plus className="size-5" /> Viết bài mới
+         </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+        {blogs.map((blog: any) => (
+          <div key={blog._id} className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-[35px] overflow-hidden shadow-sm flex group h-48">
+            <div className="w-1/3 relative overflow-hidden">
+               <img 
+                 src={blog.image || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=1073&auto=format&fit=crop"} 
+                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="flex-1 p-6 flex flex-col justify-between">
+               <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{blog.category}</span>
+                    <span className="text-[9px] font-bold text-slate-400">{blog.date}</span>
+                  </div>
+                  <h4 className="text-sm font-black text-slate-800 line-clamp-1 leading-relaxed mb-2 group-hover:text-indigo-600 transition-colors">
+                    {blog.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 line-clamp-2 font-medium">
+                    {blog.excerpt}
+                  </p>
+               </div>
+               <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {blog.authorAvatar ? (
+                      <img src={blog.authorAvatar} className="size-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="size-6 rounded-full bg-slate-200 border border-white shadow-sm flex items-center justify-center text-[8px] font-black uppercase">
+                        {blog.author?.substring(0, 2) || "AD"}
+                      </div>
+                    )}
+                    <span className="text-[9px] font-black text-slate-400 capitalize">{blog.author || "Admin"}</span>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => onEdit(blog)}
+                      className="size-8 rounded-xl hover:bg-slate-100"
+                    >
+                      <Edit className="size-4 text-slate-400" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => onDelete(blog._id)}
+                      className="size-8 rounded-xl hover:bg-rose-50 hover:text-rose-500 text-slate-400"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+               </div>
+            </div>
+          </div>
+        ))}
+        {blogs.length === 0 && (
+          <div className="col-span-2 py-20 bg-slate-50/50 rounded-[35px] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400">
+             < Newspaper className="size-12 mb-4 opacity-20" />
+             <p className="font-bold">Chưa có bài viết nào được xuất bản</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+// Blog Editor Dialog Component
+const BlogEditorDialog = ({ isOpen, onClose, onSave, initialData }: any) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "Tin tức",
+    excerpt: "",
+    content: "",
+    image: "",
+    tags: "",
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || "",
+        category: initialData.category || "Tin tức",
+        excerpt: initialData.excerpt || "",
+        content: initialData.content || "",
+        image: initialData.image || "",
+        tags: initialData.tags?.join(", ") || "",
+      });
+    } else {
+      setFormData({
+        title: "",
+        category: "Tin tức",
+        excerpt: "",
+        content: "",
+        image: "",
+        tags: "",
+      });
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      ...formData,
+      tags: formData.tags.split(",").map(t => t.trim()).filter(t => t),
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        >
+          <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              {initialData ? "Chỉnh sửa bài viết" : "Viết bài mới"}
+            </h2>
+            <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+               <LogOut className="size-6 text-slate-400 rotate-180" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Tiêu đề bài viết</label>
+              <input 
+                required
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none"
+                placeholder="Ví dụ: 10 mẹo thuê phòng trọ giá rẻ..."
+                value={formData.title}
+                onChange={e => setFormData({...formData, title: e.target.value})}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Danh mục</label>
+                <select 
+                  className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none appearance-none"
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  <option>Tin tức</option>
+                  <option>Mẹo thuê phòng</option>
+                  <option>Review nhà</option>
+                  <option>Đời sống</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Tags (cách nhau bởi dấu phẩy)</label>
+                <input 
+                  className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none"
+                  placeholder="Review, Phòng trọ, Quận 1"
+                  value={formData.tags}
+                  onChange={e => setFormData({...formData, tags: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Link ảnh bìa (URL)</label>
+              <input 
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none"
+                placeholder="https://images.unsplash.com/..."
+                value={formData.image}
+                onChange={e => setFormData({...formData, image: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Tóm tắt ngắn gọn</label>
+              <textarea 
+                required
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-3xl text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none h-24 resize-none"
+                placeholder="Mô tả ngắn gọn nội dung bài viết..."
+                value={formData.excerpt}
+                onChange={e => setFormData({...formData, excerpt: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Nội dung chi tiết</label>
+              <textarea 
+                required
+                className="w-full px-5 py-4 bg-slate-50 border-none rounded-[32px] text-sm font-bold focus:ring-2 ring-indigo-500 transition-all outline-none h-64 resize-none"
+                placeholder="Viết nội dung bài viết của bạn tại đây..."
+                value={formData.content}
+                onChange={e => setFormData({...formData, content: e.target.value})}
+              />
+            </div>
+          </form>
+
+          <div className="p-8 border-t border-slate-50 bg-slate-50/50 flex items-center justify-end gap-3">
+             <Button type="button" variant="ghost" onClick={onClose} className="rounded-2xl font-black px-8">Hủy</Button>
+             <Button type="submit" onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black px-10 h-12">
+               {initialData ? "Lưu thay đổi" : "Xuất bản ngay"}
+             </Button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};

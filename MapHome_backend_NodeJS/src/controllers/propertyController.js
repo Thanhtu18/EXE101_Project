@@ -371,18 +371,30 @@ const searchProperties = async (req, res) => {
     }
 
     // Search in name and address
+    // IMPROVEMENT: If lat/lng are present, treat q more like a property-specific filter (name/desc) 
+    // instead of an absolute address requirement, as the geospatial filter handles the address/area.
     if (q) {
-      query.$or = [
-        { name: new RegExp(q, "i") },
-        { address: new RegExp(q, "i") },
-        { description: new RegExp(q, "i") },
-      ];
+      if (req.query.lat && req.query.lng) {
+        // If searching by location, q should search in names/description
+        // We make it a bit more flexible to avoid "Quận 1, HCM" failing to match "Quận 1" in DB
+        query.$or = [
+          { name: new RegExp(q, "i") },
+          { description: new RegExp(q, "i") },
+          { address: new RegExp(q.split(",")[0], "i") }, // Try matching only the first part of the search string (e.g. "Quận 1")
+        ];
+      } else {
+        query.$or = [
+          { name: new RegExp(q, "i") },
+          { address: new RegExp(q, "i") },
+          { description: new RegExp(q, "i") },
+        ];
+      }
     }
 
-    // Filter by location
+    // Filter by location text (deprecated but kept for compatibility)
     if (location) {
       query.$or = query.$or || [];
-      query.$or.push({ address: new RegExp(location, "i") });
+      query.$or.push({ address: new RegExp(location.split(",")[0], "i") });
     }
 
     // Price range
@@ -415,11 +427,15 @@ const searchProperties = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     
     // Check if location-based search is requested within search
-    if (req.query.lat && req.query.lng) {
+    const hasGeoSearch = !!(req.query.lat && req.query.lng);
+    
+    if (hasGeoSearch) {
       const lat = Number(req.query.lat);
       const lng = Number(req.query.lng);
       const radius = Number(req.query.radius || 5);
       
+      // NOTE: $nearSphere CANNOT be used with countDocuments() or .sort()
+      // MongoDB handles sorting by distance automatically with $nearSphere
       query.location = {
         $nearSphere: {
           $geometry: { type: "Point", coordinates: [lng, lat] },
@@ -428,18 +444,30 @@ const searchProperties = async (req, res) => {
       };
     }
 
-    const properties = await Property.find(query)
-      .populate("landlordId", "name phone email avatar rating")
-      .skip(skip)
-      .limit(Number(limit))
-      .sort(req.query.lat ? {} : { createdAt: -1 }); // $near performs its own sorting by distance
-
-    const total = await Property.countDocuments(query);
+    // When using $nearSphere, we CANNOT call countDocuments or .sort()
+    // MongoDB restriction: $near/$nearSphere is incompatible with count() and explicit sort
+    let properties, total;
+    
+    if (hasGeoSearch) {
+      // Geospatial: no sort (auto-sorted by distance), no countDocuments
+      properties = await Property.find(query)
+        .populate("landlordId", "name phone email avatar rating")
+        .limit(Number(limit));
+      total = properties.length; // Approximate count from results
+    } else {
+      // Text/filter search: can sort and count normally
+      properties = await Property.find(query)
+        .populate("landlordId", "name phone email avatar rating")
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 });
+      total = await Property.countDocuments(query);
+    }
 
     const augmentedProperties = await Promise.all(properties.map(async p => {
       const pObj = p.toObject();
       pObj.nearbyLandmarks = await getNearbyLandmarks(p.location);
-      if (req.query.lat) {
+      if (hasGeoSearch) {
         pObj.distanceToCenter = Number(haversineKm(Number(req.query.lat), Number(req.query.lng), p.location[1], p.location[0]).toFixed(2));
       }
       return pObj;

@@ -41,7 +41,10 @@ const autocomplete = async (req, res) => {
       return res.status(400).json({ message: "Search input is required" });
     }
 
-    const url = `https://rsapi.goong.io/Place/Autocomplete?input=${encodeURIComponent(input)}&api_key=${GOONG_API_KEY}`;
+    // Bias results towards Ho Chi Minh City (10.7769, 106.7009) with 20km radius
+    const locationBias = "10.7769,106.7009";
+    const radiusBias = 20000;
+    const url = `https://rsapi.goong.io/Place/Autocomplete?input=${encodeURIComponent(input)}&location=${locationBias}&radius=${radiusBias}&api_key=${GOONG_API_KEY}`;
     
     const response = await axios.get(url);
     res.status(200).json(response.data.predictions || []);

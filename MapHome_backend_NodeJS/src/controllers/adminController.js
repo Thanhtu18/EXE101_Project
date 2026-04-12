@@ -4,6 +4,7 @@ const Landlord = require("../models/Landlord");
 const VerificationRequest = require("../models/VerificationRequest");
 const Booking = require("../models/Booking");
 const Review = require("../models/Review");
+const Transaction = require("../models/Transaction");
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -27,6 +28,9 @@ const getDashboardStats = async (req, res) => {
       pendingBookings,
       distinctDistricts,
       reviews,
+      totalViewsData,
+      newUsers,
+      totalTransactionsSuccess,
     ] = await Promise.all([
       Property.countDocuments({}), // Global total
       User.countDocuments({}),     // Global total
@@ -38,7 +42,15 @@ const getDashboardStats = async (req, res) => {
       Booking.countDocuments({ ...query, status: "pending" }),
       Property.distinct("district"),
       Review.find().select("rating"),
+      Property.aggregate([
+        { $group: { _id: null, total: { $sum: "$views" } } },
+      ]),
+      User.countDocuments(query),
+      Transaction.countDocuments({ ...query, status: "success" }),
     ]);
+
+    const totalViews =
+      totalViewsData.length > 0 ? totalViewsData[0].total : 0;
 
     // Calculate satisfaction rate from average review rating
     const satisfactionRate =
@@ -62,6 +74,9 @@ const getDashboardStats = async (req, res) => {
       pendingBookings,
       uniqueDistricts: distinctDistricts.filter((d) => d).length, // Count unique districts, exclude null
       satisfactionRate,
+      totalViews,
+      newUsers,
+      totalTransactionsSuccess,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
