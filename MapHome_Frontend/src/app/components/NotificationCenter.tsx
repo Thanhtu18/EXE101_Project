@@ -21,7 +21,7 @@ export default function NotificationCenter({
 }: {
   pollIntervalMs?: number;
 }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -218,7 +218,13 @@ export default function NotificationCenter({
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  navigate("/user/dashboard");
+                  if (user?.role === "admin") {
+                    navigate("/admin/dashboard?view=notifications");
+                  } else if (user?.role === "landlord") {
+                    navigate("/landlord/dashboard?tab=notifications");
+                  } else {
+                    navigate("/user/dashboard");
+                  }
                 }}
                 className="text-slate-600 hover:text-emerald-600 font-bold"
               >
