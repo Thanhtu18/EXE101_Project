@@ -43,6 +43,7 @@ import {
   Bot,
   AlertTriangle,
   Zap,
+  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/app/components/ConfirmDialog";
@@ -55,6 +56,7 @@ type DashboardTab =
   | "leads"
   | "subscription"
   | "verification"
+  | "notifications"
   | "settings";
 
 // Sidebar menu items
@@ -69,6 +71,7 @@ const menuItems: Array<{
   { id: "leads", label: "Khách hàng (AI)", icon: Users },
   { id: "subscription", label: "Gói đăng ký", icon: CreditCard },
   { id: "verification", label: "Yêu cầu xác thực", icon: ShieldCheck },
+  { id: "notifications", label: "Thông báo", icon: Bell },
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
@@ -86,6 +89,7 @@ export function LandlordDashboardV2() {
   const [verificationRequests, setVerificationRequests] = useState<
     VerificationRequest[]
   >([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [landlordDistricts, setLandlordDistricts] = useState<string[]>([]);
@@ -216,6 +220,9 @@ export function LandlordDashboardV2() {
           const response = await api.get("/api/landlord/leads");
           setLeads(response.data.leads || []);
           setLandlordDistricts(response.data.districts || []);
+        } else if (activeTab === "notifications") {
+          const response = await api.get("/api/notifications");
+          setNotifications(response.data || []);
         }
       } catch (err) {
         console.error("Failed to fetch landlord data", err);
@@ -1021,7 +1028,127 @@ export function LandlordDashboardV2() {
           </motion.div>
         );
 
+
+      case "notifications":
+        return (
+          <motion.div
+            key="notifications"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-10"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-4xl font-black bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 bg-clip-text text-transparent tracking-tight">
+                  Thông báo
+                </h2>
+                <p className="text-slate-400 font-black mt-1">
+                  Tất cả thông báo về tài khoản và tin đăng của bạn
+                </p>
+              </div>
+              {notifications.some((n) => !n.isRead) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.put("/api/notifications/read-all");
+                      setNotifications((prev) =>
+                        prev.map((n) => ({ ...n, isRead: true }))
+                      );
+                      toast.success("Đã đánh dấu tất cả là đã đọc ✅");
+                    } catch {
+                      toast.error("Không thể đánh dấu tất cả.");
+                    }
+                  }}
+                  className="px-6 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-black hover:bg-amber-100 transition-all"
+                >
+                  Đánh dấu tất cả đã đọc
+                </button>
+              )}
+            </div>
+
+            {notifications.length === 0 ? (
+              <div className="bg-white border border-gray-100 rounded-[2.5rem] shadow-sm p-20 text-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-amber-50 to-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+                  <Bell className="size-12 text-amber-400" />
+                </div>
+                <h3 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">
+                  Không có thông báo mới
+                </h3>
+                <p className="text-gray-400 font-medium text-base max-w-xs mx-auto">
+                  Khi có cập nhật từ hệ thống, thông báo sẽ xuất hiện tại đây.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {notifications.map((n: any) => (
+                  <div
+                    key={n._id}
+                    onClick={async () => {
+                      if (!n.isRead) {
+                        try {
+                          await api.put(`/api/notifications/${n._id}/read`);
+                          setNotifications((prev) =>
+                            prev.map((x) =>
+                              x._id === n._id ? { ...x, isRead: true } : x
+                            )
+                          );
+                        } catch {
+                          // silent
+                        }
+                      }
+                    }}
+                    className={`flex items-start gap-5 p-6 rounded-3xl border transition-all cursor-pointer group ${
+                      n.isRead
+                        ? "bg-white border-gray-100 opacity-70 hover:opacity-100"
+                        : "bg-amber-50 border-amber-200 shadow-sm hover:shadow-md"
+                    }`}
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 ${
+                        n.type === "success"
+                          ? "bg-green-100"
+                          : n.type === "warning"
+                            ? "bg-amber-100"
+                            : "bg-indigo-100"
+                      }`}
+                    >
+                      {n.type === "success"
+                        ? "✅"
+                        : n.type === "warning"
+                          ? "⚠️"
+                          : "🔔"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <p
+                          className={`font-black text-base truncate ${n.isRead ? "text-slate-600" : "text-slate-900"}`}
+                        >
+                          {n.title}
+                        </p>
+                        {!n.isRead && (
+                          <span className="flex-shrink-0 w-2.5 h-2.5 bg-rose-500 rounded-full shadow-sm" />
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-2">
+                        {n.message}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-bold">
+                        {new Date(n.createdAt || Date.now()).toLocaleString(
+                          "vi-VN"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        );
+
       case "settings":
+
         return (
           <motion.div
             key="settings"
