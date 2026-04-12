@@ -23,7 +23,35 @@ const createTransaction = async (data) => {
   }
 };
 
+// @desc    Get all transactions (Admin only)
+// @route   GET /api/admin/transactions
+const getAllTransactions = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const transactions = await Transaction.find(filter)
+      .populate("userId", "fullName username email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Transaction.countDocuments(filter);
+
+    res.status(200).json({
+      transactions,
+      total,
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getMyTransactions,
   createTransaction,
+  getAllTransactions,
 };

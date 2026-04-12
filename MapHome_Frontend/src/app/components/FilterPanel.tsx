@@ -10,27 +10,7 @@ import { Label } from '@/app/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Badge } from '@/app/components/ui/badge';
 import { RentalFilters } from '@/app/components/types';
-
-
-
-
-export const defaultFilters: RentalFilters = {
-  priceRange: [1000000, 10000000],
-  areaRange: [10, 50],
-  amenities: {
-    wifi: false,
-    furniture: false,
-    tv: false,
-    washingMachine: false,
-    kitchen: false,
-    refrigerator: false,
-    airConditioner: false,
-  },
-  verificationLevel: 'all',
-  availability: 'all',
-  sortBy: 'distance',
-  radius: 5,
-};
+import { defaultFilters } from '@/app/utils/filterConstants';
 
 interface FilterPanelProps {
   filters: RentalFilters;
@@ -40,6 +20,8 @@ interface FilterPanelProps {
 
 export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: FilterPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // Draft state: temporary changes before Apply is clicked
+  const [draftFilters, setDraftFilters] = useState<RentalFilters>(filters);
   const [expandedSections, setExpandedSections] = useState({
     price: true,
     area: true,
@@ -48,12 +30,24 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
     availability: true,
   });
 
+  // Sync draft when panel opens
+  const handleOpenChange = (open: boolean) => {
+    if (open) setDraftFilters(filters); // Reset draft to current filters on open
+    setIsOpen(open);
+  };
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleReset = () => {
+    setDraftFilters(defaultFilters);
     onFiltersChange(defaultFilters);
+  };
+
+  const handleApply = () => {
+    onFiltersChange(draftFilters); // This triggers the search in MapPage
+    setIsOpen(false);
   };
 
   const formatPrice = (value: number) => {
@@ -64,20 +58,20 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
   };
 
   const updateFilter = <K extends keyof RentalFilters>(key: K, value: RentalFilters[K]) => {
-    onFiltersChange({ ...filters, [key]: value });
+    setDraftFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const updateAmenity = (amenity: keyof RentalFilters['amenities'], value: boolean) => {
-    onFiltersChange({
-      ...filters,
-      amenities: { ...filters.amenities, [amenity]: value },
-    });
+    setDraftFilters(prev => ({
+      ...prev,
+      amenities: { ...prev.amenities, [amenity]: value },
+    }));
   };
 
-  const selectedAmenitiesCount = Object.values(filters.amenities).filter(Boolean).length;
+  const selectedAmenitiesCount = Object.values(draftFilters.amenities).filter(Boolean).length;
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button 
           variant="outline" 
@@ -131,7 +125,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
           <div className="space-y-4 bg-emerald-900/[0.03] p-5 rounded-[24px] border border-emerald-900/5">
             <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em]">Sắp xếp theo</Label>
             <RadioGroup 
-              value={filters.sortBy} 
+              value={draftFilters.sortBy} 
               onValueChange={(value) => updateFilter('sortBy', value as RentalFilters['sortBy'])}
               className="grid grid-cols-1 gap-2"
             >
@@ -145,7 +139,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                   key={item.id}
                   className={`
                     flex items-center space-x-3 p-3 rounded-xl border transition-all duration-300
-                    ${filters.sortBy === item.value 
+                    ${draftFilters.sortBy === item.value 
                       ? 'bg-white border-emerald-600/20 shadow-sm' 
                       : 'border-transparent hover:bg-white/50'}
                   `}
@@ -168,7 +162,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
             <Label className="text-xs font-black text-emerald-950 uppercase tracking-[0.2em] relative">Bán kính tìm kiếm</Label>
             <div className="space-y-6 pt-2 relative">
               <Slider
-                value={[filters.radius]}
+                value={[draftFilters.radius]}
                 onValueChange={(value) => updateFilter('radius', value[0])}
                 min={1}
                 max={20}
@@ -178,7 +172,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
               <div className="flex justify-between items-center px-1">
                 <span className="text-[10px] font-bold text-emerald-900/40">1km</span>
                 <div className="bg-emerald-900 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-lg shadow-emerald-900/20 transition-all duration-300 transform group-hover:scale-110">
-                   {filters.radius} KM
+                   {draftFilters.radius} KM
                 </div>
                 <span className="text-[10px] font-bold text-emerald-900/40">20km</span>
               </div>
@@ -207,7 +201,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                 >
                   <div className="space-y-6 p-5 pt-2 rounded-[24px] bg-emerald-900/[0.02] border border-emerald-900/5 mt-2">
                     <Slider
-                      value={filters.priceRange}
+                      value={draftFilters.priceRange}
                       onValueChange={(value) => updateFilter('priceRange', value as [number, number])}
                       min={1000000}
                       max={10000000}
@@ -215,11 +209,11 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                       className="w-full [&_[role=slider]]:bg-emerald-600 [&_[role=slider]]:border-emerald-950/20"
                     />
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(filters.priceRange[0])}</span>
+                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(draftFilters.priceRange[0])}</span>
                       <span className="text-xs font-black text-emerald-950 bg-white px-4 py-1.5 rounded-xl border border-emerald-950/5 shadow-sm">
-                        {formatPrice(filters.priceRange[0])} — {formatPrice(filters.priceRange[1])}
+                        {formatPrice(draftFilters.priceRange[0])} — {formatPrice(draftFilters.priceRange[1])}
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(filters.priceRange[1])}</span>
+                      <span className="text-[10px] font-bold text-emerald-900/40">{formatPrice(draftFilters.priceRange[1])}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -249,7 +243,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                 >
                   <div className="space-y-6 p-5 pt-2 rounded-[24px] bg-emerald-900/[0.02] border border-emerald-900/5 mt-2">
                     <Slider
-                      value={filters.areaRange}
+                      value={draftFilters.areaRange}
                       onValueChange={(value) => updateFilter('areaRange', value as [number, number])}
                       min={10}
                       max={50}
@@ -259,7 +253,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-bold text-emerald-900/40">10m²</span>
                       <span className="text-xs font-black text-emerald-950 bg-white px-4 py-1.5 rounded-xl border border-emerald-950/5 shadow-sm">
-                        {filters.areaRange[0]}m² - {filters.areaRange[1]}m²
+                        {draftFilters.areaRange[0]}m² - {draftFilters.areaRange[1]}m²
                       </span>
                       <span className="text-[10px] font-bold text-emerald-900/40">50m²</span>
                     </div>
@@ -319,7 +313,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                         >
                           <Checkbox
                             id={key}
-                            checked={value}
+                      checked={draftFilters.amenities[key as keyof RentalFilters['amenities']]}
                             onCheckedChange={(checked) => 
                               updateAmenity(key as keyof RentalFilters['amenities'], checked as boolean)
                             }
@@ -358,7 +352,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                   className="overflow-hidden pt-2"
                 >
                   <RadioGroup 
-                    value={filters.availability} 
+                    value={draftFilters.availability} 
                     onValueChange={(value) => updateFilter('availability', value as RentalFilters['availability'])}
                     className="grid grid-cols-1 gap-2"
                   >
@@ -369,7 +363,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                     ].map((item) => (
                       <div 
                         key={item.id}
-                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${filters.availability === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
+                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${draftFilters.availability === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
                       >
                         <RadioGroupItem value={item.value} id={item.id} className="text-emerald-600 border-emerald-200" />
                         <Label htmlFor={item.id} className="cursor-pointer font-bold text-sm text-emerald-900/70 flex-1">
@@ -404,7 +398,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                   className="overflow-hidden pt-2"
                 >
                   <RadioGroup 
-                    value={filters.verificationLevel} 
+                    value={draftFilters.verificationLevel} 
                     onValueChange={(value) => updateFilter('verificationLevel', value as RentalFilters['verificationLevel'])}
                     className="grid grid-cols-1 gap-2"
                   >
@@ -415,7 +409,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
                     ].map((item) => (
                       <div 
                         key={item.id}
-                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${filters.verificationLevel === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
+                        className={`flex items-center space-x-3 p-3 rounded-xl border transition-all duration-200 ${draftFilters.verificationLevel === item.value ? 'bg-white border-emerald-600/20 shadow-sm' : 'border-transparent hover:bg-emerald-900/[0.02]'}`}
                       >
                         <RadioGroupItem value={item.value} id={item.id} className="text-emerald-600 border-emerald-200" />
                         <Label htmlFor={item.id} className="cursor-pointer font-bold text-sm text-emerald-900/70 flex-1">
@@ -435,7 +429,7 @@ export function FilterPanel({ filters, onFiltersChange, activeFiltersCount }: Fi
           <Button 
             className="w-full h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-950 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-emerald-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all will-change-transform" 
             size="lg"
-            onClick={() => setIsOpen(false)}
+            onClick={handleApply}
           >
             Áp dụng thay đổi
           </Button>

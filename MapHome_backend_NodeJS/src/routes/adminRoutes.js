@@ -24,6 +24,7 @@ const {
   broadcastNotification,
   getAdminNotifications,
 } = require("../controllers/adminController");
+const { getAllTransactions } = require("../controllers/transactionController");
 const {
   updateSubscriptionPlan,
   createSubscriptionPlan,
@@ -438,6 +439,20 @@ router.delete("/subscriptions/plans/:id", deleteSubscriptionPlan);
  *         description: Plans reset to defaults
  */
 router.post("/subscriptions/reset", resetSubscriptionPlans);
+// Admin Transaction Management
+/**
+ * @swagger
+ * /api/admin/transactions:
+ *   get:
+ *     summary: Get all system transactions
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of transactions
+ */
+router.get("/transactions", getAllTransactions);
 
 /**
  * @swagger

@@ -7,7 +7,7 @@ import { RentalProperty, LandlordProfile } from './types';
 import { SearchLocation } from './SearchByWorkplace';
 import { Button } from '@/app/components/ui/button';
 import { Layers, Navigation, Globe } from 'lucide-react';
-import { getGoongStyleUrl, getGoongAttribution, GoongMapStyle, GOONG_MAP_STYLES, GOONG_API_KEY, GOONG_MAPTILES_KEY, getGoongTransformRequest } from '@/app/utils/goongApi';
+import { getGoongStyleUrl, getGoongAttribution, GoongMapStyle, GOONG_MAP_STYLES, GOONG_MAPTILES_KEY, getGoongTransformRequest } from '@/app/utils/goongApi';
 
 interface RentalMapViewProps {
   properties: RentalProperty[];
@@ -221,7 +221,20 @@ export function RentalMapView({ properties, selectedProperty, onPropertySelect, 
   // Track the style that is actually loaded to avoid redundant setStyle calls
   const loadedStyleRef = useRef<string>(mapStyle);
 
-  // 3. Style Updates
+  // 3. Auto-fly when searchCenter changes (e.g. user selects autocomplete address)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !searchCenter) return;
+    
+    map.flyTo({
+      center: [searchCenter[1], searchCenter[0]], // [lng, lat]
+      zoom: 14,
+      duration: 1200,
+      essential: true
+    });
+  }, [searchCenter]);
+
+  // 4. Style Updates
   useEffect(() => {
     if (!mapRef.current) return;
     

@@ -44,7 +44,20 @@ exports.getBlogById = async (req, res) => {
 // Create blog post (Admin only)
 exports.createBlog = async (req, res) => {
   try {
-    const newBlog = new Blog(req.body);
+    const blogData = { ...req.body };
+    
+    // Auto-fill author info if missing
+    if (!blogData.author && req.user) {
+      blogData.author = req.user.fullName || req.user.username;
+      blogData.authorAvatar = req.user.avatar;
+    }
+    
+    // Auto-fill date if missing
+    if (!blogData.date) {
+      blogData.date = new Date().toLocaleDateString('vi-VN');
+    }
+
+    const newBlog = new Blog(blogData);
     const savedBlog = await newBlog.save();
     res.status(201).json(savedBlog);
   } catch (error) {
