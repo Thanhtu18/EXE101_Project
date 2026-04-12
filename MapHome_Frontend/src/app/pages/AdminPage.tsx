@@ -1,5 +1,5 @@
 import { useState, useEffect, forwardRef, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/contexts/AuthContext";
 import api from "@/app/utils/api";
@@ -71,8 +71,11 @@ type AdminView =
 
 export function AdminPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, logout, isAuthenticated } = useAuth();
-  const [activeView, setActiveView] = useState<AdminView>("dashboard");
+  const [activeView, setActiveView] = useState<AdminView>(
+    (searchParams.get("view") as AdminView) || "dashboard"
+  );
   const [stats, setStats] = useState<any>(null);
   const [weeklySearchData, setWeeklySearchData] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -813,6 +816,7 @@ export function AdminPage() {
                   )}
                   {activeView === "notifications" && (
                     <NotificationsManagementView
+                      notifications={adminNotifications}
                       onSendBroadcast={handleBroadcastNotification}
                     />
                   )}
@@ -3208,8 +3212,10 @@ function ReportsView({
 
 // Notifications Management View Component
 function NotificationsManagementView({
+  notifications,
   onSendBroadcast,
 }: {
+  notifications: any[];
   onSendBroadcast: (data: any) => Promise<void>;
 }) {
   const [formData, setFormData] = useState({
@@ -3256,10 +3262,51 @@ function NotificationsManagementView({
             Trung tâm Thông báo Hệ thống
           </h3>
           <p className="text-xs text-slate-400 font-bold mt-1">
-            Gửi thông báo quan trọng đến cộng đồng MapHome
+            Gửi và quản lý thông báo quan trọng của hệ thống
           </p>
         </div>
       </div>
+
+      {/* Admin System Notifications List */}
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, y: 20 },
+          show: { opacity: 1, y: 0 },
+        }}
+        className="bg-white border border-slate-100 rounded-[40px] p-10 shadow-sm"
+      >
+        <h4 className="text-lg font-black text-slate-800 mb-6">Thông báo chuyên trang Admin</h4>
+        <div className="space-y-3">
+          {notifications.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 font-medium">Không có thông báo hệ thống nào.</div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className="flex gap-4 p-5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+                    n.type === "user"
+                      ? "bg-blue-100/50"
+                      : n.type === "property"
+                        ? "bg-emerald-100/50"
+                        : n.type === "verification"
+                          ? "bg-amber-100/50"
+                          : "bg-indigo-100/50"
+                  }`}
+                >
+                  {n.icon}
+                </div>
+                <div>
+                  <div className="font-black text-sm text-slate-800">{n.title}</div>
+                  <div className="text-xs text-slate-500 mt-1">{n.message}</div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-2">
+                    {new Date(n.time).toLocaleString("vi-VN")}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Composition Form */}
