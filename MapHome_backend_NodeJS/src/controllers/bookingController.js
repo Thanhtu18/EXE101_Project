@@ -1,5 +1,25 @@
 const Booking = require("../models/Booking");
+const Property = require("../models/Property");
 const Landlord = require("../models/Landlord");
+const User = require("../models/User");
+const {
+  notifyLandlordNewBooking,
+  notifyTenantBookingConfirmed,
+  notifyTenantBookingCancelled,
+  notifyTenantBookingCompleted,
+  notifyLandlordBookingCancelledByTenant,
+} = require("../utils/notificationHelper");
+
+// ─── Helper: format date for display ────────────────────────────────────────
+const formatDate = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 const getBookings = async (req, res) => {
   try {
@@ -31,23 +51,46 @@ const getBookingById = async (req, res) => {
   }
 };
 
+// @desc    Create a new booking and notify the landlord
+// @route   POST /api/bookings
 const createBooking = async (req, res) => {
   try {
     const payload = { ...req.body };
-    
+
     if (req.user && req.user.role === "user") {
       payload.userId = req.user._id;
     }
 
-    // Auto-find landlordId from Property if not in payload
-    if (payload.propertyId && !payload.landlordId) {
-      const property = await Property.findById(payload.propertyId);
-      if (property) {
+    // Auto-resolve landlordId from Property if not provided in payload
+    let property = null;
+    if (payload.propertyId) {
+      property = await Property.findById(payload.propertyId);
+      if (property && !payload.landlordId) {
         payload.landlordId = property.landlordId;
       }
     }
 
     const booking = await Booking.create(payload);
+
+    // ── Notify the Landlord ──
+    if (property && payload.landlordId) {
+      try {
+        const landlord = await Landlord.findById(payload.landlordId);
+        if (landlord && landlord.userId) {
+          await notifyLandlordNewBooking({
+            landlordUserId: landlord.userId,
+            propertyName: property.name,
+            customerName: payload.customerName || "Guest",
+            bookingDate: formatDate(payload.bookingDate),
+            bookingTime: payload.bookingTime || "",
+            propertyId: property._id,
+          });
+        }
+      } catch (notifErr) {
+        console.error("[createBooking] Failed to send notification:", notifErr.message);
+      }
+    }
+
     res.status(201).json(booking);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -97,33 +140,53 @@ const deleteBooking = async (req, res) => {
   }
 };
 
-// @desc    User cancels their own pending booking
+// @desc    Tenant cancels their own pending booking and notifies the landlord
 // @route   PUT /api/bookings/:id/cancel
 const cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findOne({ _id: req.params.id, userId: req.user._id });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-    
+
     if (booking.status !== "pending") {
-      return res.status(400).json({ message: "Only pending bookings can be cancelled" });
+      return res.status(400).json({ message: "Only pending bookings can be cancelled." });
     }
-    
+
     booking.status = "cancelled";
     await booking.save();
+
+    // ── Notify the Landlord ──
+    try {
+      const property = await Property.findById(booking.propertyId);
+      if (property && booking.landlordId) {
+        const landlord = await Landlord.findById(booking.landlordId);
+        if (landlord && landlord.userId) {
+          await notifyLandlordBookingCancelledByTenant({
+            landlordUserId: landlord.userId,
+            propertyName: property.name,
+            customerName: booking.customerName || "Guest",
+            bookingDate: formatDate(booking.bookingDate),
+            bookingTime: booking.bookingTime || "",
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error("[cancelBooking] Failed to send notification:", notifErr.message);
+    }
+
     res.status(200).json({ message: "Booking cancelled successfully", booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Landlord/Admin updates booking status (accept/reject/complete)
+// @desc    Landlord/Admin updates booking status and notifies the tenant
 // @route   PUT /api/bookings/:id/status
 const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["confirmed", "cancelled", "completed"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status. Must be one of: " + validStatuses.join(", ") });
+      return res.status(400).json({ message: "Invalid status. Allowed values: " + validStatuses.join(", ") });
     }
 
     const query = { _id: req.params.id };
@@ -142,6 +205,43 @@ const updateBookingStatus = async (req, res) => {
 
     booking.status = status;
     await booking.save();
+
+    // ── Notify the Tenant (if userId is present) ──
+    if (booking.userId) {
+      try {
+        const property = await Property.findById(booking.propertyId);
+        const propertyName = property ? property.name : "the property";
+        const propertyId = property ? property._id : null;
+        const bookingDate = formatDate(booking.bookingDate);
+        const bookingTime = booking.bookingTime || "";
+
+        if (status === "confirmed") {
+          await notifyTenantBookingConfirmed({
+            tenantUserId: booking.userId,
+            propertyName,
+            bookingDate,
+            bookingTime,
+            propertyId,
+          });
+        } else if (status === "cancelled") {
+          await notifyTenantBookingCancelled({
+            tenantUserId: booking.userId,
+            propertyName,
+            cancelledBy: "landlord",
+            propertyId,
+          });
+        } else if (status === "completed") {
+          await notifyTenantBookingCompleted({
+            tenantUserId: booking.userId,
+            propertyName,
+            propertyId,
+          });
+        }
+      } catch (notifErr) {
+        console.error("[updateBookingStatus] Failed to send notification:", notifErr.message);
+      }
+    }
+
     res.status(200).json({ message: "Booking status updated successfully", booking });
   } catch (error) {
     res.status(500).json({ message: error.message });

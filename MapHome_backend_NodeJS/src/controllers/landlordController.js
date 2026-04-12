@@ -1,4 +1,5 @@
 const Landlord = require("../models/Landlord");
+const Lead = require("../models/Lead");
 
 const getOrCreateLandlord = async (user) => {
   let landlord = await Landlord.findOne({ userId: user._id });
@@ -140,6 +141,39 @@ const getLandlordBookings = async (req, res) => {
   }
 };
 
+// @desc    Get current landlord's relevant leads (matching districts)
+// @route   GET /api/landlord/leads
+const getLandlordLeads = async (req, res) => {
+  try {
+    const Property = require("../models/Property");
+    const landlord = await getOrCreateLandlord(req.user);
+
+    // 1. Lấy tất cả các Quận mà chủ trọ này có phòng
+    const properties = await Property.find({ landlordId: landlord._id });
+    
+    // Trích xuất danh sách Quận từ địa chỉ (giả định địa chỉ có định dạng: ..., Quận X, ...)
+    const districts = [...new Set(properties.map(p => {
+      const parts = p.address.split(",");
+      // Tìm phần tử có chứa chữ "Quận" hoặc "Huyện"
+      const districtPart = parts.find(part => part.trim().includes("Quận") || part.trim().includes("Huyện"));
+      return districtPart ? districtPart.trim() : null;
+    }))].filter(d => d !== null);
+
+    // 2. Tìm các Lead có yêu cầu trùng với các Quận này
+    const leads = await Lead.find({
+      "requirements.district": { $in: districts }
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      districts,
+      count: leads.length,
+      leads
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get current landlord's analytics
 // @route   GET /api/landlord/analytics
 const getLandlordAnalytics = async (req, res) => {
@@ -153,6 +187,14 @@ const getLandlordAnalytics = async (req, res) => {
     const totalProperties = await Property.countDocuments({
       landlordId: landlord._id,
     });
+    const approvedProperties = await Property.countDocuments({
+      landlordId: landlord._id,
+      status: "approved",
+    });
+    const pendingProperties = await Property.countDocuments({
+      landlordId: landlord._id,
+      status: "pending",
+    });
     const totalBookings = await Booking.countDocuments({
       landlordId: landlord._id,
     });
@@ -164,9 +206,13 @@ const getLandlordAnalytics = async (req, res) => {
       "greenBadge.level": "verified",
     });
 
-    const propertyViews = await Property.aggregate([
+    const propertyStats = await Property.aggregate([
       { $match: { landlordId: landlord._id } },
-      { $group: { _id: null, totalViews: { $sum: "$views" } } },
+      { $group: { 
+          _id: null, 
+          totalViews: { $sum: "$views" }, 
+          totalFavorites: { $sum: "$favorites" } 
+      }},
     ]);
 
     // Trend: Bookings per month (last 6 months)
@@ -184,10 +230,13 @@ const getLandlordAnalytics = async (req, res) => {
 
     res.status(200).json({
       totalProperties,
+      approvedProperties,
+      pendingProperties,
       totalBookings,
       totalVerifications,
       verifiedProperties,
-      totalViews: propertyViews[0]?.totalViews || 0,
+      totalViews: propertyStats[0]?.totalViews || 0,
+      totalFavorites: propertyStats[0]?.totalFavorites || 0,
       bookingTrend
     });
   } catch (error) {
@@ -206,4 +255,5 @@ module.exports = {
   getLandlordVerificationRequests,
   getLandlordBookings,
   getLandlordAnalytics,
+  getLandlordLeads,
 };

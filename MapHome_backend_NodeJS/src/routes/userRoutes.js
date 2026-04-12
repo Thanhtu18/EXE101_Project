@@ -9,6 +9,9 @@ const {
   getMyBookings,
   getMyInspections,
 } = require("../controllers/userController");
+const { updateUserRules, toggleFavoriteRules, getUserByIdRules } = require("../validators/userValidator");
+const validate = require("../middleware/validate");
+
 const {
   authMiddleware,
   requireSelfOrAdmin,
@@ -66,7 +69,8 @@ router.get("/me/favorites", authMiddleware, getMyFavorites);
  *       200:
  *         description: Favorite toggled
  */
-router.post("/me/favorites/toggle", authMiddleware, toggleFavoriteProperty);
+router.post("/me/favorites/toggle", authMiddleware, toggleFavoriteRules, validate, toggleFavoriteProperty);
+
 
 /**
  * @swagger
@@ -139,7 +143,8 @@ router.get("/inspections", authMiddleware, getMyInspections);
  */
 router
   .route("/:id")
-  .get(authMiddleware, requireSelfOrAdmin("id"), getUserById)
-  .put(authMiddleware, requireSelfOrAdmin("id"), updateUser);
+  .get(authMiddleware, requireSelfOrAdmin("id"), getUserByIdRules, validate, getUserById)
+  .put(authMiddleware, requireSelfOrAdmin("id"), updateUserRules, validate, updateUser);
+
 
 module.exports = router;

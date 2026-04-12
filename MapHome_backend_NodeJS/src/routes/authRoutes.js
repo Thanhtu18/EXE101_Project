@@ -1,7 +1,25 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, changePassword, forgotPassword, resetPassword } = require("../controllers/authController");
+const {
+  register,
+  login,
+  changePassword,
+  forgotPassword,
+  verifyResetCode,
+  resetPassword,
+  googleLogin,
+} = require("../controllers/authController");
 const { authMiddleware } = require("../middleware/authMiddleware");
+const {
+  registerRules,
+  loginRules,
+  forgotPasswordRules,
+  verifyResetCodeRules,
+  resetPasswordRules,
+  changePasswordRules,
+} = require("../validators/authValidator");
+
+const validate = require("../middleware/validate");
 
 /**
  * @swagger
@@ -60,7 +78,7 @@ const { authMiddleware } = require("../middleware/authMiddleware");
  *       400:
  *         description: Bad request or user already exists
  */
-router.post("/register", register);
+router.post("/register", registerRules, validate, register);
 
 /**
  * @swagger
@@ -102,7 +120,7 @@ router.post("/register", register);
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", login);
+router.post("/login", loginRules, validate, login);
 
 /**
  * @swagger
@@ -130,25 +148,26 @@ router.get("/me", authMiddleware, (req, res) => res.status(200).json(req.user));
  * @swagger
  * /api/auth/google:
  *   post:
- *     summary: Google login stub
+ *     summary: Google login
  *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
  *     responses:
- *       501:
- *         description: Not implemented yet
+ *       200:
+ *         description: Login successful
+ *       500:
+ *         description: Error verifying token
  */
-router.post("/google", (req, res) => res.status(501).json({ message: "Google login is currently under development" }));
-
-/**
- * @swagger
- * /api/auth/zalo:
- *   post:
- *     summary: Zalo login stub
- *     tags: [Authentication]
- *     responses:
- *       501:
- *         description: Not implemented yet
- */
-router.post("/zalo", (req, res) => res.status(501).json({ message: "Zalo login is currently under development" }));
+router.post("/google", googleLogin);
 
 /**
  * @swagger
@@ -178,7 +197,13 @@ router.post("/zalo", (req, res) => res.status(501).json({ message: "Zalo login i
  *       400:
  *         description: Incorrect current password
  */
-router.put("/change-password", authMiddleware, changePassword);
+router.put(
+  "/change-password",
+  authMiddleware,
+  changePasswordRules,
+  validate,
+  changePassword,
+);
 
 /**
  * @swagger
@@ -201,7 +226,40 @@ router.put("/change-password", authMiddleware, changePassword);
  *       200:
  *         description: Token sent
  */
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", forgotPasswordRules, validate, forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/verify-reset-code:
+ *   post:
+ *     summary: Verify password reset token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - token
+ *             properties:
+ *               email:
+ *                 type: string
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post(
+  "/verify-reset-code",
+  verifyResetCodeRules,
+  validate,
+  verifyResetCode,
+);
 
 /**
  * @swagger
@@ -219,6 +277,9 @@ router.post("/forgot-password", forgotPassword);
  *               - token
  *               - newPassword
  *             properties:
+ *               email:
+ *                 type: string
+ *                 description: Optional email for extra verification
  *               token:
  *                 type: string
  *               newPassword:
@@ -227,6 +288,6 @@ router.post("/forgot-password", forgotPassword);
  *       200:
  *         description: Password reset successful
  */
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", resetPasswordRules, validate, resetPassword);
 
 module.exports = router;

@@ -4,7 +4,9 @@ const UserSchema = new mongoose.Schema(
   {
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: { type: String },
+    googleId: { type: String },
+
     fullName: { type: String },
     phone: { type: String },
     role: {
@@ -12,6 +14,7 @@ const UserSchema = new mongoose.Schema(
       enum: ["admin", "landlord", "user"],
       default: "user",
     },
+    avatar: { type: String, default: "" }, // user profile picture URL
     verificationLevel: { type: Number, default: 1 },
     status: { type: String, enum: ["active", "blocked"], default: "active" },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Property' }],

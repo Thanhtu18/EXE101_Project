@@ -97,10 +97,36 @@ const replyToReview = async (req, res) => {
   }
 };
 
+// @desc    Get latest five-star reviews for landing page
+// @route   GET /api/reviews/latest
+const getLatestReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ rating: 5 })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .populate("userId", "username avatar fullName role")
+      .populate("propertyId", "name");
+
+    const testimonials = reviews.map((r) => ({
+      id: r._id,
+      name: r.userId?.fullName || r.userId?.username || "Ẩn danh",
+      role: r.userId?.role === "landlord" ? "Chủ trọ" : "Người thuê",
+      text: r.comment,
+      rating: r.rating,
+      avatar: r.userId?.fullName?.charAt(0) || "U",
+    }));
+
+    res.status(200).json(testimonials);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getPropertyReviews,
   createReview,
   updateReview,
   deleteReview,
   replyToReview,
+  getLatestReviews,
 };

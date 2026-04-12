@@ -7,12 +7,57 @@ const {
 const { upload } = require("../middleware/uploadMiddleware");
 const { authMiddleware } = require("../middleware/authMiddleware");
 
+/**
+ * @swagger
+ * /api/uploads/single:
+ *   post:
+ *     summary: Upload a single image to Cloudinary
+ *     tags: [Uploads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ */
 router.post(
   "/single",
   authMiddleware,
   upload.single("image"),
   uploadSingleImage,
 );
+
+/**
+ * @swagger
+ * /api/uploads/multiple:
+ *   post:
+ *     summary: Upload multiple images to Cloudinary
+ *     tags: [Uploads]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
+ */
 router.post(
   "/multiple",
   authMiddleware,

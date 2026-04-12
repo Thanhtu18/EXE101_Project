@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./config/swagger");
 const path = require("path");
+const { initCronJobs } = require("./utils/cronJobs");
 
 // Load env vars
 dotenv.config();
@@ -14,7 +15,8 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
+// Cloudinary is now used for all images, no local /uploads static serving needed.
 
 // Swagger UI
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -28,13 +30,21 @@ app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/user", require("./routes/userRoutes")); // alias for singular
 app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/uploads", require("./routes/uploadRoutes"));
+app.use("/api/upload", require("./routes/uploadRoutes")); // alias for singular
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
 app.use("/api/transactions", require("./routes/transactionRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/blogs", require("./routes/blogRoutes"));
+app.use("/api/contacts", require("./routes/contactRoutes"));
+app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/map", require("./routes/mapRoutes"));
+
+
 
 app.get("/", (req, res) => res.send("API is running..."));
 
@@ -57,6 +67,10 @@ const PORT = process.env.PORT || 5000;
 (async function start() {
   try {
     await connectDB();
+    
+    // Initialize scheduled tasks
+    initCronJobs();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`📚 Swagger API Docs: http://localhost:${PORT}/api-docs`);
